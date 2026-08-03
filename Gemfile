@@ -5,6 +5,7 @@ source "https://rubygems.org"
 ruby ">= 3.2"
 
 gem "activerecord", "~> 7.1"
+gem "term-ansicolor", "~> 1.11"
 gem "sqlite3", "~> 1.7"
 
 group :development, :test do
