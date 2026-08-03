@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "optparse"
+require_relative "../lib/work_coordinator"
+
+options = {}
+
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: work-coordinator [command] [options]"
+
+  opts.on("-v", "--version", "Print version") do
+    puts WorkCoordinator::VERSION
+    exit
+  end
+
+  opts.on("-h", "--help", "Print help") do
+    puts opts
+    exit
+  end
+end
+
+subcommands = {
+  "start" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator start [options]" },
+  "status" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator status [options]" }
+}
+
+parser.order!(ARGV)
+command = ARGV.shift
+
+if command && subcommands.key?(command)
+  subcommands[command].parse!(ARGV)
+  # dispatch to application service
+else
+  puts parser
+  exit 1
+end
