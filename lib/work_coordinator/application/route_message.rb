@@ -32,13 +32,15 @@ module WorkCoordinator
 
       def deliver_and_record(session_id:, work_item:, raw_message:, body:)
         @agent_session.deliver(session_id: session_id, message: body)
+        active_item = work_item.with(state: :active, updated_at: Time.now)
+        @work_item_repo.save(active_item)
         @event_store.append(
           type: "human.replied",
           work_item_id: work_item.id,
           source: "human",
           data: { raw_message: raw_message, body: body }
         )
-        Result.new(routed: true, work_item: work_item, body: body)
+        Result.new(routed: true, work_item: active_item, body: body)
       end
     end
   end
