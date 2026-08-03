@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 module WorkCoordinator
   module Domain
-    Event = Data.define(:id, :type, :payload, :occurred_at)
+    Event = Data.define(:id, :work_item_id, :type, :source, :data, :occurred_at)
   end
 end
