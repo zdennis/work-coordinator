@@ -2,39 +2,99 @@
 # frozen_string_literal: true
 
 require "optparse"
+require "term/ansicolor"
 require_relative "../lib/work_coordinator"
 
-parser = OptionParser.new do |opts|
-  opts.banner = "Usage: work-coordinator [command] [options]"
+include Term::ANSIColor # rubocop:disable Style/MixinUsage
 
+def colorize_state(state)
+  case state.to_sym
+  when :active             then green(state.to_s)
+  when :waiting_for_human  then yellow(state.to_s)
+  when :blocked            then red(state.to_s)
+  when :completed          then cyan(state.to_s)
+  else state.to_s
+  end
+end
+
+global = OptionParser.new do |opts|
+  opts.banner = "Usage: work-coordinator [command] [options]"
   opts.on("-v", "--version", "Print version") do
     puts WorkCoordinator::VERSION
     exit
   end
-
   opts.on("-h", "--help", "Print help") do
     puts opts
     exit
   end
 end
 
-subcommands = {
-  "start" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator start [options]" },
-  "status" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator status [options]" },
-  "send" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator send \"REF body\"" }
-}
-
-parser.order!(ARGV)
+global.order!(ARGV)
 command = ARGV.shift
 
-if command == "send"
-  message = ARGV.shift
-  if message.nil? || message.strip.empty?
-    warn "Usage: work-coordinator send \"REF body\""
+case command
+when "register"
+  options = {}
+  OptionParser.new do |opts|
+    opts.banner = "Usage: work-coordinator register --title TITLE --kind KIND " \
+                  "--ref REF --repo REPO [--tmux SESSION:WIN.PANE]"
+    opts.on("--title TITLE") { |v| options[:title] = v }
+    opts.on("--kind KIND")   { |v| options[:kind] = v.to_sym }
+    opts.on("--ref REF")     { |v| options[:ref] = v }
+    opts.on("--repo REPO")   { |v| options[:repo] = v }
+    opts.on("--tmux TARGET") { |v| options[:tmux] = v }
+  end.parse!(ARGV)
+
+  %i[title kind].each do |req|
+    unless options[req]
+      warn "Missing required option: --#{req}"
+      exit 1
+    end
+  end
+
+  container = WorkCoordinator::Container.new
+  work_item = container.register_work_item.call(
+    title: options[:title],
+    kind: options[:kind],
+    external_reference: options[:ref],
+    repository: options[:repo],
+    workspace_name: options[:tmux]
+  )
+  puts "id:    #{work_item.id}"
+  puts "state: #{work_item.state}"
+
+when "start"
+  id = ARGV.shift
+  unless id
+    warn "Usage: work-coordinator start <work-item-id>"
     exit 1
   end
 
-  require "work_coordinator/adapters/socket_message_sender"
+  container = WorkCoordinator::Container.new
+  item = container.start_work_item.call(work_item_id: id)
+  puts "Started #{item.id} (state: #{item.state})"
+
+when "status"
+  container = WorkCoordinator::Container.new
+  items = container.work_item_repo.find_all
+  if items.empty?
+    puts "No work items."
+  else
+    fmt = "%-36s  %-12s  %-20s  %-22s  %s"
+    puts format(fmt, "ID", "REF", "STATE", "PHASE", "TITLE")
+    puts "-" * 100
+    items.each do |wi|
+      puts format(fmt, wi.id, wi.external_reference.to_s, colorize_state(wi.state), wi.phase.to_s, wi.title)
+    end
+  end
+
+when "send"
+  message = ARGV.shift
+  if message.nil? || message.strip.empty?
+    warn 'Usage: work-coordinator send "REF body"'
+    exit 1
+  end
+
   sender = WorkCoordinator::Adapters::SocketMessageSender.new
   begin
     sender.send_message(body: message)
@@ -43,10 +103,33 @@ if command == "send"
     warn "Error sending message: #{e.message}"
     exit 1
   end
-elsif command && subcommands.key?(command)
-  subcommands[command].parse!(ARGV)
-  # dispatch to application service
+
+when "run"
+  container = WorkCoordinator::Container.new
+  socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
+  puts "work-coordinator running on #{socket_path}"
+  puts "Press Ctrl-C to stop."
+
+  Signal.trap("INT") do
+    container.message_receiver.stop
+    exit
+  end
+  Signal.trap("TERM") do
+    container.message_receiver.stop
+    exit
+  end
+
+  container.message_receiver.start do |msg|
+    raw = "#{msg[:work_item_ref]} #{msg[:body]}"
+    result = container.route_message.call(raw_message: raw)
+    if result.routed
+      puts "Routed to #{result.work_item.id}: #{result.body}"
+    else
+      puts "Unrouted message: #{raw}"
+    end
+  end
+
 else
-  puts parser
+  puts global
   exit 1
 end
