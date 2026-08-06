@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "active_record"
 require "sqlite3"
 
@@ -16,3 +18,7 @@ module WorkCoordinator
     end
   end
 end
+
+require "work_coordinator/persistence/models/work_item_record"
+require "work_coordinator/persistence/models/event_record"
+require "work_coordinator/persistence/models/resource_lease_record"
