@@ -44,7 +44,7 @@ module WorkCoordinator
       private
 
       def poll_once(&)
-        db = SQLite3::Database.new(@db_path, { readonly: true })
+        db = open_db
         rows = db.execute(INBOX_SQL, @last_date)
         rows.each { |row| yield parse_row(row) }
         @last_date = rows.map { _1[2] }.max if rows.any?
@@ -58,8 +58,12 @@ module WorkCoordinator
         { work_item_ref: parts[0], body: parts[1].to_s.strip, received_at: Time.now }
       end
 
+      def open_db
+        SQLite3::Database.new("file://#{@db_path}?mode=ro&immutable=1", uri: true)
+      end
+
       def current_max_date
-        db = SQLite3::Database.new(@db_path, { readonly: true })
+        db = open_db
         result = db.execute("SELECT max(date) FROM message")
         result&.dig(0, 0) || 0
       ensure
