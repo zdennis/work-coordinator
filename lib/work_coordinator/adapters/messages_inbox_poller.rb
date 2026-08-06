@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "sqlite3"
+require "tmpdir"
 require "work_coordinator/ports/message_receiver"
 
 module WorkCoordinator
@@ -44,12 +46,11 @@ module WorkCoordinator
       private
 
       def poll_once(&)
-        db = open_db
-        rows = db.execute(INBOX_SQL, @last_date)
-        rows.each { |row| yield parse_row(row) }
-        @last_date = rows.map { _1[2] }.max if rows.any?
-      ensure
-        db&.close
+        with_db do |db|
+          rows = db.execute(INBOX_SQL, @last_date)
+          rows.each { |row| yield parse_row(row) }
+          @last_date = rows.map { _1[2] }.max if rows.any?
+        end
       end
 
       def parse_row(row)
@@ -58,16 +59,18 @@ module WorkCoordinator
         { work_item_ref: parts[0], body: parts[1].to_s.strip, received_at: Time.now }
       end
 
-      def open_db
-        SQLite3::Database.new("file://#{@db_path}?mode=ro&immutable=1", uri: true)
+      def with_db
+        tmp = File.join(Dir.tmpdir, "wc_chat_#{Process.pid}.db")
+        FileUtils.cp(@db_path, tmp)
+        db = SQLite3::Database.new(tmp)
+        yield db
+      ensure
+        db&.close
+        File.delete(tmp) if tmp && File.exist?(tmp)
       end
 
       def current_max_date
-        db = open_db
-        result = db.execute("SELECT max(date) FROM message")
-        result&.dig(0, 0) || 0
-      ensure
-        db&.close
+        with_db { |db| db.execute("SELECT max(date) FROM message")&.dig(0, 0) || 0 }
       end
     end
   end
