@@ -15,8 +15,8 @@ module WorkCoordinator
 
       def start_session(work_item_id:)
         work_item = @work_item_repo.find(work_item_id)
-        target = work_item&.tmux_target
-        raise ArgumentError, "work item #{work_item_id} has no tmux_target" if target.nil? || target.empty?
+        target = work_item&.workspace_name
+        raise ArgumentError, "work item #{work_item_id} has no workspace_name" if target.nil? || target.empty?
 
         target
       end
@@ -33,7 +33,7 @@ module WorkCoordinator
 
       def active_session(work_item_id:)
         work_item = @work_item_repo.find(work_item_id)
-        target = work_item&.tmux_target
+        target = work_item&.workspace_name
         return nil if target.nil? || target.empty?
 
         out, status = run_command(["tmux", "list-panes", "-a", "-F",

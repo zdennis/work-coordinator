@@ -8,6 +8,10 @@ require "work_coordinator/persistence/models/event_record"
 module WorkCoordinator
   module Adapters
     class SqliteEventStore
+      def append(type:, work_item_id:, source: "coordinator", data: {}, occurred_at: Time.now) # rubocop:disable Lint/UnusedMethodArgument
+        record(type: type, work_item_id: work_item_id, source: source, data: data)
+      end
+
       def record(type:, work_item_id:, source: "coordinator", data: {})
         record = Persistence::Models::EventRecord.create!(
           id: SecureRandom.uuid,
