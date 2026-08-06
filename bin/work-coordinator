@@ -4,8 +4,6 @@
 require "optparse"
 require_relative "../lib/work_coordinator"
 
-options = {}
-
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: work-coordinator [command] [options]"
 
@@ -22,13 +20,30 @@ end
 
 subcommands = {
   "start" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator start [options]" },
-  "status" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator status [options]" }
+  "status" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator status [options]" },
+  "send" => OptionParser.new { |opts| opts.banner = "Usage: work-coordinator send \"REF body\"" }
 }
 
 parser.order!(ARGV)
 command = ARGV.shift
 
-if command && subcommands.key?(command)
+if command == "send"
+  message = ARGV.shift
+  if message.nil? || message.strip.empty?
+    warn "Usage: work-coordinator send \"REF body\""
+    exit 1
+  end
+
+  require "work_coordinator/adapters/socket_message_sender"
+  sender = WorkCoordinator::Adapters::SocketMessageSender.new
+  begin
+    sender.send_message(body: message)
+    puts "Sent: #{message}"
+  rescue StandardError => e
+    warn "Error sending message: #{e.message}"
+    exit 1
+  end
+elsif command && subcommands.key?(command)
   subcommands[command].parse!(ARGV)
   # dispatch to application service
 else
