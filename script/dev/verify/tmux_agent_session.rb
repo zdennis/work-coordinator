@@ -18,7 +18,7 @@ FakeRepo = Struct.new(:items) do
   def find(id) = items[id]
 end
 
-FakeWorkItem = Struct.new(:id, :tmux_target)
+FakeWorkItem = Struct.new(:id, :workspace_name)
 
 # Subclass that captures commands instead of running them
 class TestTmuxAgentSession < TmuxAgentSession
