@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+
 require "optparse"
 require "term/ansicolor"
 require_relative "../lib/work_coordinator"
@@ -127,6 +129,8 @@ when "run"
     else
       puts "Unrouted message: #{raw}"
     end
+  rescue StandardError => e
+    warn "Error routing message: #{e.message}"
   end
 
 else
