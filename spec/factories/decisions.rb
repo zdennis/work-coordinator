@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 FactoryBot.define do
   factory :decision_domain, class: "WorkCoordinator::Domain::Decision" do
     id { SecureRandom.uuid }

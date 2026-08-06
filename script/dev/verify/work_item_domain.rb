@@ -57,35 +57,27 @@ predicates = {
 states.each do |s|
   item = wi.with(state: s)
   pred = predicates[s]
-  if item.public_send(pred)
-    pass "#{pred} true when state=#{s}"
-  else
-    fail "#{pred} should be true when state=#{s}"
-  end
+  raise "#{pred} should be true when state=#{s}" unless item.public_send(pred)
+
+  pass "#{pred} true when state=#{s}"
 
   other = states.reject { |x| x == s }.first
   other_item = wi.with(state: other)
-  if !other_item.public_send(pred)
-    pass "#{pred} false when state=#{other}"
-  else
-    fail "#{pred} should be false when state=#{other}"
-  end
+  raise "#{pred} should be false when state=#{other}" if other_item.public_send(pred)
+
+  pass "#{pred} false when state=#{other}"
 end
 
 section "state? helper"
 
 item = wi.with(state: :active)
-if item.state?(:active)
-  pass "state?(:active) true when state=:active"
-else
-  fail "state?(:active) should be true"
-end
+raise "state?(:active) should be true" unless item.state?(:active)
 
-if !item.state?(:blocked)
-  pass "state?(:blocked) false when state=:active"
-else
-  fail "state?(:blocked) should be false"
-end
+pass "state?(:active) true when state=:active"
+
+raise "state?(:blocked) should be false" if item.state?(:blocked)
+
+pass "state?(:blocked) false when state=:active"
 
 section "Compatibility aliases (open?, done?, in_progress?)"
 
@@ -102,20 +94,16 @@ section "Valid kinds"
 
 %i[jira chore investigation adhoc].each do |k|
   item = wi.with(kind: k)
-  if item.kind == k
-    pass "kind=#{k} accepted"
-  else
-    fail "kind=#{k} not accepted"
-  end
+  raise "kind=#{k} not accepted" unless item.kind == k
+
+  pass "kind=#{k} accepted"
 end
 
 section "Valid phases"
 
 %i[investigating implementing verifying reviewing].each do |p|
   item = wi.with(phase: p)
-  if item.phase == p
-    pass "phase=#{p} accepted"
-  else
-    fail "phase=#{p} not accepted"
-  end
+  raise "phase=#{p} not accepted" unless item.phase == p
+
+  pass "phase=#{p} accepted"
 end

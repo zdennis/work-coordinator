@@ -22,7 +22,7 @@ module WorkCoordinator
       end
 
       def deliver(session_id:, message:)
-        cmd = ["tmux", "send-keys", "-t", session_id, Shellwords.escape(message), "Enter"]
+        cmd = ["tmux", "send-keys", "-t", session_id, message, "Enter"]
         out, status = run_command(cmd)
         raise "tmux send-keys failed: #{out}" unless status.success?
       end
@@ -37,7 +37,7 @@ module WorkCoordinator
         return nil if target.nil? || target.empty?
 
         out, status = run_command(["tmux", "list-panes", "-a", "-F",
-                                   "\#{session_name}:\#{window_index}.\#{pane_index}"])
+                                   "\#{session_name}:\#{window_name}.\#{pane_index}"])
         return nil unless status.success?
 
         out.split("\n").include?(target) ? target : nil

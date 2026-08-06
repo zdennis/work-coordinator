@@ -19,6 +19,6 @@ module WorkCoordinator
   end
 end
 
-require "work_coordinator/persistence/models/work_item_record"
-require "work_coordinator/persistence/models/event_record"
-require "work_coordinator/persistence/models/resource_lease_record"
+require_relative "models/work_item_record"
+require_relative "models/event_record"
+require_relative "models/resource_lease_record"

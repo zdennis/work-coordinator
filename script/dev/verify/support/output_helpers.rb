@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "term/ansicolor"
 
 module OutputHelpers
@@ -22,6 +24,4 @@ module OutputHelpers
   def separator
     puts cyan("-" * 60)
   end
-
-  extend self
 end
