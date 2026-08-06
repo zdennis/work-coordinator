@@ -107,9 +107,19 @@ when "send"
   end
 
 when "run"
-  container = WorkCoordinator::Container.new
+  options = {}
+  OptionParser.new do |opts|
+    opts.on("--mode MODE", "local or messages (default: local)") { |v| options[:mode] = v.to_sym }
+  end.parse!(ARGV)
+  mode = options[:mode] || :local
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
-  puts "work-coordinator running on #{socket_path}"
+  container = WorkCoordinator::Container.new(mode: mode)
+  if mode == :messages
+    puts "work-coordinator running in messages mode (polling ~/Library/Messages/chat.db)"
+    puts "Listening for messages starting with: ai: "
+  else
+    puts "work-coordinator running on #{socket_path}"
+  end
   puts "Press Ctrl-C to stop."
 
   Signal.trap("INT") do
@@ -132,6 +142,22 @@ when "run"
   rescue StandardError => e
     warn "Error routing message: #{e.message}"
   end
+
+when "notify"
+  options = {}
+  OptionParser.new do |opts|
+    opts.on("--mode MODE") { |v| options[:mode] = v.to_sym }
+  end.parse!(ARGV)
+  id = ARGV.shift
+  body = ARGV.shift
+  unless id && body
+    warn 'Usage: work-coordinator notify <id> "<body>" [--mode messages]'
+    exit 1
+  end
+  mode = options[:mode] || :messages
+  container = WorkCoordinator::Container.new(mode: mode)
+  container.notify_human.call(work_item_id: id, body: body)
+  puts "Notification sent."
 
 else
   puts global
