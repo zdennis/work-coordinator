@@ -1,0 +1,71 @@
+# frozen_string_literal: true
+
+require "work_coordinator/ports/work_item_repository"
+require "work_coordinator/domain/work_item"
+require "work_coordinator/persistence/models/work_item_record"
+
+module WorkCoordinator
+  module Adapters
+    class SqliteWorkItemRepository
+      include Ports::WorkItemRepository
+
+      def save(work_item)
+        record = Persistence::Models::WorkItemRecord.find_or_initialize_by(id: work_item.id)
+        record.assign_attributes(to_attributes(work_item))
+        record.save!
+        work_item
+      end
+
+      def find(id)
+        record = Persistence::Models::WorkItemRecord.find_by(id: id)
+        record && to_domain(record)
+      end
+
+      def find_by_ref(external_reference)
+        record = Persistence::Models::WorkItemRecord.find_by(external_reference: external_reference)
+        record && to_domain(record)
+      end
+
+      def find_all(state: nil)
+        scope = Persistence::Models::WorkItemRecord.all
+        scope = scope.with_state(state) if state
+        scope.map { |r| to_domain(r) }
+      end
+
+      def delete(id)
+        Persistence::Models::WorkItemRecord.find_by(id: id)&.destroy
+      end
+
+      private
+
+      def to_attributes(work_item)
+        {
+          title: work_item.title,
+          kind: work_item.kind.to_s,
+          external_reference: work_item.external_reference,
+          repository: work_item.repository,
+          workspace_name: work_item.workspace_name,
+          state: work_item.state.to_s,
+          phase: work_item.phase&.to_s,
+          created_at: work_item.created_at,
+          updated_at: work_item.updated_at
+        }
+      end
+
+      def to_domain(record)
+        Domain::WorkItem.new(
+          id: record.id,
+          title: record.title,
+          kind: record.kind.to_sym,
+          external_reference: record.external_reference,
+          repository: record.repository,
+          workspace_name: record.workspace_name,
+          state: record.state.to_sym,
+          phase: record.phase&.to_sym,
+          created_at: record.created_at,
+          updated_at: record.updated_at
+        )
+      end
+    end
+  end
+end
