@@ -2,73 +2,55 @@
 
 ## Prerequisites
 
-- Ruby >= 3.2
-- Bundler (`gem install bundler`)
-- tmux
-
-## Setup
+- Ruby >= 3.2, Bundler (`gem install bundler`), tmux
 
 ```
-$ git clone <repo-url> work-coordinator
-$ cd work-coordinator
-$ bundle install
+git clone <repo-url> work-coordinator
+cd work-coordinator
+bundle install
 ```
-
-> **Note:** The `bin/work-coordinator` script requires `lib/` on the load path. All commands below include `-I lib`. The underlying fix is to add `$LOAD_PATH.unshift File.expand_path('../lib', __dir__)` in `bin/work-coordinator`, but until that lands, use the flag.
 
 ---
 
-## Quickstart: Local Mode
+## Quickstart: Local Socket Mode
 
-### 1. Register a work item
+### Step 1: Create a tmux session for your agent
 
 ```
-$ bundle exec ruby -I lib bin/work-coordinator register \
-    --title 'Fix Kafka abandonment fixture' \
-    --kind jira \
-    --ref MS-123 \
-    --repo acme-billing \
-    --tmux wc-demo:claude.0
+tmux new-session -d -s my-project -n claude
+```
+
+The `-n claude` flag names the window `claude`. The `--tmux` flag in the next step references this as `my-project:claude.0` (session:window.pane).
+
+### Step 2: Register a work item
+
+```
+bundle exec ruby bin/work-coordinator register \
+  --title "Fix Kafka abandonment fixture" \
+  --kind  jira \
+  --ref   MS-123 \
+  --repo  acme-billing \
+  --tmux  wc-demo:claude.0
 ```
 
 Flags:
-- `--title` — human-readable label
-- `--kind` — tracker type (`jira`, etc.)
-- `--ref` — external reference; this becomes the routing key for inbound messages
-- `--repo` — repository the work item belongs to
-- `--tmux` — tmux target (`session:window.pane`) where messages are delivered
+- `--title` — human-readable label for this work item
+- `--kind`  — tracker type (`jira`, etc.)
+- `--ref`   — external reference; becomes the routing key for inbound messages
+- `--repo`  — repository this work item belongs to
+- `--tmux`  — tmux target (`session:window.pane`) where messages are delivered
 
-Example output (first run triggers migrations):
+Output (migrations run on first invocation only):
 
 ```
-== 20260805000001 CreateWorkItems: migrating ==================================
--- create_table(:work_items, {id: false})
-   -> 0.0002s
-...
-== 20260805000003 CreateResourceLeases: migrated (0.0001s) ====================
-
-id:    1d60b2af-fdb6-421a-96dc-e5e4448142e5
+id:    71380947-2ce7-4799-adbf-be9516583b45
 state: created
 ```
 
-Subsequent runs skip migrations and print just the `id` and `state` lines.
-
-### 2. Check status
+### Step 3: Start the coordinator (Terminal 1)
 
 ```
-$ bundle exec ruby -I lib bin/work-coordinator status
-```
-
-```
-ID                                    REF           STATE                 PHASE                   TITLE
-----------------------------------------------------------------------------------------------------
-1d60b2af-fdb6-421a-96dc-e5e4448142e5  MS-123        created                                       Fix Kafka abandonment fixture
-```
-
-### 3. Start the coordinator run loop
-
-```
-$ bundle exec ruby -I lib bin/work-coordinator run
+bundle exec ruby bin/work-coordinator run
 ```
 
 ```
@@ -76,49 +58,56 @@ work-coordinator running on /tmp/work-coordinator.sock
 Press Ctrl-C to stop.
 ```
 
-The run loop opens a Unix domain socket at `/tmp/work-coordinator.sock` and listens for inbound messages. Keep this running in its own terminal (or background it with `&` and tail `/tmp/wc-run.log`).
+This opens a Unix domain socket at `/tmp/work-coordinator.sock` and listens for inbound messages. Keep this running while you work.
 
-### 4. Send a message from another terminal
-
-This is the key feature. Open a second terminal and send a message prefixed with the work item's REF:
+### Step 4: Route a reply (Terminal 2)
 
 ```
-$ bundle exec ruby -I lib bin/work-coordinator send 'MS-123 yes, update the fixture and rerun the suite'
+bundle exec ruby bin/work-coordinator send "MS-123 yes, update the fixture and rerun the suite"
 ```
 
 ```
 Sent: MS-123 yes, update the fixture and rerun the suite
 ```
 
-The `MS-123` prefix is the REF registered in step 1. The coordinator looks up the matching work item and routes the message to the configured tmux pane.
+**REF prefix format:** `<REF> <message body>` — the REF must match exactly (case-sensitive) and be separated from the body by a single space. The coordinator parses the leading token as a REF, looks up the matching work item, and routes the message body to its registered tmux pane.
 
-**REF prefix format:** `<REF> <message body>` — the REF must match exactly (case-sensitive) and be separated from the message by a space.
+Check status after sending:
 
-### 5. What arrives in the tmux pane
+```
+bundle exec ruby bin/work-coordinator status
+```
 
-> **Observed behavior (2026-08-05):** During the E2E run, the message was accepted by the socket but was not relayed to the tmux pane. The work item remained in `created` state after the send. The coordinator appears to require the work item to be in `active` state before routing messages to the configured tmux target. The pane showed only an idle shell prompt.
->
-> Until a state-transition mechanism is documented, treat tmux delivery as not yet fully wired for items in `created` state.
+```
+ID                                    REF    STATE   PHASE  TITLE
+71380947-2ce7-4799-adbf-be9516583b45  MS-123 active         Fix Kafka abandonment fixture
+```
 
----
+The work item transitions from `created` to `active` once a message is routed to it.
 
-## How routing works
+### Step 5: What the agent receives
 
-When a message arrives on the socket, the coordinator parses the leading token as a REF, queries the database for a work item with that external reference, and delivers the message body to the tmux pane recorded on that work item (via `tmux send-keys` or equivalent). If no matching work item is found, or if the item is not in a routable state, the message is dropped.
+Contents of `wc-demo:claude.0` after the send:
+
+```
+yes, update the fixture and rerun the suite
+```
+
+The REF prefix is stripped; only the message body is delivered to the pane. In a real Claude Code session this routes into the agent's input. (In the example above the pane was an interactive shell rather than a Claude Code session, which is why the shell tried to execute `yes,` as a command.)
 
 ---
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `WC_DATABASE` | `db/work_coordinator.sqlite3` | Path to the SQLite database file |
-| `WC_SOCKET` | `/tmp/work-coordinator.sock` | Path to the Unix domain socket |
+| Variable      | Default                        | Purpose                           |
+|---------------|--------------------------------|-----------------------------------|
+| `WC_DATABASE` | `db/work_coordinator.sqlite3`  | Path to the SQLite database file  |
+| `WC_SOCKET`   | `/tmp/work-coordinator.sock`   | Path to the Unix domain socket    |
 
 ---
 
-## What is not wired yet
+## What is not yet wired
 
-- **Messages.app / iMessage polling** — `chat.db` integration is not implemented. Inbound iMessages are not read or processed.
-- **Outbound notifications** — `notify_human` via `AppleScriptMessageSender` is present in the codebase but not connected end-to-end. Outbound Messages.app delivery does not work yet.
-- **State transitions** — there is no CLI command to move a work item from `created` to `active`. Message routing to tmux panes appears to depend on the work item being active.
+- **Messages.app / iMessage polling** — `chat.db` integration is not implemented; inbound iMessages are not read or processed.
+- **Outbound notifications** — `notify_human` via `AppleScriptMessageSender` is present in the codebase but not connected end-to-end; outbound Messages.app delivery does not work yet.
+- **`work-coordinator start`** — there is no CLI command for tmux session tracking; use `register --tmux` directly (as shown above).
