@@ -12,7 +12,7 @@ fi
 
 # Install Homebrew dependencies
 echo "==> Installing Homebrew dependencies..."
-brew bundle --no-lock
+brew bundle
 
 # Install Ruby version
 RUBY_VERSION=$(cat .ruby-version)

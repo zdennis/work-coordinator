@@ -21,11 +21,11 @@ end
 
 COMMANDS = {
   "register" => "Register a new work item",
-  "start"    => "Transition a work item to active state",
-  "status"   => "List all work items with their current state and phase",
-  "send"     => "Send a message to the running coordinator via socket",
-  "run"      => "Start the coordinator daemon (local socket or Messages mode)",
-  "notify"   => "Send a human notification for a work item"
+  "start" => "Transition a work item to active state",
+  "status" => "List all work items with their current state and phase",
+  "send" => "Send a message to the running coordinator via socket",
+  "run" => "Start the coordinator daemon (local socket or Messages mode)",
+  "notify" => "Send a human notification for a work item"
 }.freeze
 
 global = OptionParser.new do |opts|
@@ -81,8 +81,13 @@ when "register"
     opts.separator "Optional:"
     opts.on("--ref REF",   "External reference (e.g. GitHub issue or PR number)") { |v| options[:ref] = v }
     opts.on("--repo REPO", "Repository name or path this work item belongs to") { |v| options[:repo] = v }
-    opts.on("--tmux TARGET", "Tmux target in SESSION:WINDOW.PANE format to associate with this item") { |v| options[:tmux] = v }
-    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+    opts.on("--tmux TARGET", "Tmux target in SESSION:WINDOW.PANE format to associate with this item") do |v|
+      options[:tmux] = v
+    end
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
   end.parse!(ARGV)
 
   %i[title kind].each do |req|
@@ -120,7 +125,10 @@ when "start"
     opts.separator "  # Register and immediately start in one shell pipeline"
     opts.separator "  ID=$(work-coordinator register --title 'Fix crash' --kind bug | awk '/^id:/{print $2}')"
     opts.separator "  work-coordinator start $ID"
-    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
   end.parse!(ARGV)
 
   id = ARGV.shift
@@ -150,7 +158,10 @@ when "status"
     opts.separator ""
     opts.separator "  # Watch status refresh every 5 seconds"
     opts.separator "  watch -n 5 work-coordinator status"
-    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
   end.parse!(ARGV)
 
   container = WorkCoordinator::Container.new
@@ -189,7 +200,10 @@ when "send"
     opts.separator ""
     opts.separator "  # Send via a custom socket path"
     opts.separator "  WC_SOCKET=/var/run/wc.sock work-coordinator send '#42 update: tests passing'"
-    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
   end.parse!(ARGV)
 
   message = ARGV.shift
@@ -238,14 +252,17 @@ when "run"
     opts.on("-m", "--mode MODE", "Receive mode (repeatable, comma-separated): all, local, messages") do |v|
       v.split(",").map(&:strip).each { |m| options[:modes] << m.to_sym }
     end
-    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
   end.parse!(ARGV)
   modes = options[:modes].empty? ? [:all] : options[:modes]
   modes = KNOWN_MODES.dup if modes.include?(:all)
   modes = modes.uniq
   unknown = modes.reject { |m| KNOWN_MODES.include?(m) }
   if unknown.any?
-    warn "Unknown mode(s): #{unknown.join(", ")}. Valid modes: all, #{KNOWN_MODES.join(", ")}"
+    warn "Unknown mode(s): #{unknown.join(', ')}. Valid modes: all, #{KNOWN_MODES.join(', ')}"
     exit 1
   end
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
@@ -294,8 +311,13 @@ when "notify"
     opts.separator "  work-coordinator notify 4b1f9c2a-83de-4e7a-bf10-d1a2c3e4f567 'Build failed' --mode local"
     opts.separator ""
     opts.separator "Options:"
-    opts.on("--mode MODE", %w[messages local], "Delivery mode: messages (default) or local") { |v| options[:mode] = v.to_sym }
-    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+    opts.on("--mode MODE", %w[messages local], "Delivery mode: messages (default) or local") do |v|
+      options[:mode] = v.to_sym
+    end
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
   end.parse!(ARGV)
   id = ARGV.shift
   body = ARGV.shift
