@@ -126,6 +126,31 @@ WC_SOCKET=/var/run/wc.sock work-coordinator run --mode local
 
 Keep `run` running in a dedicated terminal for the lifetime of the session.
 
+## Message routing
+
+Every inbound message is processed by `RouteMessage`. Two patterns are recognized:
+
+**Explicit reference prefix** — `REF body` routes to the work item with that external reference:
+
+```
+GE-123 go ahead and deploy
+```
+
+**Reply prefix** — `reply: instruction` looks up the most recent outbound notification and routes to that work item with context prepended:
+
+```
+reply: investigate, debug, fix
+```
+
+The agent receives:
+
+```
+Current instruction: investigate, debug, fix
+Context: [GE-123] CI failed on branch main
+```
+
+The `reply:` prefix is case-insensitive. It always routes to the work item from the most recent `notify` call, regardless of how many work items are registered.
+
 ## Gotchas
 
 **`WC_RECIPIENT` is required for messages mode.** Without it the container cannot configure the Messages.app adapter. The daemon will start but outbound notifications will fail.

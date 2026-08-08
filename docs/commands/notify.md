@@ -6,7 +6,7 @@ Sends a human notification for a work item and transitions it to `waiting_for_hu
 work-coordinator notify <work-item-id> "<body>" [options]
 ```
 
-`notify` sends the body to the configured recipient, prefixed with the work item's external reference so the reply can be routed back. It then moves the item to `waiting_for_human` and records an `agent.question_asked` event. The message format sent to the recipient is:
+`notify` sends the body to the configured recipient, prefixed with the work item's external reference so the reply can be routed back. It then moves the item to `waiting_for_human` and records both an `agent.question_asked` event and a `system.notified` event. The `system.notified` event is what the router uses to supply context when the recipient replies with the `reply:` prefix. The message format sent to the recipient is:
 
 ```
 [GE-123] Your question here
@@ -65,3 +65,5 @@ work-coordinator notify 4b1f9c2a-83de-4e7a-bf10-d1a2c3e4f567 'Build failed' --mo
 **The work item must have an external reference.** The notification is prefixed with `[REF]` and the reply instructions include the REF. An item registered without `--ref` will produce a malformed message and replies cannot be routed back.
 
 **State transition is unconditional.** `notify` moves the item to `waiting_for_human` regardless of its current state. Calling it on a `completed` or `blocked` item will change its state.
+
+**`reply:` routing uses the most recent `system.notified` event.** If multiple work items have been notified, a `reply:` from the human always routes to whichever one was notified last. There is no per-thread disambiguation.
