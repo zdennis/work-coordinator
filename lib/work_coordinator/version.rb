@@ -3,5 +3,5 @@
 # Top-level namespace for the work-coordinator gem.
 module WorkCoordinator
   # Gem version.
-  VERSION = "0.4.0"
+  VERSION = "0.5.0"
 end
