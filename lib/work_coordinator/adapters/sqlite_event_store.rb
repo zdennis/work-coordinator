@@ -51,13 +51,12 @@ module WorkCoordinator
       end
 
       # @param type [Symbol, String]
-      # @param work_item_id [String]
+      # @param work_item_id [String, nil] when nil, searches across all work items
       # @return [Domain::Event, nil] most recent event of that type
-      def last_of_type(type:, work_item_id:)
-        record = Persistence::Models::EventRecord
-                 .where(work_item_id: work_item_id, event_type: type.to_s)
-                 .order(occurred_at: :desc)
-                 .first
+      def last_of_type(type:, work_item_id: nil)
+        scope = Persistence::Models::EventRecord.where(event_type: type.to_s)
+        scope = scope.where(work_item_id: work_item_id) if work_item_id
+        record = scope.order(occurred_at: :desc).first
         record && to_domain(record)
       end
 

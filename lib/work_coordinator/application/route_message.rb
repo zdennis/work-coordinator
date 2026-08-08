@@ -18,6 +18,10 @@ module WorkCoordinator
       # @return [Regexp]
       PREFIX_PATTERN = /\A([A-Z]+-\d+)\s+(.*)\z/m
 
+      # Matches a reply prefix, e.g. `reply: investigate this`.
+      # @return [Regexp]
+      REPLY_PATTERN = /\Areply:\s*(.*)\z/mi
+
       # @param work_item_repo [Ports::WorkItemRepository]
       # @param agent_session [Ports::AgentSession]
       # @param event_store [#append]
@@ -36,11 +40,19 @@ module WorkCoordinator
       # @param raw_message [String]
       # @return [Result]
       def call(raw_message:)
+        if (reply_match = REPLY_PATTERN.match(raw_message))
+          return route_reply(instruction: reply_match[1].strip, raw_message: raw_message)
+        end
+
         match = PREFIX_PATTERN.match(raw_message)
         return Result.new(routed: false, work_item: nil, body: raw_message) unless match
 
-        ref = match[1]
-        body = match[2]
+        route_with_prefix(ref: match[1], body: match[2], raw_message: raw_message)
+      end
+
+      private
+
+      def route_with_prefix(ref:, body:, raw_message:)
         work_item = @work_item_repo.find_all.find { |wi| wi.external_reference == ref }
         return Result.new(routed: false, work_item: nil, body: body) unless work_item
 
@@ -50,7 +62,21 @@ module WorkCoordinator
         deliver_and_record(session_id: session_id, work_item: work_item, raw_message: raw_message, body: body)
       end
 
-      private
+      def route_reply(instruction:, raw_message:)
+        event = @event_store.last_of_type(type: "system.notified")
+        return Result.new(routed: false, work_item: nil, body: instruction) unless event
+
+        work_item = @work_item_repo.find(event.work_item_id)
+        return Result.new(routed: false, work_item: nil, body: instruction) unless work_item
+
+        session_id = @agent_session.active_session(work_item_id: work_item.id)
+        return Result.new(routed: false, work_item: work_item, body: instruction) unless session_id
+
+        context = "[#{event.data['ref']}] #{event.data['body']}"
+        combined = "Current instruction: #{instruction}\nContext: #{context}"
+
+        deliver_and_record(session_id: session_id, work_item: work_item, raw_message: raw_message, body: combined)
+      end
 
       def deliver_and_record(session_id:, work_item:, raw_message:, body:)
         @agent_session.deliver(session_id: session_id, message: body)

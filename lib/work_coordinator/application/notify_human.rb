@@ -35,14 +35,26 @@ module WorkCoordinator
         waiting_item = work_item.with(state: :waiting_for_human, updated_at: Time.now)
         @work_item_repo.save(waiting_item)
 
+        record_events(work_item_id: work_item_id, ref: ref, body: body)
+
+        waiting_item
+      end
+
+      private
+
+      def record_events(work_item_id:, ref:, body:)
         @event_store.append(
           type: "agent.question_asked",
           work_item_id: work_item_id,
           source: "agent",
           data: { body: body }
         )
-
-        waiting_item
+        @event_store.append(
+          type: "system.notified",
+          work_item_id: work_item_id,
+          source: "system",
+          data: { ref: ref, body: body }
+        )
       end
     end
   end
