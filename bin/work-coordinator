@@ -208,6 +208,8 @@ when "send"
   end
 
 when "run"
+  KNOWN_MODES = %i[local messages].freeze
+
   options = { modes: [] }
   OptionParser.new do |opts|
     opts.banner = "Usage: work-coordinator run [options]"
@@ -217,33 +219,35 @@ when "run"
     opts.separator "~/Library/Messages/chat.db for iMessages prefixed with 'ai: '."
     opts.separator ""
     opts.separator "Examples:"
-    opts.separator "  # Start in local socket mode (default)"
+    opts.separator "  # Start all modes (default)"
     opts.separator "  work-coordinator run"
     opts.separator ""
-    opts.separator "  # Start in iMessage mode to receive messages from your phone"
-    opts.separator "  work-coordinator run --mode messages"
+    opts.separator "  # Explicitly enable all modes"
+    opts.separator "  work-coordinator run --mode all"
     opts.separator ""
-    opts.separator "  # Run both modes at once"
-    opts.separator "  work-coordinator run --mode local --mode messages"
-    opts.separator "  work-coordinator run --mode local,messages"
+    opts.separator "  # Start in local socket mode only"
+    opts.separator "  work-coordinator run --mode local"
+    opts.separator ""
+    opts.separator "  # Explicit multi-mode"
     opts.separator "  work-coordinator run -m local,messages"
     opts.separator ""
     opts.separator "  # Run on a custom socket path"
     opts.separator "  WC_SOCKET=/var/run/wc.sock work-coordinator run"
     opts.separator ""
     opts.separator "Options:"
-    opts.on("-m", "--mode MODE", "Receive mode (repeatable, comma-separated): local, messages") do |v|
+    opts.on("-m", "--mode MODE", "Receive mode (repeatable, comma-separated): all, local, messages") do |v|
       v.split(",").map(&:strip).each { |m| options[:modes] << m.to_sym }
     end
     opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
   end.parse!(ARGV)
-  valid_modes = %i[local messages]
-  unknown = options[:modes].reject { |m| valid_modes.include?(m) }
+  modes = options[:modes].empty? ? [:all] : options[:modes]
+  modes = KNOWN_MODES.dup if modes.include?(:all)
+  modes = modes.uniq
+  unknown = modes.reject { |m| KNOWN_MODES.include?(m) }
   if unknown.any?
-    warn "Unknown mode(s): #{unknown.join(", ")}. Valid modes: #{valid_modes.join(", ")}"
+    warn "Unknown mode(s): #{unknown.join(", ")}. Valid modes: all, #{KNOWN_MODES.join(", ")}"
     exit 1
   end
-  modes = options[:modes].empty? ? [:local] : options[:modes]
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
   container = WorkCoordinator::Container.new(modes: modes)
   modes.each do |m|
