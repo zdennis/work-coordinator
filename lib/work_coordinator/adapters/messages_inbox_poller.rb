@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-require "fileutils"
 require "sqlite3"
-require "tmpdir"
 require "work_coordinator/ports/message_receiver"
 
 module WorkCoordinator
@@ -31,8 +29,6 @@ module WorkCoordinator
         @running = false
         @mutex = Mutex.new
         @stop_cond = ConditionVariable.new
-        @cached_db_path = nil
-        @last_db_mtime = nil
       end
 
       # Polls until {#stop}, yielding each new message exactly once. Messages
@@ -110,36 +106,11 @@ module WorkCoordinator
       end
 
       def with_db
-        refresh_db_cache
-        db = SQLite3::Database.new(@cached_db_path)
+        db = SQLite3::Database.new(@db_path, readonly: true)
         db.results_as_hash = true
         yield db
       ensure
         db&.close
-      end
-
-      def refresh_db_cache
-        current_mtime = db_mtime
-        return if @cached_db_path && current_mtime == @last_db_mtime
-
-        tmp = File.join(Dir.tmpdir, "wc_chat_#{Process.pid}.db")
-        FileUtils.cp(@db_path, tmp)
-        copy_wal_companions(tmp)
-        File.delete(@cached_db_path) if @cached_db_path && File.exist?(@cached_db_path)
-        @cached_db_path = tmp
-        @last_db_mtime = current_mtime
-      end
-
-      def db_mtime
-        wal_path = "#{@db_path}-wal"
-        [File.mtime(@db_path), (File.mtime(wal_path) if File.exist?(wal_path))].compact.max
-      end
-
-      def copy_wal_companions(tmp)
-        %w[-wal -shm].each do |suffix|
-          companion = "#{@db_path}#{suffix}"
-          FileUtils.cp(companion, "#{tmp}#{suffix}") if File.exist?(companion)
-        end
       end
     end
   end
