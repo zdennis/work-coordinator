@@ -225,14 +225,24 @@ when "run"
     opts.separator ""
     opts.separator "  # Run both modes at once"
     opts.separator "  work-coordinator run --mode local --mode messages"
+    opts.separator "  work-coordinator run --mode local,messages"
+    opts.separator "  work-coordinator run -m local,messages"
     opts.separator ""
     opts.separator "  # Run on a custom socket path"
     opts.separator "  WC_SOCKET=/var/run/wc.sock work-coordinator run"
     opts.separator ""
     opts.separator "Options:"
-    opts.on("--mode MODE", %w[local messages], "Receive mode (repeatable): local, messages") { |v| options[:modes] << v.to_sym }
+    opts.on("-m", "--mode MODE", "Receive mode (repeatable, comma-separated): local, messages") do |v|
+      v.split(",").map(&:strip).each { |m| options[:modes] << m.to_sym }
+    end
     opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
   end.parse!(ARGV)
+  valid_modes = %i[local messages]
+  unknown = options[:modes].reject { |m| valid_modes.include?(m) }
+  if unknown.any?
+    warn "Unknown mode(s): #{unknown.join(", ")}. Valid modes: #{valid_modes.join(", ")}"
+    exit 1
+  end
   modes = options[:modes].empty? ? [:local] : options[:modes]
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
   container = WorkCoordinator::Container.new(modes: modes)
