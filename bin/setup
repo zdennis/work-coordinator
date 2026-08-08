@@ -25,9 +25,13 @@ fi
 echo "==> Installing gem dependencies..."
 bundle install
 
+# Install binstubs
+echo "==> Installing binstubs..."
+bundle binstubs rspec-core
+
 echo
 echo "==> Setup complete!"
 echo
 echo "Next steps:"
-echo "  bundle exec ruby bin/work-coordinator --help   # explore commands"
-echo "  bundle exec rspec                              # run tests"
+echo "  bin/work-coordinator --help   # explore commands"
+echo "  bin/rspec                     # run tests"
