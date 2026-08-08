@@ -109,10 +109,12 @@ module WorkCoordinator
                                                           agent_session: @agent_session, event_store: @event_store)
       @notify_human       = Application::NotifyHuman.new(message_sender: @message_sender,
                                                          work_item_repo: @work_item_repo, event_store: @event_store)
+      config = Config.new
       @ai_command_runner   = Adapters::ClaudeWorkspaceCommandRunner.new
       @dispatch_ai_command = Application::DispatchAiCommand.new(
         ai_command_runner: @ai_command_runner,
-        message_sender: @message_sender
+        message_sender: @message_sender,
+        aliases: config.aliases
       )
     end
   end

@@ -89,4 +89,4 @@ work-coordinator alias remove BI
 
 **Comments in `config.yml` are not preserved.** `add`/`remove` rewrite the file from parsed YAML, so any comments you hand-add below the header line will be lost the next time you run `alias add` or `alias remove`.
 
-**No consumer yet.** Aliases are stored and listed, but no other command currently resolves a short name into a project when dispatching or registering work items — that wiring is a separate follow-up.
+**Aliases are resolved when dispatching AI commands.** When `work-coordinator run` dispatches an inbound message, the extracted keyword is first checked against configured aliases (case-insensitive) before falling back to fuzzy-matching against `workspace list`. This means `GE` in an instruction routes directly to `growth-engine` without needing an exact or fuzzy project name match.
