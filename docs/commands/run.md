@@ -128,7 +128,11 @@ Keep `run` running in a dedicated terminal for the lifetime of the session.
 
 ## Message routing
 
-Every inbound message is processed by `RouteMessage`. Two patterns are recognized:
+Every inbound message takes one of two paths depending on whether it matches a known work item.
+
+### Work item routing
+
+`RouteMessage` handles messages that reference a registered work item. Two patterns are recognized:
 
 **Explicit reference prefix** — `REF body` routes to the work item with that external reference:
 
@@ -150,6 +154,26 @@ Context: [GE-123] CI failed on branch main
 ```
 
 The `reply:` prefix is case-insensitive. It always routes to the work item from the most recent `notify` call, regardless of how many work items are registered.
+
+### AI command dispatch (messages mode only)
+
+In `messages` mode, any `ai: ` message that does not match a work item ref is treated as a freeform AI instruction. The pipeline:
+
+1. `claude -p` extracts a workspace keyword from the instruction text
+2. `workspace list` retrieves the active projects
+3. The keyword is fuzzy-matched against project names
+4. If no match is found, `send-message` notifies you immediately and stops
+5. `workspace run <project> '<instruction>' --split --wait --close` runs the instruction in that project's tmux session
+6. `claude -p` summarizes the output in 1–3 sentences
+7. `send-message` delivers the summary back to you
+
+Example — send this iMessage:
+
+```
+ai: add input validation to the registration form
+```
+
+The daemon extracts `registration`, matches it to an active workspace, runs the instruction there, and texts you a summary when it finishes.
 
 ## Gotchas
 
