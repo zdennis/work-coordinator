@@ -122,6 +122,35 @@ RSpec.describe WorkCoordinator::Config do
     end
   end
 
+  describe "#resolve_alias" do
+    it "returns nil when no aliases are configured" do
+      expect(config.resolve_alias("MS")).to be_nil
+    end
+
+    it "returns the project for a matching SHORT name" do
+      config.set_alias("MS", "my-service")
+      expect(config.resolve_alias("MS")).to eq("my-service")
+    end
+
+    it "matches case-insensitively (normalizes to upcase)" do
+      config.set_alias("MS", "my-service")
+      expect(config.resolve_alias("ge")).to eq("my-service")
+    end
+
+    it "returns nil for an unknown alias" do
+      config.write_defaults!
+      expect(config.resolve_alias("XX")).to be_nil
+    end
+
+    it "returns nil for a nil keyword" do
+      expect(config.resolve_alias(nil)).to be_nil
+    end
+
+    it "returns nil for an empty string" do
+      expect(config.resolve_alias("")).to be_nil
+    end
+  end
+
   describe "#remove_alias" do
     it "returns nil and makes no changes when the alias does not exist" do
       config.write_defaults!

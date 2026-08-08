@@ -5,9 +5,9 @@ require "spec_helper"
 RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
   let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
 
-  def build_use_case(**runner_opts)
+  def build_use_case(aliases: {}, **runner_opts)
     runner = WorkCoordinator::Adapters::FakeAiCommandRunner.new(**runner_opts)
-    [described_class.new(ai_command_runner: runner, message_sender: message_sender), runner]
+    [described_class.new(ai_command_runner: runner, message_sender: message_sender, aliases: aliases), runner]
   end
 
   describe "happy path" do
@@ -71,6 +71,67 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
 
       expect(result.dispatched).to be(true)
       expect(result.project).to eq("auth-service")
+    end
+  end
+
+  describe "alias resolution" do
+    it "resolves an exact alias match without consulting fuzzy match" do
+      use_case, runner = build_use_case(
+        aliases: { "MS" => "my-service" },
+        extract_project_result: "MS",
+        list_projects_result: [],
+        run_project_result: "done",
+        summarize_result: "Growth engine ran."
+      )
+
+      result = use_case.call(body: "run the GE build")
+
+      expect(result.dispatched).to be(true)
+      expect(result.project).to eq("my-service")
+      expect(runner.run_project_calls).to eq([{ project: "my-service", instructions: "run the GE build" }])
+    end
+
+    it "matches alias case-insensitively (normalizes keyword to upcase)" do
+      use_case, _runner = build_use_case(
+        aliases: { "MS" => "my-service" },
+        extract_project_result: "ge",
+        list_projects_result: [],
+        run_project_result: "done",
+        summarize_result: "Done."
+      )
+
+      result = use_case.call(body: "run ge")
+
+      expect(result.dispatched).to be(true)
+      expect(result.project).to eq("my-service")
+    end
+
+    it "falls back to fuzzy matching when the keyword does not match any alias" do
+      use_case, _runner = build_use_case(
+        aliases: { "MS" => "my-service" },
+        extract_project_result: "auth",
+        list_projects_result: %w[auth-service acme-billing],
+        run_project_result: "done",
+        summarize_result: "Auth ran."
+      )
+
+      result = use_case.call(body: "fix auth")
+
+      expect(result.dispatched).to be(true)
+      expect(result.project).to eq("auth-service")
+    end
+
+    it "returns no_workspace when alias resolves but project list is not consulted" do
+      use_case, _runner = build_use_case(
+        aliases: {},
+        extract_project_result: "WC",
+        list_projects_result: []
+      )
+
+      result = use_case.call(body: "update WC")
+
+      expect(result.dispatched).to be(false)
+      expect(result.failure_reason).to eq(:no_workspace)
     end
   end
 

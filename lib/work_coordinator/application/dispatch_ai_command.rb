@@ -5,14 +5,16 @@ module WorkCoordinator
     class DispatchAiCommand
       Result = Data.define(:dispatched, :project, :summary, :failure_reason)
 
-      def initialize(ai_command_runner:, message_sender:)
+      def initialize(ai_command_runner:, message_sender:, aliases: {})
         @ai_command_runner = ai_command_runner
         @message_sender    = message_sender
+        @aliases           = aliases
       end
 
       def call(body:)
         keyword = @ai_command_runner.extract_project(body: body)
-        project = fuzzy_match(keyword, @ai_command_runner.list_projects)
+        resolved = resolve_alias(keyword)
+        project = resolved || fuzzy_match(keyword, @ai_command_runner.list_projects)
         return no_workspace_result(keyword, body) if project.nil?
 
         run_and_notify(project: project, body: body)
@@ -34,6 +36,12 @@ module WorkCoordinator
         summary = @ai_command_runner.summarize(text: output)
         @message_sender.send_message(to: nil, body: summary, conversation_id: nil)
         Result.new(dispatched: true, project: project, summary: summary, failure_reason: nil)
+      end
+
+      def resolve_alias(keyword)
+        return nil if keyword.nil? || keyword.empty?
+
+        @aliases[keyword.strip.upcase]
       end
 
       def fuzzy_match(keyword, projects)

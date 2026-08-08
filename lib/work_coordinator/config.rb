@@ -30,6 +30,12 @@ module WorkCoordinator
       data.fetch("aliases", {})
     end
 
+    def resolve_alias(keyword)
+      return nil if keyword.nil? || keyword.empty?
+
+      aliases[keyword.strip.upcase]
+    end
+
     def exist?
       File.exist?(@path)
     end
