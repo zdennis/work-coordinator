@@ -99,17 +99,16 @@ The REF prefix is stripped; only the message body is delivered to the pane. In a
 
 ## Environment variables
 
-| Variable      | Default                        | Purpose                           |
-|---------------|--------------------------------|-----------------------------------|
-| `WC_DATABASE` | `db/work_coordinator.sqlite3`  | Path to the SQLite database file  |
-| `WC_SOCKET`   | `/tmp/work-coordinator.sock`   | Path to the Unix domain socket    |
+| Variable       | Default                        | Purpose                                          |
+|----------------|--------------------------------|--------------------------------------------------|
+| `WC_DATABASE`  | `db/work_coordinator.sqlite3`  | Path to the SQLite database file                 |
+| `WC_SOCKET`    | `/tmp/work-coordinator.sock`   | Path to the Unix domain socket (local mode)      |
+| `WC_RECIPIENT` | _(required for messages mode)_ | Phone number or email for outbound notifications |
 
 ---
 
 ## What is not yet wired
 
-- **Messages.app / iMessage polling** — `chat.db` integration is not implemented; inbound iMessages are not read or processed.
-- **Outbound notifications** — `notify_human` via `AppleScriptMessageSender` is present in the codebase but not connected end-to-end; outbound Messages.app delivery does not work yet.
 - **`work-coordinator start`** — there is no CLI command for tmux session tracking; use `register --tmux` directly (as shown above).
 
 ---
@@ -192,7 +191,9 @@ And the text arrives in your registered tmux pane (`my-project:claude.0`).
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
-| `authorization denied` on chat.db | FDA not granted | System Settings > Privacy & Security > Full Disk Access |
+| `Errno::EPERM` or `unable to open database file` on chat.db | Full Disk Access not granted to your terminal | System Settings → Privacy & Security → Full Disk Access → add iTerm2 or Terminal.app, then **quit and relaunch** the terminal (and kill/restart tmux if applicable) |
+| FDA granted but still denied | tmux server predates the FDA grant | `tmux kill-server`, relaunch terminal, start a new tmux session |
+| Verify FDA is working | — | Run `cp ~/Library/Messages/chat.db /tmp/test.db && echo OK && rm /tmp/test.db` — if this prints `OK` the poller will work |
 | Reply not picked up | Missing `ai: ` prefix | Start message with exactly `ai: ` (lowercase, space after colon) |
 | `send-message` fails | Not configured | Run `send-message --init` |
 | Message routed but not delivered to pane | Wrong tmux target | Check `work-coordinator status` and verify --tmux value matches your session |
