@@ -19,8 +19,26 @@ def colorize_state(state)
   end
 end
 
+COMMANDS = {
+  "register" => "Register a new work item",
+  "start"    => "Transition a work item to active state",
+  "status"   => "List all work items with their current state and phase",
+  "send"     => "Send a message to the running coordinator via socket",
+  "run"      => "Start the coordinator daemon (local socket or Messages mode)",
+  "notify"   => "Send a human notification for a work item"
+}.freeze
+
 global = OptionParser.new do |opts|
   opts.banner = "Usage: work-coordinator [command] [options]"
+
+  opts.separator ""
+  opts.separator "Commands:"
+  COMMANDS.each { |cmd, desc| opts.separator "    #{cmd.ljust(12)}  #{desc}" }
+  opts.separator ""
+  opts.separator "Run 'work-coordinator <command> --help' for command-specific options."
+  opts.separator ""
+  opts.separator "Options:"
+
   opts.on("-v", "--version", "Print version") do
     puts WorkCoordinator::VERSION
     exit
@@ -38,13 +56,21 @@ case command
 when "register"
   options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: work-coordinator register --title TITLE --kind KIND " \
-                  "--ref REF --repo REPO [--tmux SESSION:WIN.PANE]"
-    opts.on("--title TITLE") { |v| options[:title] = v }
-    opts.on("--kind KIND")   { |v| options[:kind] = v.to_sym }
-    opts.on("--ref REF")     { |v| options[:ref] = v }
-    opts.on("--repo REPO")   { |v| options[:repo] = v }
-    opts.on("--tmux TARGET") { |v| options[:tmux] = v }
+    opts.banner = "Usage: work-coordinator register --title TITLE --kind KIND [options]"
+
+    opts.separator ""
+    opts.separator "Register a new work item in the coordinator. The item starts in a pending"
+    opts.separator "state and must be started with the 'start' command before work begins."
+    opts.separator ""
+    opts.separator "Required:"
+    opts.on("--title TITLE", "Short descriptive title for the work item") { |v| options[:title] = v }
+    opts.on("--kind KIND",   "Type of work item (e.g. feature, bug, chore)") { |v| options[:kind] = v.to_sym }
+    opts.separator ""
+    opts.separator "Optional:"
+    opts.on("--ref REF",   "External reference (e.g. GitHub issue or PR number)") { |v| options[:ref] = v }
+    opts.on("--repo REPO", "Repository name or path this work item belongs to") { |v| options[:repo] = v }
+    opts.on("--tmux TARGET", "Tmux target in SESSION:WINDOW.PANE format to associate with this item") { |v| options[:tmux] = v }
+    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
   end.parse!(ARGV)
 
   %i[title kind].each do |req|
@@ -66,6 +92,17 @@ when "register"
   puts "state: #{work_item.state}"
 
 when "start"
+  OptionParser.new do |opts|
+    opts.banner = "Usage: work-coordinator start <work-item-id>"
+    opts.separator ""
+    opts.separator "Transition a registered work item to the active state, indicating work"
+    opts.separator "has begun. The work item ID is printed when you run 'register'."
+    opts.separator ""
+    opts.separator "Arguments:"
+    opts.separator "    work-item-id    UUID of the work item to start"
+    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+  end.parse!(ARGV)
+
   id = ARGV.shift
   unless id
     warn "Usage: work-coordinator start <work-item-id>"
@@ -77,6 +114,18 @@ when "start"
   puts "Started #{item.id} (state: #{item.state})"
 
 when "status"
+  OptionParser.new do |opts|
+    opts.banner = "Usage: work-coordinator status"
+    opts.separator ""
+    opts.separator "List all registered work items with their ID, external reference,"
+    opts.separator "current state, phase, and title. States are color-coded:"
+    opts.separator "  active           (green)"
+    opts.separator "  waiting_for_human (yellow)"
+    opts.separator "  blocked          (red)"
+    opts.separator "  completed        (cyan)"
+    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+  end.parse!(ARGV)
+
   container = WorkCoordinator::Container.new
   items = container.work_item_repo.find_all
   if items.empty?
@@ -91,6 +140,21 @@ when "status"
   end
 
 when "send"
+  OptionParser.new do |opts|
+    opts.banner = 'Usage: work-coordinator send "REF body"'
+    opts.separator ""
+    opts.separator "Send a raw message to the running coordinator over its Unix socket."
+    opts.separator "The message must begin with a work item reference so the coordinator"
+    opts.separator "can route it to the correct item."
+    opts.separator ""
+    opts.separator "Arguments:"
+    opts.separator '    "REF body"    Full message string; REF identifies the work item'
+    opts.separator ""
+    opts.separator "Environment:"
+    opts.separator "    WC_SOCKET    Unix socket path (default: /tmp/work-coordinator.sock)"
+    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
+  end.parse!(ARGV)
+
   message = ARGV.shift
   if message.nil? || message.strip.empty?
     warn 'Usage: work-coordinator send "REF body"'
@@ -109,7 +173,15 @@ when "send"
 when "run"
   options = {}
   OptionParser.new do |opts|
-    opts.on("--mode MODE", "local or messages (default: local)") { |v| options[:mode] = v.to_sym }
+    opts.banner = "Usage: work-coordinator run [options]"
+    opts.separator ""
+    opts.separator "Start the coordinator daemon. In local mode it listens on a Unix socket"
+    opts.separator "for messages sent with 'work-coordinator send'. In messages mode it polls"
+    opts.separator "~/Library/Messages/chat.db for iMessages prefixed with 'ai: '."
+    opts.separator ""
+    opts.separator "Options:"
+    opts.on("--mode MODE", %w[local messages], "Receive mode: local (default) or messages") { |v| options[:mode] = v.to_sym }
+    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
   end.parse!(ARGV)
   mode = options[:mode] || :local
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
@@ -146,7 +218,18 @@ when "run"
 when "notify"
   options = {}
   OptionParser.new do |opts|
-    opts.on("--mode MODE") { |v| options[:mode] = v.to_sym }
+    opts.banner = 'Usage: work-coordinator notify <work-item-id> "<body>" [options]'
+    opts.separator ""
+    opts.separator "Send a notification to a human for the given work item. Useful when a"
+    opts.separator "work item reaches a state that requires human attention or approval."
+    opts.separator ""
+    opts.separator "Arguments:"
+    opts.separator "    work-item-id    UUID of the work item"
+    opts.separator '    "body"          Notification message to deliver'
+    opts.separator ""
+    opts.separator "Options:"
+    opts.on("--mode MODE", %w[messages local], "Delivery mode: messages (default) or local") { |v| options[:mode] = v.to_sym }
+    opts.on("-h", "--help", "Print help for this command") { puts opts; exit }
   end.parse!(ARGV)
   id = ARGV.shift
   body = ARGV.shift
