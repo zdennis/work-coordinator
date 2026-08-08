@@ -76,13 +76,20 @@ module WorkCoordinator
     def build_messages_receiver
       @inbound_message_repo ||= Adapters::SqliteInboundMessageRepository.new
       poller = Adapters::MessagesInboxPoller.new(inbound_message_repo: @inbound_message_repo)
-      ai_handler = lambda do |msg|
-        body = "#{msg[:work_item_ref]} #{msg[:body]}".strip
-        @dispatch_ai_command.call(body: body)
-      rescue StandardError => e
-        warn "Error dispatching AI command: #{e.message}"
+      Adapters::AiCommandReceiver.new(inner: poller, ai_command_handler: method(:handle_ai_command))
+    end
+
+    def handle_ai_command(msg)
+      body = "#{msg[:work_item_ref]} #{msg[:body]}".strip
+      puts "AI command: #{body}"
+      result = @dispatch_ai_command.call(body: body)
+      if result.dispatched
+        puts "AI command dispatched to '#{result.project}': #{result.summary}"
+      else
+        puts "AI command unmatched (#{result.failure_reason}): #{body}"
       end
-      Adapters::AiCommandReceiver.new(inner: poller, ai_command_handler: ai_handler)
+    rescue StandardError => e
+      warn "Error dispatching AI command: #{e.message}"
     end
 
     def build_sender(modes)
