@@ -82,11 +82,11 @@ Check where things stand with `work-coordinator status`.
 | Command | Description |
 |---------|-------------|
 | [`register`](docs/commands/register.md) | Create a work item and print its UUID |
-| `start <uuid>` | Transition a work item to `active` |
-| `status` | List all work items with state, phase, and title |
+| [`start <uuid>`](docs/commands/start.md) | Transition a work item to `active` |
+| [`status`](docs/commands/status.md) | List all work items with state, phase, and title |
 | [`run`](docs/commands/run.md) | Start the daemon and listen for inbound messages |
-| `send "REF body"` | Send a message to the running daemon over its socket |
-| `notify <uuid> "body"` | Send a human notification for a work item |
+| [`send "REF body"`](docs/commands/send.md) | Send a message to the running daemon over its socket |
+| [`notify <uuid> "body"`](docs/commands/notify.md) | Send a human notification for a work item |
 
 Run `work-coordinator <command> --help` for command-specific options.
 
