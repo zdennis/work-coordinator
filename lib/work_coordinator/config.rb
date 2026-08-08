@@ -26,6 +26,10 @@ module WorkCoordinator
       data.fetch("ai_command", DEFAULT_AI_COMMAND)
     end
 
+    def aliases
+      data.fetch("aliases", {})
+    end
+
     def exist?
       File.exist?(@path)
     end
@@ -37,16 +41,39 @@ module WorkCoordinator
       File.write(@path, default_content)
     end
 
+    def set_alias(short, project)
+      new_data = data.dup
+      new_data["aliases"] = (new_data["aliases"] || {}).dup
+      new_data["aliases"][short] = project
+      write_data!(new_data)
+    end
+
+    def remove_alias(short)
+      new_data = data.dup
+      new_data["aliases"] = (new_data["aliases"] || {}).dup
+      removed = new_data["aliases"].delete(short)
+      write_data!(new_data)
+      removed
+    end
+
     private
 
     def data
       @data ||= exist? ? (YAML.safe_load_file(@path) || {}) : {}
     end
 
+    def write_data!(new_data)
+      FileUtils.mkdir_p(File.dirname(@path))
+      File.write(@path, "# work-coordinator configuration\n#{YAML.dump(new_data).sub(/\A---\n/, '')}")
+      @data = nil
+    end
+
     def default_content
       <<~YAML
         # work-coordinator configuration
         ai_command: "#{DEFAULT_AI_COMMAND}"
+        aliases:
+          WC: work-coordinator
       YAML
     end
   end

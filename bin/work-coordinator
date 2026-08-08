@@ -21,6 +21,7 @@ end
 
 COMMANDS = {
   "init" => "Create the default config file (~/.config/work-coordinator/config.yml)",
+  "alias" => "List, add, or remove workspace project aliases",
   "register" => "Register a new work item",
   "start" => "Transition a work item to active state",
   "status" => "List all work items with their current state and phase",
@@ -78,6 +79,72 @@ when "init"
   else
     config.write_defaults!
     puts "Created #{config.path}"
+  end
+
+when "alias"
+  OptionParser.new do |opts|
+    opts.banner = "Usage: work-coordinator alias [list|add SHORT PROJECT|remove SHORT]"
+    opts.separator ""
+    opts.separator "Manage short aliases for workspace project names, so you can type"
+    opts.separator "'GE' instead of 'growth-engine' when referring to a workspace project."
+    opts.separator ""
+    opts.separator "Subcommands:"
+    opts.separator "    list              Show all configured aliases (default)"
+    opts.separator "    add SHORT NAME    Add or overwrite an alias"
+    opts.separator "    remove SHORT      Remove an alias"
+    opts.separator ""
+    opts.separator "SHORT is upcased and trimmed (e.g. 'ge' becomes 'GE'). 'add' overwrites"
+    opts.separator "an existing alias with the same SHORT name silently. SHORT and NAME are"
+    opts.separator "not validated against 'workspace list' — typos are stored as-is."
+    opts.separator ""
+    opts.separator "Examples:"
+    opts.separator "  work-coordinator alias"
+    opts.separator "  work-coordinator alias add GE growth-engine"
+    opts.separator "  work-coordinator alias remove GE"
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
+  end.parse!(ARGV)
+
+  config = WorkCoordinator::Config.new
+  subcommand = ARGV.shift || "list"
+
+  case subcommand
+  when "list"
+    aliases = config.aliases
+    if aliases.empty?
+      puts "No aliases configured."
+    else
+      fmt = "%-10s  %s"
+      puts format(fmt, "SHORT", "PROJECT")
+      aliases.each { |short, project| puts format(fmt, short, project) }
+    end
+  when "add"
+    short = ARGV.shift&.strip&.upcase
+    project = ARGV.shift&.strip
+    if short.nil? || short.empty? || project.nil? || project.empty?
+      warn "Usage: work-coordinator alias add SHORT PROJECT"
+      exit 1
+    end
+    config.set_alias(short, project)
+    puts "Added alias: #{short} -> #{project}"
+  when "remove"
+    short = ARGV.shift&.strip&.upcase
+    if short.nil? || short.empty?
+      warn "Usage: work-coordinator alias remove SHORT"
+      exit 1
+    end
+    if config.remove_alias(short)
+      puts "Removed alias: #{short}"
+    else
+      warn "No such alias: #{short}"
+      exit 1
+    end
+  else
+    warn "Unknown alias subcommand: #{subcommand}"
+    warn "Usage: work-coordinator alias [list|add SHORT PROJECT|remove SHORT]"
+    exit 1
   end
 
 when "register"
