@@ -67,6 +67,10 @@ Listening for messages starting with: ai:
 Press Ctrl-C to stop.
 ```
 
+## Concurrent message handling
+
+Each inbound message is dispatched on its own thread. Two messages that arrive at the same time — whether from the same receiver or different ones — are processed independently and in parallel. A slow handler (tmux subprocess, workspace run, AppleScript) does not block delivery or processing of the next message.
+
 ## Signal handling
 
 `Ctrl-C` (SIGINT) and SIGTERM both call `stop` on the message receiver, allowing it to shut down cleanly. No partial writes or dangling socket files are left behind.
