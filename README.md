@@ -82,6 +82,7 @@ Check where things stand with `work-coordinator status`.
 | Command | Description |
 |---------|-------------|
 | [`init`](docs/commands/init.md) | Create the default config file |
+| [`alias`](docs/commands/alias.md) | List, add, or remove workspace project aliases |
 | [`register`](docs/commands/register.md) | Create a work item and print its UUID |
 | [`start <uuid>`](docs/commands/start.md) | Transition a work item to `active` |
 | [`status`](docs/commands/status.md) | List all work items with state, phase, and title |
