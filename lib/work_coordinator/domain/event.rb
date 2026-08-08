@@ -5,9 +5,9 @@ module WorkCoordinator
     # An append-only record of something that happened to a work item.
     #
     # @!attribute [r] id
-    #   @return [String]
+    #   @return [String] unique identifier for this event
     # @!attribute [r] work_item_id
-    #   @return [String]
+    #   @return [String] ID of the work item this event belongs to
     # @!attribute [r] type
     #   @return [Symbol, String] dotted name such as `work_item.started`
     # @!attribute [r] source
@@ -15,7 +15,7 @@ module WorkCoordinator
     # @!attribute [r] data
     #   @return [Hash] type-specific payload
     # @!attribute [r] occurred_at
-    #   @return [Time]
+    #   @return [Time] when the event took place
     Event = Data.define(:id, :work_item_id, :type, :source, :data, :occurred_at)
   end
 end

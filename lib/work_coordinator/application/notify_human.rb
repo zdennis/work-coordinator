@@ -8,6 +8,7 @@ module WorkCoordinator
       # @param message_sender [Ports::MessageSender]
       # @param work_item_repo [Ports::WorkItemRepository]
       # @param event_store [#append]
+      # @return [void]
       def initialize(message_sender:, work_item_repo:, event_store:)
         @message_sender = message_sender
         @work_item_repo = work_item_repo

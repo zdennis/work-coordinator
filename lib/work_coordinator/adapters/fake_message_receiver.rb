@@ -10,6 +10,7 @@ module WorkCoordinator
     class FakeMessageReceiver
       include Ports::MessageReceiver
 
+      # @return [void]
       def initialize
         @queue = []
       end
@@ -23,12 +24,20 @@ module WorkCoordinator
         @queue << { work_item_ref: work_item_ref, body: body, received_at: Time.now }
       end
 
+      # Returns all queued messages, optionally filtered to those received after
+      # the given time.
+      #
+      # @param since [Time, nil]
+      # @return [Array<Hash{Symbol=>String, Time}>]
       def receive_messages(since: nil)
         messages = @queue.dup
         messages = messages.select { |m| m[:received_at] > since } if since
         messages
       end
 
+      # No-op; push-style callbacks are not supported by this fake.
+      #
+      # @return [void]
       def on_message(&)
         # no-op stub
       end

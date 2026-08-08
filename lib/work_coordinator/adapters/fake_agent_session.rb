@@ -9,6 +9,7 @@ module WorkCoordinator
     class FakeAgentSession
       include Ports::AgentSession
 
+      # @return [void]
       def initialize
         @sessions = {}        # session_id => work_item_id
         @active = {}          # work_item_id => session_id
@@ -16,6 +17,10 @@ module WorkCoordinator
         @next_id = 0
       end
 
+      # Allocates a new session identifier for the work item and activates it.
+      #
+      # @param work_item_id [String]
+      # @return [String] the generated session id
       def start_session(work_item_id:)
         session_id = "session-#{@next_id += 1}"
         @sessions[session_id] = work_item_id
@@ -23,15 +28,28 @@ module WorkCoordinator
         session_id
       end
 
+      # Records the message against the session; never transmits.
+      #
+      # @param session_id [String]
+      # @param message [String]
+      # @return [void]
       def deliver(session_id:, message:)
         @messages << { session_id: session_id, message: message }
       end
 
+      # Removes the session and deactivates it for the associated work item.
+      #
+      # @param session_id [String]
+      # @return [void]
       def end_session(session_id:)
         work_item_id = @sessions.delete(session_id)
         @active.delete(work_item_id) if work_item_id
       end
 
+      # Returns the session id currently active for the work item, if any.
+      #
+      # @param work_item_id [String]
+      # @return [String, nil]
       def active_session(work_item_id:)
         @active[work_item_id]
       end

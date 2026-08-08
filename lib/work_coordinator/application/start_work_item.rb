@@ -7,6 +7,7 @@ module WorkCoordinator
       # @param work_item_repo [Ports::WorkItemRepository]
       # @param agent_session [Ports::AgentSession]
       # @param event_store [#append]
+      # @return [void]
       def initialize(work_item_repo:, agent_session:, event_store:)
         @work_item_repo = work_item_repo
         @agent_session = agent_session

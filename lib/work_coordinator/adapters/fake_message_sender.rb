@@ -8,10 +8,17 @@ module WorkCoordinator
     class FakeMessageSender
       include Ports::MessageSender
 
+      # @return [void]
       def initialize
         @sent_messages = []
       end
 
+      # Records the send without transmitting; all parameters are captured.
+      #
+      # @param to [String]
+      # @param body [String]
+      # @param conversation_id [String, nil]
+      # @return [void]
       def send_message(to:, body:, conversation_id: nil)
         @sent_messages << { to: to, body: body, conversation_id: conversation_id }
       end

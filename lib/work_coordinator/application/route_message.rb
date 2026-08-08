@@ -15,11 +15,13 @@ module WorkCoordinator
     # Dispatches a human's reply to the agent working the referenced item.
     class RouteMessage
       # Matches a leading ticket reference, e.g. `ABC-123 do the thing`.
+      # @return [Regexp]
       PREFIX_PATTERN = /\A([A-Z]+-\d+)\s+(.*)\z/m
 
       # @param work_item_repo [Ports::WorkItemRepository]
       # @param agent_session [Ports::AgentSession]
       # @param event_store [#append]
+      # @return [void]
       def initialize(work_item_repo:, agent_session:, event_store:)
         @work_item_repo = work_item_repo
         @agent_session = agent_session

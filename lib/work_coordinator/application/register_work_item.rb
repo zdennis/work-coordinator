@@ -9,6 +9,7 @@ module WorkCoordinator
     class RegisterWorkItem
       # @param work_item_repo [Ports::WorkItemRepository]
       # @param event_store [#append]
+      # @return [void]
       def initialize(work_item_repo:, event_store:)
         @work_item_repo = work_item_repo
         @event_store = event_store
