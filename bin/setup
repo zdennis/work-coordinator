@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -e
+
+echo "==> Setting up work-coordinator..."
+echo
+
+# Check for Homebrew
+if ! command -v brew &>/dev/null; then
+  echo "Error: Homebrew is required. Install it from https://brew.sh" >&2
+  exit 1
+fi
+
+# Install Homebrew dependencies
+echo "==> Installing Homebrew dependencies..."
+brew bundle --no-lock
+
+# Install Ruby version
+RUBY_VERSION=$(cat .ruby-version)
+if ! rbenv versions --bare | grep -qx "$RUBY_VERSION"; then
+  echo "==> Installing Ruby $RUBY_VERSION via rbenv..."
+  rbenv install "$RUBY_VERSION"
+fi
+
+# Install gems
+echo "==> Installing gem dependencies..."
+bundle install
+
+echo
+echo "==> Setup complete!"
+echo
+echo "Next steps:"
+echo "  bundle exec ruby bin/work-coordinator --help   # explore commands"
+echo "  bundle exec rspec                              # run tests"

@@ -1,7 +1,6 @@
 *.gem
 *.rbc
 .bundle/
-.ruby-version
 Gemfile.lock
 vendor/bundle/
 db/*.sqlite3
