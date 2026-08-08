@@ -3,8 +3,8 @@
 module WorkCoordinator
   class Container
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
-                :message_receiver, :route_message, :register_work_item,
-                :start_work_item, :notify_human
+                :message_receiver, :inbound_message_repo, :route_message,
+                :register_work_item, :start_work_item, :notify_human
 
     def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"),
                    socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"),
@@ -15,8 +15,9 @@ module WorkCoordinator
       @event_store      = Adapters::SqliteEventStore.new
       @agent_session    = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
       if mode == :messages
+        @inbound_message_repo = Adapters::SqliteInboundMessageRepository.new
         @message_sender   = Adapters::AppleScriptMessageSender.new
-        @message_receiver = Adapters::MessagesInboxPoller.new
+        @message_receiver = Adapters::MessagesInboxPoller.new(inbound_message_repo: @inbound_message_repo)
       else
         @message_sender   = Adapters::SocketMessageSender.new(socket_path: socket_path)
         @message_receiver = Adapters::SocketMessageReceiver.new(socket_path: socket_path)
