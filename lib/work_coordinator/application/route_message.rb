@@ -2,17 +2,37 @@
 
 module WorkCoordinator
   module Application
+    # Outcome of a {RouteMessage} call.
+    #
+    # @!attribute [r] routed
+    #   @return [Boolean] whether the body reached an agent session
+    # @!attribute [r] work_item
+    #   @return [Domain::WorkItem, nil] the matched item, if the prefix resolved
+    # @!attribute [r] body
+    #   @return [String] the message with its reference prefix stripped
     Result = Data.define(:routed, :work_item, :body)
 
+    # Dispatches a human's reply to the agent working the referenced item.
     class RouteMessage
+      # Matches a leading ticket reference, e.g. `ABC-123 do the thing`.
       PREFIX_PATTERN = /\A([A-Z]+-\d+)\s+(.*)\z/m
 
+      # @param work_item_repo [Ports::WorkItemRepository]
+      # @param agent_session [Ports::AgentSession]
+      # @param event_store [#append]
       def initialize(work_item_repo:, agent_session:, event_store:)
         @work_item_repo = work_item_repo
         @agent_session = agent_session
         @event_store = event_store
       end
 
+      # Delivers the message when its prefix names a known work item with a live
+      # session, marking that item active and recording a `human.replied` event.
+      # Returns an unrouted result — without raising — when the prefix is
+      # missing, unknown, or the item has no live session.
+      #
+      # @param raw_message [String]
+      # @return [Result]
       def call(raw_message:)
         match = PREFIX_PATTERN.match(raw_message)
         return Result.new(routed: false, work_item: nil, body: raw_message) unless match

@@ -9,11 +9,18 @@ module WorkCoordinator
     class CompositeMessageReceiver
       include Ports::MessageReceiver
 
+      # @param receivers [Array<#start, #stop>]
       def initialize(receivers)
         @receivers = receivers
         @threads = []
       end
 
+      # Starts every receiver on its own thread and blocks until they all
+      # finish. If any thread raises, the remaining receivers are stopped and
+      # the error propagates.
+      #
+      # @yieldparam message [Hash]
+      # @return [void]
       def start(&block)
         mutex = Mutex.new
         safe_block = ->(message) { mutex.synchronize { block.call(message) } }
@@ -24,6 +31,9 @@ module WorkCoordinator
         raise
       end
 
+      # Stops every wrapped receiver, unblocking {#start}.
+      #
+      # @return [void]
       def stop
         @receivers.each(&:stop)
       end

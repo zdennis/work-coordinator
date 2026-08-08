@@ -6,21 +6,34 @@ require "work_coordinator/ports/message_receiver"
 
 module WorkCoordinator
   module Adapters
+    # Listens on a Unix domain socket, treating each line as one message of the
+    # form `<ref> <body>`. Push-style only: {#receive_messages} and
+    # {#on_message} are not supported.
     class SocketMessageReceiver
       include Ports::MessageReceiver
 
+      # @param socket_path [String]
       def initialize(socket_path: "/tmp/work-coordinator.sock")
         @socket_path = socket_path
         @server = nil
         @stop_requested = false
       end
 
+      # Replaces any stale socket file, then accepts connections until {#stop},
+      # yielding one parsed message per connection.
+      #
+      # @yieldparam message [Hash] `{ work_item_ref:, body:, received_at: }`
+      # @return [void]
       def start(&)
         FileUtils.rm_f(@socket_path)
         @server = UNIXServer.new(@socket_path)
         accept_loop(&)
       end
 
+      # Closes the listener and removes the socket file, unblocking {#start}.
+      # Errors during teardown are swallowed.
+      #
+      # @return [void]
       def stop
         @stop_requested = true
         @server&.close

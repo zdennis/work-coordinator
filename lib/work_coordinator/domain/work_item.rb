@@ -2,11 +2,37 @@
 
 module WorkCoordinator
   module Domain
+    # Every state a work item may occupy.
     WORK_ITEM_STATES = %i[created ready active waiting_for_human waiting_for_resource blocked completed
                           abandoned].freeze
+    # Categories of work the coordinator tracks.
     WORK_ITEM_KINDS = %i[jira chore investigation adhoc].freeze
+    # Stages an active work item moves through.
     WORK_ITEM_PHASES = %i[investigating implementing verifying reviewing].freeze
 
+    # A single unit of tracked work, immutable — transitions produce a new value
+    # via `with`.
+    #
+    # @!attribute [r] id
+    #   @return [String]
+    # @!attribute [r] title
+    #   @return [String]
+    # @!attribute [r] kind
+    #   @return [Symbol] one of {WORK_ITEM_KINDS}
+    # @!attribute [r] external_reference
+    #   @return [String, nil] ticket key used as the message routing prefix
+    # @!attribute [r] repository
+    #   @return [String, nil]
+    # @!attribute [r] workspace_name
+    #   @return [String, nil] tmux target the agent session runs in
+    # @!attribute [r] state
+    #   @return [Symbol] one of {WORK_ITEM_STATES}
+    # @!attribute [r] phase
+    #   @return [Symbol, nil] one of {WORK_ITEM_PHASES}
+    # @!attribute [r] created_at
+    #   @return [Time]
+    # @!attribute [r] updated_at
+    #   @return [Time]
     WorkItem = Data.define(
       :id,
       :title,
@@ -19,19 +45,33 @@ module WorkCoordinator
       :created_at,
       :updated_at
     ) do
+      # @param check_state [Symbol]
+      # @return [Boolean]
       def state?(check_state) = state == check_state
 
+      # @return [Boolean]
       def created?              = state?(:created)
+      # @return [Boolean]
       def ready?                = state?(:ready)
+      # @return [Boolean]
       def active?               = state?(:active)
+      # @return [Boolean]
       def waiting_for_human?    = state?(:waiting_for_human)
+      # @return [Boolean]
       def waiting_for_resource? = state?(:waiting_for_resource)
+      # @return [Boolean]
       def blocked?              = state?(:blocked)
+      # @return [Boolean]
       def completed?            = state?(:completed)
+      # @return [Boolean]
       def abandoned?            = state?(:abandoned)
 
+      # Registered but not yet started.
+      # @return [Boolean]
       def open?        = created?
+      # @return [Boolean]
       def done?        = completed?
+      # @return [Boolean]
       def in_progress? = active?
     end
   end

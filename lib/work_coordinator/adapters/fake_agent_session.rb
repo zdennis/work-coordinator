@@ -4,6 +4,8 @@ require "work_coordinator/ports/agent_session"
 
 module WorkCoordinator
   module Adapters
+    # In-memory agent session for tests. Sessions are named `session-N` and
+    # delivered messages are captured rather than sent anywhere.
     class FakeAgentSession
       include Ports::AgentSession
 
@@ -34,6 +36,8 @@ module WorkCoordinator
         @active[work_item_id]
       end
 
+      # @return [Array<Hash{Symbol=>String}>] every delivery, as
+      #   `{ session_id:, message: }`, in order
       def delivered_messages
         @messages.dup
       end

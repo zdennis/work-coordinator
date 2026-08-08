@@ -4,6 +4,7 @@ require "work_coordinator/ports/work_item_repository"
 
 module WorkCoordinator
   module Adapters
+    # Hash-backed work item storage for tests; nothing survives the process.
     class InMemoryWorkItemRepository
       include Ports::WorkItemRepository
 

@@ -6,9 +6,16 @@ require "work_coordinator/persistence/models/work_item_record"
 
 module WorkCoordinator
   module Adapters
+    # Persists work items to the `work_items` table, converting between the
+    # ActiveRecord row and {Domain::WorkItem} (symbols on the domain side,
+    # strings in the database).
     class SqliteWorkItemRepository
       include Ports::WorkItemRepository
 
+      # Inserts or updates the row matching the work item's id.
+      #
+      # @param work_item [Domain::WorkItem]
+      # @return [Domain::WorkItem] the argument, unchanged
       def save(work_item)
         record = Persistence::Models::WorkItemRecord.find_or_initialize_by(id: work_item.id)
         record.assign_attributes(to_attributes(work_item))
@@ -16,22 +23,30 @@ module WorkCoordinator
         work_item
       end
 
+      # @param id [String]
+      # @return [Domain::WorkItem, nil]
       def find(id)
         record = Persistence::Models::WorkItemRecord.find_by(id: id)
         record && to_domain(record)
       end
 
+      # @param external_reference [String] ticket key, e.g. "ABC-123"
+      # @return [Domain::WorkItem, nil]
       def find_by_ref(external_reference)
         record = Persistence::Models::WorkItemRecord.find_by(external_reference: external_reference)
         record && to_domain(record)
       end
 
+      # @param state [Symbol, String, nil] restrict to work items in this state
+      # @return [Array<Domain::WorkItem>]
       def find_all(state: nil)
         scope = Persistence::Models::WorkItemRecord.all
         scope = scope.with_state(state) if state
         scope.map { |r| to_domain(r) }
       end
 
+      # @param id [String]
+      # @return [void]
       def delete(id)
         Persistence::Models::WorkItemRecord.find_by(id: id)&.destroy
       end
