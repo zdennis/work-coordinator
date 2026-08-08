@@ -24,6 +24,18 @@ RSpec.describe WorkCoordinator::Adapters::CompositeMessageReceiver do
     end
   end
 
+  # Minimal receiver that delivers messages without tracking started/stopped.
+  let(:simple_receiver_class) do
+    Class.new do
+      def initialize(messages) = @messages = messages
+      def stop = nil
+
+      def start(&block)
+        @messages.each { |m| block.call(m) }
+      end
+    end
+  end
+
   def silencing_thread_reports
     previous = Thread.report_on_exception
     Thread.report_on_exception = false
@@ -50,21 +62,28 @@ RSpec.describe WorkCoordinator::Adapters::CompositeMessageReceiver do
       expect(received).to match_array(%w[a b c])
     end
 
-    it "serializes calls to the caller's block" do
-      receivers = Array.new(4) { |i| receiver_class.new(Array.new(25) { |j| "#{i}-#{j}" }) }
-      concurrent = Queue.new
-      in_block = 0
+    it "processes messages from multiple receivers concurrently" do
+      # Each handler blocks until released. Serial dispatch would deadlock here
+      # because the second pop would never be reached until the first unblocked.
+      latch = Queue.new
+      barrier = Queue.new
       received = []
+      receivers = [simple_receiver_class.new(%w[a]), simple_receiver_class.new(%w[b])]
 
-      described_class.new(receivers).start do |message|
-        in_block += 1
-        concurrent << in_block if in_block > 1
-        received << message
-        in_block -= 1
+      thread = Thread.new do
+        described_class.new(receivers).start do |message|
+          barrier << message  # signal handler entered
+          latch.pop           # wait until both handlers are running
+          received << message
+        end
       end
 
-      expect(concurrent).to be_empty
-      expect(received.size).to eq(100)
+      barrier.pop
+      barrier.pop
+      2.times { latch << :go }
+      thread.join
+
+      expect(received).to match_array(%w[a b])
     end
 
     it "waits for a receiver that blocks until released" do
