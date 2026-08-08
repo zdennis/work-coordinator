@@ -24,6 +24,7 @@ module WorkCoordinator
       def stop
         @stop_requested = true
         @server&.close
+        FileUtils.rm_f(@socket_path) if @socket_path
       rescue StandardError
         nil
       end

@@ -24,6 +24,8 @@ module WorkCoordinator
         @db_path = db_path
         @poll_interval = poll_interval
         @running = false
+        @mutex = Mutex.new
+        @stop_cond = ConditionVariable.new
       end
 
       def start(lookback: LOOKBACK_DEFAULT, &block)
@@ -35,12 +37,15 @@ module WorkCoordinator
           break unless @running
 
           poll_once(&block)
-          sleep @poll_interval
+          @mutex.synchronize { @stop_cond.wait(@mutex, @poll_interval) if @running }
         end
       end
 
       def stop
-        @running = false
+        @mutex.synchronize do
+          @running = false
+          @stop_cond.signal
+        end
       end
 
       INBOX_SQL = <<~SQL
