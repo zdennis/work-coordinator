@@ -35,6 +35,14 @@ RSpec.describe WorkCoordinator::Config do
       expect(content).to include(WorkCoordinator::Config::DEFAULT_AI_COMMAND)
     end
 
+    it "includes the default WC alias in the written file" do
+      config.write_defaults!
+      content = File.read(config_path)
+      expect(content).to include("aliases")
+      expect(content).to include("WC")
+      expect(content).to include("work-coordinator")
+    end
+
     it "creates parent directories if they do not exist" do
       nested_path = File.join(tmpdir, "a", "b", "config.yml")
       described_class.new(nested_path).write_defaults!
@@ -64,6 +72,68 @@ RSpec.describe WorkCoordinator::Config do
       FileUtils.mkdir_p(File.dirname(config_path))
       File.write(config_path, "ai_command: my-ai --flag\n")
       expect(config.ai_command).to eq("my-ai --flag")
+    end
+  end
+
+  describe "#aliases" do
+    it "returns an empty hash when the config file does not exist" do
+      expect(config.aliases).to eq({})
+    end
+
+    it "returns the default WC alias after write_defaults!" do
+      config.write_defaults!
+      expect(config.aliases).to eq("WC" => "work-coordinator")
+    end
+
+    it "returns aliases defined in the config file" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "aliases:\n  GE: my-service\n")
+      expect(config.aliases).to eq("MS" => "my-service")
+    end
+  end
+
+  describe "#set_alias" do
+    it "creates the config file if it does not exist" do
+      config.set_alias("MS", "my-service")
+      expect(config.exist?).to be(true)
+    end
+
+    it "persists the new alias" do
+      config.set_alias("MS", "my-service")
+      expect(described_class.new(config_path).aliases).to eq("MS" => "my-service")
+    end
+
+    it "overwrites an existing alias with the same short name" do
+      config.set_alias("MS", "my-service")
+      config.set_alias("MS", "my-service-pr-826")
+      expect(config.aliases).to eq("MS" => "my-service-pr-826")
+    end
+
+    it "preserves existing aliases when adding another" do
+      config.write_defaults!
+      config.set_alias("MS", "my-service")
+      expect(config.aliases).to eq("WC" => "work-coordinator", "MS" => "my-service")
+    end
+
+    it "preserves ai_command when adding an alias" do
+      config.write_defaults!
+      config.set_alias("MS", "my-service")
+      expect(config.ai_command).to eq(WorkCoordinator::Config::DEFAULT_AI_COMMAND)
+    end
+  end
+
+  describe "#remove_alias" do
+    it "returns nil and makes no changes when the alias does not exist" do
+      config.write_defaults!
+      expect(config.remove_alias("NOPE")).to be_nil
+      expect(config.aliases).to eq("WC" => "work-coordinator")
+    end
+
+    it "removes an existing alias and returns its former value" do
+      config.write_defaults!
+      config.set_alias("MS", "my-service")
+      expect(config.remove_alias("MS")).to eq("my-service")
+      expect(config.aliases).to eq("WC" => "work-coordinator")
     end
   end
 
