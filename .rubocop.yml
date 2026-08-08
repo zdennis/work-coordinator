@@ -1,4 +1,4 @@
-require:
+plugins:
   - rubocop-rspec
 
 AllCops:
@@ -25,6 +25,7 @@ Style/StringLiterals:
 Metrics/BlockLength:
   Exclude:
     - "spec/**/*"
+    - "bin/work-coordinator"
 
 Metrics/MethodLength:
   Max: 15
