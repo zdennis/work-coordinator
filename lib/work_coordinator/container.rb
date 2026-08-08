@@ -25,9 +25,14 @@ module WorkCoordinator
     #   @return [Application::StartWorkItem]
     # @!attribute [r] notify_human
     #   @return [Application::NotifyHuman]
+    # @!attribute [r] ai_command_runner
+    #   @return [Adapters::ClaudeWorkspaceCommandRunner]
+    # @!attribute [r] dispatch_ai_command
+    #   @return [Application::DispatchAiCommand]
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
                 :message_receiver, :inbound_message_repo, :route_message,
-                :register_work_item, :start_work_item, :notify_human
+                :register_work_item, :start_work_item, :notify_human,
+                :ai_command_runner, :dispatch_ai_command
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -47,24 +52,37 @@ module WorkCoordinator
       @event_store      = Adapters::SqliteEventStore.new
       @agent_session    = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
       @message_sender   = build_sender(modes)
-      @message_receiver = Adapters::CompositeMessageReceiver.new(build_receivers(modes))
       wire!
+      @message_receiver = Adapters::CompositeMessageReceiver.new(build_receivers(modes))
     end
 
     private
 
     def build_receivers(modes)
-      modes.map do |mode|
-        case mode
-        when :local
-          Adapters::SocketMessageReceiver.new(socket_path: @socket_path)
-        when :messages
-          @inbound_message_repo ||= Adapters::SqliteInboundMessageRepository.new
-          Adapters::MessagesInboxPoller.new(inbound_message_repo: @inbound_message_repo)
-        else
-          raise ArgumentError, "unknown mode: #{mode}"
-        end
+      modes.map { |mode| build_receiver(mode) }
+    end
+
+    def build_receiver(mode)
+      case mode
+      when :local
+        Adapters::SocketMessageReceiver.new(socket_path: @socket_path)
+      when :messages
+        build_messages_receiver
+      else
+        raise ArgumentError, "unknown mode: #{mode}"
       end
+    end
+
+    def build_messages_receiver
+      @inbound_message_repo ||= Adapters::SqliteInboundMessageRepository.new
+      poller = Adapters::MessagesInboxPoller.new(inbound_message_repo: @inbound_message_repo)
+      ai_handler = lambda do |msg|
+        body = "#{msg[:work_item_ref]} #{msg[:body]}".strip
+        @dispatch_ai_command.call(body: body)
+      rescue StandardError => e
+        warn "Error dispatching AI command: #{e.message}"
+      end
+      Adapters::AiCommandReceiver.new(inner: poller, ai_command_handler: ai_handler)
     end
 
     def build_sender(modes)
@@ -84,6 +102,11 @@ module WorkCoordinator
                                                           agent_session: @agent_session, event_store: @event_store)
       @notify_human       = Application::NotifyHuman.new(message_sender: @message_sender,
                                                          work_item_repo: @work_item_repo, event_store: @event_store)
+      @ai_command_runner   = Adapters::ClaudeWorkspaceCommandRunner.new
+      @dispatch_ai_command = Application::DispatchAiCommand.new(
+        ai_command_runner: @ai_command_runner,
+        message_sender: @message_sender
+      )
     end
   end
 end
