@@ -31,6 +31,8 @@ module WorkCoordinator
         @running = false
         @mutex = Mutex.new
         @stop_cond = ConditionVariable.new
+        @cached_db_path = nil
+        @last_db_mtime = nil
       end
 
       # Polls until {#stop}, yielding each new message exactly once. Messages
@@ -108,14 +110,19 @@ module WorkCoordinator
       end
 
       def with_db
-        tmp = File.join(Dir.tmpdir, "wc_chat_#{Process.pid}.db")
-        FileUtils.cp(@db_path, tmp)
-        db = SQLite3::Database.new(tmp)
+        current_mtime = File.mtime(@db_path)
+        if @cached_db_path.nil? || current_mtime != @last_db_mtime
+          tmp = File.join(Dir.tmpdir, "wc_chat_#{Process.pid}.db")
+          FileUtils.cp(@db_path, tmp)
+          File.delete(@cached_db_path) if @cached_db_path && File.exist?(@cached_db_path)
+          @cached_db_path = tmp
+          @last_db_mtime = current_mtime
+        end
+        db = SQLite3::Database.new(@cached_db_path)
         db.results_as_hash = true
         yield db
       ensure
         db&.close
-        File.delete(tmp) if tmp && File.exist?(tmp)
       end
     end
   end
