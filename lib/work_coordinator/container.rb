@@ -8,24 +8,42 @@ module WorkCoordinator
 
     def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"),
                    socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"),
-                   mode: :local)
+                   modes: [:local])
+      modes = Array(modes).map(&:to_sym).uniq
+      @socket_path = socket_path
       Persistence.connect!(database: db_path)
       Persistence.migrate!
       @work_item_repo   = Adapters::SqliteWorkItemRepository.new
       @event_store      = Adapters::SqliteEventStore.new
       @agent_session    = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
-      if mode == :messages
-        @inbound_message_repo = Adapters::SqliteInboundMessageRepository.new
-        @message_sender   = Adapters::AppleScriptMessageSender.new
-        @message_receiver = Adapters::MessagesInboxPoller.new(inbound_message_repo: @inbound_message_repo)
-      else
-        @message_sender   = Adapters::SocketMessageSender.new(socket_path: socket_path)
-        @message_receiver = Adapters::SocketMessageReceiver.new(socket_path: socket_path)
-      end
+      @message_sender   = build_sender(modes)
+      @message_receiver = Adapters::CompositeMessageReceiver.new(build_receivers(modes))
       wire!
     end
 
     private
+
+    def build_receivers(modes)
+      modes.map do |mode|
+        case mode
+        when :local
+          Adapters::SocketMessageReceiver.new(socket_path: @socket_path)
+        when :messages
+          @inbound_message_repo ||= Adapters::SqliteInboundMessageRepository.new
+          Adapters::MessagesInboxPoller.new(inbound_message_repo: @inbound_message_repo)
+        else
+          raise ArgumentError, "unknown mode: #{mode}"
+        end
+      end
+    end
+
+    def build_sender(modes)
+      if modes.include?(:messages)
+        Adapters::AppleScriptMessageSender.new
+      else
+        Adapters::SocketMessageSender.new(socket_path: @socket_path)
+      end
+    end
 
     def wire!
       @register_work_item = Application::RegisterWorkItem.new(work_item_repo: @work_item_repo,
