@@ -4,8 +4,9 @@ require "work_coordinator/ports/message_receiver"
 
 module WorkCoordinator
   module Adapters
-    # Runs several message receivers concurrently, serializing delivery to the
-    # caller's block so handlers never run in parallel.
+    # Runs several message receivers concurrently. Each message is dispatched
+    # on its own thread so a slow handler (tmux subprocess, AppleScript, etc.)
+    # does not block delivery of subsequent messages.
     class CompositeMessageReceiver
       include Ports::MessageReceiver
 
@@ -16,18 +17,29 @@ module WorkCoordinator
       end
 
       # Starts every receiver on its own thread and blocks until they all
-      # finish. If any thread raises, the remaining receivers are stopped and
+      # finish. Each incoming message is handled on a dedicated thread so
+      # handlers run in parallel — one slow message does not delay the next.
+      #
+      # If any receiver thread raises, the remaining receivers are stopped and
       # the error propagates.
       #
       # @yieldparam message [Hash]
       # @return [void]
+      DRAIN_SENTINEL = Object.new.freeze
+      private_constant :DRAIN_SENTINEL
+
       def start(&block)
-        mutex = Mutex.new
-        safe_block = ->(message) { mutex.synchronize { block.call(message) } }
-        @threads = @receivers.map { |receiver| Thread.new { receiver.start(&safe_block) } }
+        handler_threads = Queue.new
+        dispatch = ->(message) { handler_threads << Thread.new { block.call(message) } }
+        @threads = @receivers.map { |receiver| Thread.new { receiver.start(&dispatch) } }
         @threads.each(&:join)
+        # Signal that no more items will be enqueued, then join all handlers.
+        handler_threads << DRAIN_SENTINEL
+        drain_handlers(handler_threads)
       rescue StandardError
         stop
+        handler_threads << DRAIN_SENTINEL
+        drain_handlers(handler_threads)
         raise
       end
 
@@ -36,6 +48,19 @@ module WorkCoordinator
       # @return [void]
       def stop
         @receivers.each(&:stop)
+      end
+
+      private
+
+      def drain_handlers(queue)
+        pending = []
+        loop do
+          item = queue.pop
+          break if item.equal?(DRAIN_SENTINEL)
+
+          pending << item
+        end
+        pending.each(&:join)
       end
     end
   end
