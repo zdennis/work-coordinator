@@ -185,7 +185,8 @@ RSpec.describe WorkCoordinator::Application::RouteMessage do
     it "sets body on the result to the combined message" do
       result = route.call(raw_message: "reply: investigate, debug, fix")
 
-      expect(result.body).to eq("Current instruction: investigate, debug, fix\nContext: [MS-123] CI failed on branch main")
+      expected = "Current instruction: investigate, debug, fix\nContext: [MS-123] CI failed on branch main"
+      expect(result.body).to eq(expected)
     end
 
     it "appends a human.replied event with the combined body" do
