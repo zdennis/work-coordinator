@@ -3,6 +3,7 @@
 require "open3"
 require "shellwords"
 require "work_coordinator/ports/ai_command_runner"
+require "work_coordinator/config"
 
 module WorkCoordinator
   module Adapters
@@ -14,16 +15,16 @@ module WorkCoordinator
       SUMMARIZE_PROMPT = "Summarize the following output in 1 to 3 sentences: "
 
       def initialize(
-        claude_bin: "claude",
+        config_path: Config.default_config_path,
         workspace_bin: "workspace"
       )
-        @claude_bin    = claude_bin
+        @config        = Config.new(config_path)
         @workspace_bin = workspace_bin
       end
 
       def extract_project(body:)
-        stdout, status = run(@claude_bin, "-p", "#{EXTRACT_PROMPT}#{body}")
-        raise "claude extract_project failed" unless status.success?
+        stdout, status = run(*ai_command_args, "#{EXTRACT_PROMPT}#{body}")
+        raise "ai extract_project failed" unless status.success?
 
         stdout.strip
       end
@@ -36,7 +37,7 @@ module WorkCoordinator
       end
 
       def run_project(project:, instructions:)
-        command = "#{@claude_bin} -p #{Shellwords.escape(instructions)}"
+        command = "#{@config.ai_command} #{Shellwords.escape(instructions)}"
         stdout, status = run(@workspace_bin, "run", project, command,
                              "--split", "--wait", "--close")
         raise "workspace run failed (exit #{status.exitstatus})" unless status.success?
@@ -45,15 +46,28 @@ module WorkCoordinator
       end
 
       def summarize(text:)
-        stdout, status = run(@claude_bin, "-p", "#{SUMMARIZE_PROMPT}#{text}")
-        raise "claude summarize failed" unless status.success?
+        stdout, status = run(*ai_command_args, "#{SUMMARIZE_PROMPT}#{text}")
+        raise "ai summarize failed" unless status.success?
 
         stdout.strip
       end
 
       private
 
+      def ai_command_args
+        Shellwords.split(@config.ai_command)
+      end
+
+      def ensure_config
+        return if @config.exist?
+
+        puts "No config file found at #{@config.path}. Running init..."
+        @config.write_defaults!
+        puts "Created #{@config.path} with defaults."
+      end
+
       def run(*cmd)
+        ensure_config
         Open3.capture2e(*cmd)
       end
     end

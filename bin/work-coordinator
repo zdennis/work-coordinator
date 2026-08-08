@@ -20,6 +20,7 @@ def colorize_state(state)
 end
 
 COMMANDS = {
+  "init" => "Create the default config file (~/.config/work-coordinator/config.yml)",
   "register" => "Register a new work item",
   "start" => "Transition a work item to active state",
   "status" => "List all work items with their current state and phase",
@@ -53,6 +54,32 @@ global.order!(ARGV)
 command = ARGV.shift
 
 case command
+when "init"
+  OptionParser.new do |opts|
+    opts.banner = "Usage: work-coordinator init"
+    opts.separator ""
+    opts.separator "Create the default configuration file at:"
+    opts.separator "  ~/.config/work-coordinator/config.yml"
+    opts.separator ""
+    opts.separator "If the file already exists, init reports that and exits without"
+    opts.separator "making any changes."
+    opts.separator ""
+    opts.separator "Examples:"
+    opts.separator "  work-coordinator init"
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
+  end.parse!(ARGV)
+
+  config = WorkCoordinator::Config.new
+  if config.exist?
+    puts "Config file already exists: #{config.path}"
+  else
+    config.write_defaults!
+    puts "Created #{config.path}"
+  end
+
 when "register"
   options = {}
   OptionParser.new do |opts|
