@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "open3"
+require "shellwords"
 require "work_coordinator/ports/ai_command_runner"
 
 module WorkCoordinator
@@ -35,7 +36,8 @@ module WorkCoordinator
       end
 
       def run_project(project:, instructions:)
-        stdout, status = run(@workspace_bin, "run", project, instructions,
+        command = "#{@claude_bin} -p #{Shellwords.escape(instructions)}"
+        stdout, status = run(@workspace_bin, "run", project, command,
                              "--split", "--wait", "--close")
         raise "workspace run failed (exit #{status.exitstatus})" unless status.success?
 
