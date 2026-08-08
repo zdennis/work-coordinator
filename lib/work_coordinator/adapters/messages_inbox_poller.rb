@@ -12,9 +12,14 @@ module WorkCoordinator
     class MessagesInboxPoller
       include Ports::MessageReceiver
 
+      # Seconds between the Unix epoch and the Core Data epoch chat.db uses.
       MAC_EPOCH_OFFSET_SECONDS = 978_307_200
+      # How far back the first poll reaches, in seconds.
       LOOKBACK_DEFAULT = 24 * 3600
 
+      # @param inbound_message_repo [#seen?, #record] dedupes already-handled guids
+      # @param db_path [String] path to the Messages database
+      # @param poll_interval [Numeric] seconds to wait between polls
       def initialize(
         inbound_message_repo:,
         db_path: File.expand_path("~/Library/Messages/chat.db"),
@@ -28,6 +33,13 @@ module WorkCoordinator
         @stop_cond = ConditionVariable.new
       end
 
+      # Polls until {#stop}, yielding each new message exactly once. Messages
+      # already recorded in the inbound repository are skipped.
+      #
+      # @param lookback [Numeric] seconds of history to consider on the first poll
+      # @yieldparam message [Hash] `{ guid:, work_item_ref:, body:, received_at: }`
+      # @return [void]
+      # @raise [RuntimeError] when chat.db predates macOS 10.15
       def start(lookback: LOOKBACK_DEFAULT, &block)
         @running = true
         check_guid_column!
@@ -41,6 +53,9 @@ module WorkCoordinator
         end
       end
 
+      # Wakes the poll sleep so {#start} returns without waiting out the interval.
+      #
+      # @return [void]
       def stop
         @mutex.synchronize do
           @running = false
@@ -48,6 +63,7 @@ module WorkCoordinator
         end
       end
 
+      # Selects unseen inbound messages carrying the 'ai: ' prefix.
       INBOX_SQL = <<~SQL
         SELECT rowid, text, date, guid FROM message
         WHERE is_from_me = 0 AND text LIKE 'ai: %' AND date > ?

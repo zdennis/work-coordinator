@@ -1,11 +1,41 @@
 # frozen_string_literal: true
 
 module WorkCoordinator
+  # Composition root: connects the database, picks adapters for the requested
+  # modes, and wires up the application use cases. Constructing a container has
+  # side effects — it opens the database and runs pending migrations.
   class Container
+    # @!attribute [r] work_item_repo
+    #   @return [Adapters::SqliteWorkItemRepository]
+    # @!attribute [r] event_store
+    #   @return [Adapters::SqliteEventStore]
+    # @!attribute [r] agent_session
+    #   @return [Adapters::TmuxAgentSession]
+    # @!attribute [r] message_sender
+    #   @return [Ports::MessageSender]
+    # @!attribute [r] message_receiver
+    #   @return [Adapters::CompositeMessageReceiver]
+    # @!attribute [r] inbound_message_repo
+    #   @return [Adapters::SqliteInboundMessageRepository, nil] only built in :messages mode
+    # @!attribute [r] route_message
+    #   @return [Application::RouteMessage]
+    # @!attribute [r] register_work_item
+    #   @return [Application::RegisterWorkItem]
+    # @!attribute [r] start_work_item
+    #   @return [Application::StartWorkItem]
+    # @!attribute [r] notify_human
+    #   @return [Application::NotifyHuman]
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
                 :message_receiver, :inbound_message_repo, :route_message,
                 :register_work_item, :start_work_item, :notify_human
 
+    # A receiver is built per mode and run concurrently; the sender is chosen
+    # from the modes, with `:messages` winning over `:local` when both are given.
+    #
+    # @param db_path [String] SQLite file to connect to and migrate
+    # @param socket_path [String] Unix socket used by `:local` mode
+    # @param modes [Array<Symbol>, Symbol] any of `:local`, `:messages`
+    # @raise [ArgumentError] when a mode is unrecognized
     def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"),
                    socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"),
                    modes: [:local])
