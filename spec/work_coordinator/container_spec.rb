@@ -24,10 +24,13 @@ RSpec.describe WorkCoordinator::Container do
     expect(container.message_sender).to be_an_instance_of(WorkCoordinator::Adapters::SocketMessageSender)
   end
 
-  it "wraps an inbox poller for messages mode" do
+  it "wraps an inbox poller in an AiCommandReceiver for messages mode" do
     container = described_class.new(modes: [:messages])
 
-    expect(receivers_of(container)).to match([an_instance_of(WorkCoordinator::Adapters::MessagesInboxPoller)])
+    outer = receivers_of(container)
+    expect(outer).to match([an_instance_of(WorkCoordinator::Adapters::AiCommandReceiver)])
+    expect(outer.first.instance_variable_get(:@inner))
+      .to be_an_instance_of(WorkCoordinator::Adapters::MessagesInboxPoller)
     expect(container.inbound_message_repo)
       .to be_an_instance_of(WorkCoordinator::Adapters::SqliteInboundMessageRepository)
     expect(container.message_sender).to be_an_instance_of(WorkCoordinator::Adapters::AppleScriptMessageSender)
@@ -38,7 +41,7 @@ RSpec.describe WorkCoordinator::Container do
 
     expect(receivers_of(container)).to match([
                                                an_instance_of(WorkCoordinator::Adapters::SocketMessageReceiver),
-                                               an_instance_of(WorkCoordinator::Adapters::MessagesInboxPoller)
+                                               an_instance_of(WorkCoordinator::Adapters::AiCommandReceiver)
                                              ])
   end
 
@@ -51,7 +54,7 @@ RSpec.describe WorkCoordinator::Container do
   it "accepts string modes" do
     container = described_class.new(modes: ["messages"])
 
-    expect(receivers_of(container)).to match([an_instance_of(WorkCoordinator::Adapters::MessagesInboxPoller)])
+    expect(receivers_of(container)).to match([an_instance_of(WorkCoordinator::Adapters::AiCommandReceiver)])
   end
 
   it "raises on an unknown mode" do
