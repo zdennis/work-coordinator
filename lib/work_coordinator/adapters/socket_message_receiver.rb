@@ -18,7 +18,6 @@ module WorkCoordinator
       def start(&)
         FileUtils.rm_f(@socket_path)
         @server = UNIXServer.new(@socket_path)
-        install_signal_traps
         accept_loop(&)
       end
 
@@ -33,11 +32,6 @@ module WorkCoordinator
       def on_message(&) = raise NotImplementedError
 
       private
-
-      def install_signal_traps
-        trap("TERM") { stop }
-        trap("INT")  { stop }
-      end
 
       def accept_loop(&)
         until @stop_requested
