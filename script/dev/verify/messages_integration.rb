@@ -61,24 +61,35 @@ end
 
 # Section B — MessagesInboxPoller
 
+SeenRepo = Struct.new(:seen_guids) do
+  def seen?(guid) = seen_guids.include?(guid)
+  def record(guid) = seen_guids << guid
+end
+
 db_path = File.join(Dir.tmpdir, "test_messages_#{Process.pid}.db")
 begin
+  mac_epoch = Time.utc(2001, 1, 1).to_i
+  base_mac = ((Time.now.to_f - mac_epoch - 3600) * 1_000_000_000).to_i
+
   db = SQLite3::Database.new(db_path)
   db.execute(<<~SQL)
     CREATE TABLE message (
       rowid INTEGER PRIMARY KEY,
       text TEXT,
       date INTEGER,
+      guid TEXT,
       is_from_me INTEGER
     )
   SQL
-  db.execute("INSERT INTO message VALUES (1, 'ai: GE-123 yes update it', 1000, 0)")
-  db.execute("INSERT INTO message VALUES (2, 'hello world', 1001, 0)")
-  db.execute("INSERT INTO message VALUES (3, 'ai: GE-456 check status', 1002, 1)")
-  db.execute("INSERT INTO message VALUES (4, 'ai: GE-456 run tests', 1003, 0)")
+  insert_sql = "INSERT INTO message (rowid, text, date, guid, is_from_me) VALUES (?, ?, ?, ?, ?)"
+  db.execute(insert_sql, [1, "ai: GE-123 yes update it", base_mac, "msg-guid-1", 0])
+  db.execute(insert_sql, [2, "hello world", base_mac + 1_000_000_000, "msg-guid-2", 0])
+  db.execute(insert_sql, [3, "ai: GE-456 check status", base_mac + 2_000_000_000, "msg-guid-3", 1])
+  db.execute(insert_sql, [4, "ai: GE-456 run tests", base_mac + 3_000_000_000, "msg-guid-4", 0])
   db.close
 
-  poller = WorkCoordinator::Adapters::MessagesInboxPoller.new(db_path: db_path)
+  repo = SeenRepo.new([])
+  poller = WorkCoordinator::Adapters::MessagesInboxPoller.new(inbound_message_repo: repo, db_path: db_path)
   poller.instance_variable_set(:@last_date, 0)
 
   messages = []
@@ -101,6 +112,25 @@ begin
   end
 
   pass "MessagesInboxPoller: second message parsed correctly"
+
+  unless first[:received_at].is_a?(Time) && second[:received_at].is_a?(Time)
+    raise "MessagesInboxPoller: received_at should be a Time — #{first[:received_at].inspect}"
+  end
+
+  pass "MessagesInboxPoller: received_at is a Time"
+
+  dedup_repo = SeenRepo.new(["msg-guid-1"])
+  dedup_poller = WorkCoordinator::Adapters::MessagesInboxPoller.new(inbound_message_repo: dedup_repo, db_path: db_path)
+  dedup_poller.instance_variable_set(:@last_date, 0)
+
+  deduped = []
+  dedup_poller.send(:poll_once) { |m| deduped << m }
+
+  unless deduped.size == 1 && deduped[0][:guid] == "msg-guid-4"
+    raise "MessagesInboxPoller: expected only unseen message, got #{deduped.map { _1[:guid] }.inspect}"
+  end
+
+  pass "MessagesInboxPoller: skips already-seen guids"
 ensure
   FileUtils.rm_f(db_path)
 end
