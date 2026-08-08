@@ -149,6 +149,92 @@ RSpec.describe WorkCoordinator::Application::RouteMessage do
     end
   end
 
+  describe "#call with a reply: prefix" do
+    let(:notified_item) do
+      repo.save(build(:work_item_domain, external_reference: "MS-123", state: :waiting_for_human))
+    end
+
+    before do
+      notified_item
+      event_store.append(
+        type: "system.notified",
+        work_item_id: notified_item.id,
+        source: "system",
+        data: { "ref" => "MS-123", "body" => "CI failed on branch main" }
+      )
+      start_session_for(notified_item)
+    end
+
+    it "reports the message as routed" do
+      expect(route.call(raw_message: "reply: investigate")).to have_attributes(routed: true)
+    end
+
+    it "returns the activated work item" do
+      result = route.call(raw_message: "reply: investigate")
+
+      expect(result.work_item).to have_attributes(id: notified_item.id, state: :active)
+    end
+
+    it "delivers the combined instruction and context to the agent session" do
+      route.call(raw_message: "reply: investigate, debug, fix")
+
+      expected = "Current instruction: investigate, debug, fix\nContext: [MS-123] CI failed on branch main"
+      expect(agent_session.delivered_messages.last[:message]).to eq(expected)
+    end
+
+    it "sets body on the result to the combined message" do
+      result = route.call(raw_message: "reply: investigate, debug, fix")
+
+      expect(result.body).to eq("Current instruction: investigate, debug, fix\nContext: [MS-123] CI failed on branch main")
+    end
+
+    it "appends a human.replied event with the combined body" do
+      route.call(raw_message: "reply: investigate")
+
+      expect(event_store.all.last).to have_attributes(
+        type: "human.replied",
+        work_item_id: notified_item.id,
+        source: "human"
+      )
+    end
+
+    it "handles REPLY: in upper case" do
+      expect(route.call(raw_message: "REPLY: investigate")).to have_attributes(routed: true)
+    end
+
+    it "strips leading whitespace from the instruction" do
+      result = route.call(raw_message: "reply:   lots of spaces")
+
+      expect(result.body).to start_with("Current instruction: lots of spaces")
+    end
+
+    it "preserves multi-line instructions" do
+      result = route.call(raw_message: "reply: first line\nsecond line")
+
+      expect(result.body).to start_with("Current instruction: first line\nsecond line")
+    end
+
+    it "takes the reply: path even when the instruction contains a ticket-like prefix" do
+      result = route.call(raw_message: "reply: ABC-123 do this")
+
+      expect(result.body).to start_with("Current instruction: ABC-123 do this")
+    end
+
+    it "returns unrouted when no system.notified event exists" do
+      store = WorkCoordinator::Application::InMemoryEventStore.new
+      router = described_class.new(work_item_repo: repo, agent_session: agent_session, event_store: store)
+
+      expect(router.call(raw_message: "reply: investigate")).to have_attributes(routed: false, work_item: nil)
+    end
+
+    it "returns unrouted when the work item has no live session" do
+      itemless_session = WorkCoordinator::Adapters::FakeAgentSession.new
+      router = described_class.new(work_item_repo: repo, agent_session: itemless_session, event_store: event_store)
+
+      expect(router.call(raw_message: "reply: investigate")).to have_attributes(routed: false)
+    end
+  end
+
   describe WorkCoordinator::Application::Result do
     it "compares by value" do
       attrs = { routed: true, work_item: nil, body: "hi" }

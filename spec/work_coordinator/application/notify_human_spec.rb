@@ -42,12 +42,36 @@ RSpec.describe WorkCoordinator::Application::NotifyHuman do
     it "appends an agent.question_asked event with the unformatted body" do
       notify.call(work_item_id: work_item.id, body: "Which branch?")
 
-      expect(event_store.all.last).to have_attributes(
+      expect(event_store.all.find { |e| e.type == "agent.question_asked" }).to have_attributes(
         type: "agent.question_asked",
         work_item_id: work_item.id,
         source: "agent",
         data: { body: "Which branch?" }
       )
+    end
+
+    it "appends a system.notified event with the ref and unformatted body" do
+      notify.call(work_item_id: work_item.id, body: "Which branch?")
+
+      expect(event_store.all.find { |e| e.type == "system.notified" }).to have_attributes(
+        type: "system.notified",
+        work_item_id: work_item.id,
+        source: "system",
+        data: { ref: "ABC-123", body: "Which branch?" }
+      )
+    end
+
+    it "records system.notified after agent.question_asked" do
+      notify.call(work_item_id: work_item.id, body: "Which branch?")
+
+      types = event_store.all.map(&:type)
+      expect(types.index("agent.question_asked")).to be < types.index("system.notified")
+    end
+
+    it "does not append system.notified when the work item is unknown" do
+      expect { notify.call(work_item_id: "missing", body: "hi") }.to raise_error(RuntimeError)
+
+      expect(event_store.all.select { |e| e.type == "system.notified" }).to be_empty
     end
 
     it "advances updated_at" do

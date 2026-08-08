@@ -36,6 +36,15 @@ module WorkCoordinator
       def all
         @events.dup
       end
+
+      # @param type [Symbol, String]
+      # @param work_item_id [String, nil] when nil, searches across all work items
+      # @return [Domain::Event, nil] most recent event of that type
+      def last_of_type(type:, work_item_id: nil)
+        events = @events.select { |e| e.type.to_s == type.to_s }
+        events = events.select { |e| e.work_item_id == work_item_id } if work_item_id
+        events.last
+      end
     end
   end
 end

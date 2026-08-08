@@ -74,4 +74,45 @@ RSpec.describe WorkCoordinator::Application::InMemoryEventStore do
       expect(store.all.size).to eq(1)
     end
   end
+
+  describe "#last_of_type" do
+    it "returns nil when no events of that type exist" do
+      store.append(type: "other", work_item_id: "wi-1", source: "system")
+
+      expect(store.last_of_type(type: "missing")).to be_nil
+    end
+
+    it "returns the event when exactly one matching event exists" do
+      event = store.append(type: "system.notified", work_item_id: "wi-1", source: "system")
+
+      expect(store.last_of_type(type: "system.notified")).to eq(event)
+    end
+
+    it "returns the most recently appended matching event when several exist" do
+      store.append(type: "system.notified", work_item_id: "wi-1", source: "system", data: { body: "first" })
+      last = store.append(type: "system.notified", work_item_id: "wi-1", source: "system", data: { body: "last" })
+
+      expect(store.last_of_type(type: "system.notified")).to eq(last)
+    end
+
+    it "scopes to the specified work_item_id when given" do
+      store.append(type: "system.notified", work_item_id: "wi-1", source: "system")
+      wi2_event = store.append(type: "system.notified", work_item_id: "wi-2", source: "system")
+
+      expect(store.last_of_type(type: "system.notified", work_item_id: "wi-2")).to eq(wi2_event)
+    end
+
+    it "returns nil when work_item_id is given but only events for other items exist" do
+      store.append(type: "system.notified", work_item_id: "wi-1", source: "system")
+
+      expect(store.last_of_type(type: "system.notified", work_item_id: "wi-99")).to be_nil
+    end
+
+    it "returns the newest event across all work items when work_item_id is omitted" do
+      store.append(type: "system.notified", work_item_id: "wi-1", source: "system")
+      last = store.append(type: "system.notified", work_item_id: "wi-2", source: "system")
+
+      expect(store.last_of_type(type: "system.notified")).to eq(last)
+    end
+  end
 end
