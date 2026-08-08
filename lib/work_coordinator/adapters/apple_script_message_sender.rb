@@ -22,7 +22,7 @@ module WorkCoordinator
       # @param work_item_id [String, nil] ignored
       # @return [void]
       # @raise [RuntimeError] when the helper exits non-zero
-      def send_message(body:, to: nil, work_item_id: nil) # rubocop:disable Lint/UnusedMethodArgument
+      def send_message(body:, to: nil, work_item_id: nil, conversation_id: nil) # rubocop:disable Lint/UnusedMethodArgument
         cmd = [@send_message_bin, "--message", body]
         output, status = run_command(cmd)
         raise "send-message failed: #{output}" unless status.success?
