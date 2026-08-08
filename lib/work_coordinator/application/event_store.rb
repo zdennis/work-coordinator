@@ -7,6 +7,7 @@ module WorkCoordinator
     # Non-persistent event store for tests and dry runs. Ids are sequential
     # integers rendered as strings.
     class InMemoryEventStore
+      # @return [void]
       def initialize
         @events = []
         @next_id = 0

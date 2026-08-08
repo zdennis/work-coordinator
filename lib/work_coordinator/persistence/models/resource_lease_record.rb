@@ -2,6 +2,7 @@
 
 module WorkCoordinator
   module Persistence
+    # ActiveRecord model classes that back the coordinator's SQLite tables.
     module Models
       # Row in `resource_leases`, keyed by a string id.
       class ResourceLeaseRecord < ActiveRecord::Base

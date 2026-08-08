@@ -2,6 +2,7 @@
 
 module WorkCoordinator
   module Persistence
+    # ActiveRecord model classes that back the coordinator's SQLite tables.
     module Models
       # Row in `work_items`, keyed by a UUID string.
       class WorkItemRecord < ActiveRecord::Base

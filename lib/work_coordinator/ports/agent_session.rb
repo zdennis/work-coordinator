@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module WorkCoordinator
+  # Port interfaces that the domain and application layers depend on.
   module Ports
     # Interface for driving the agent process attached to a work item.
     #

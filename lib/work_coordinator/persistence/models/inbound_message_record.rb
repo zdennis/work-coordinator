@@ -2,6 +2,7 @@
 
 module WorkCoordinator
   module Persistence
+    # ActiveRecord model classes that back the coordinator's SQLite tables.
     module Models
       # Row in `inbound_messages`, recording the guid of a handled message so it
       # is never processed twice. Untimestamped.
