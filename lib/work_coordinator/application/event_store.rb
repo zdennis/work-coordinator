@@ -45,6 +45,14 @@ module WorkCoordinator
         events = events.select { |e| e.work_item_id == work_item_id } if work_item_id
         events.last
       end
+
+      # Returns the most recent events across all work items.
+      #
+      # @param limit [Integer] maximum number of events to return (default 5)
+      # @return [Array<Domain::Event>] newest first
+      def recent(limit: 5)
+        @events.last(limit).reverse
+      end
     end
   end
 end

@@ -29,10 +29,12 @@ module WorkCoordinator
     #   @return [Adapters::ClaudeWorkspaceCommandRunner]
     # @!attribute [r] dispatch_ai_command
     #   @return [Application::DispatchAiCommand]
+    # @!attribute [r] handle_query
+    #   @return [Application::HandleQuery]
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
                 :message_receiver, :inbound_message_repo, :route_message,
                 :register_work_item, :start_work_item, :notify_human,
-                :ai_command_runner, :dispatch_ai_command
+                :ai_command_runner, :dispatch_ai_command, :handle_query
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -81,6 +83,11 @@ module WorkCoordinator
 
     def handle_ai_command(msg)
       body = "#{msg[:work_item_ref]} #{msg[:body]}".strip
+      if (response = @handle_query.call(body: body))
+        @message_sender.send_message(to: nil, body: response, conversation_id: nil)
+        puts "Query handled: #{body.split.first}"
+        return
+      end
       puts "AI command: #{body}"
       result = @dispatch_ai_command.call(body: body)
       if result.dispatched
@@ -115,6 +122,13 @@ module WorkCoordinator
         ai_command_runner: @ai_command_runner,
         message_sender: @message_sender,
         aliases: config.aliases
+      )
+      @handle_query = Application::HandleQuery.new(
+        work_item_repo: @work_item_repo,
+        event_store:    @event_store,
+        agent_session:  @agent_session,
+        config:         Config.new,
+        message_sender: @message_sender
       )
     end
   end

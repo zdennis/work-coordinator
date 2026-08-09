@@ -15,6 +15,7 @@ module WorkCoordinator
         @active = {}          # work_item_id => session_id
         @messages = []
         @next_id = 0
+        @all_panes = []
       end
 
       # Allocates a new session identifier for the work item and activates it.
@@ -58,6 +59,19 @@ module WorkCoordinator
       #   `{ session_id:, message: }`, in order
       def delivered_messages
         @messages.dup
+      end
+
+      # Overrides the pane list returned by {#list_all_panes}.
+      #
+      # @param panes [Array<String>]
+      # @return [void]
+      def stub_panes(panes)
+        @all_panes = panes
+      end
+
+      # @return [Array<String>] configured pane identifiers, empty by default
+      def list_all_panes
+        @all_panes.dup
       end
     end
   end
