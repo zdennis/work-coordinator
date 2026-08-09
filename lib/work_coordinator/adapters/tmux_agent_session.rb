@@ -38,9 +38,7 @@ module WorkCoordinator
       # @return [void]
       # @raise [RuntimeError] when tmux reports failure
       def deliver(session_id:, message:)
-        cmd = ["tmux", "send-keys", "-t", session_id, message, "Enter"]
-        out, status = run_command(cmd)
-        raise "tmux send-keys failed: #{out}" unless status.success?
+        send_keys!(session_id, message)
       end
 
       # No-op: panes are owned by the operator, not this adapter.
@@ -106,14 +104,26 @@ module WorkCoordinator
         end
 
         pane_target = "#{workspace_name}:0.#{tmux_pane_index}"
-        out, status = run_command(["tmux", "send-keys", "-t", pane_target, message, "Enter"])
-        raise "tmux send-keys failed: #{out}" unless status.success?
+        send_keys!(pane_target, message)
       end
 
       private
 
       def run_command(cmd)
         Open3.capture2e(*cmd)
+      end
+
+      def send_keys!(target, message)
+        out, status = run_command(["tmux", "send-keys", "-t", target, message, "Enter"])
+        raise "tmux send-keys failed: #{out}" unless status.success?
+
+        # Multiline messages put Claude Code into multiline input mode, where the
+        # trailing Enter above becomes just another newline. A second Enter is needed
+        # to actually submit the prompt.
+        return unless message.include?("\n")
+
+        out, status = run_command(["tmux", "send-keys", "-t", target, "Enter"])
+        raise "tmux send-keys failed (submit): #{out}" unless status.success?
       end
     end
   end

@@ -52,6 +52,34 @@ RSpec.describe WorkCoordinator::Adapters::TmuxAgentSession do
         send_keys_cmd = captured_cmds.find { |c| c.include?("send-keys") }
         expect(send_keys_cmd).to include("my-service:0.0")
       end
+
+      it "sends a single send-keys for a single-line message" do
+        captured_cmds = []
+        allow(Open3).to receive(:capture2e) do |*cmd|
+          captured_cmds << cmd
+          cmd.include?("list-panes") ? ["0\n", success_status] : ["", success_status]
+        end
+
+        session.deliver_to_pane(workspace_name: "my-service", pane_index: 1, message: "single line")
+
+        send_keys_calls = captured_cmds.count { |c| c.include?("send-keys") }
+        expect(send_keys_calls).to eq(1)
+      end
+
+      it "sends a second bare Enter for a multiline message so Claude Code submits" do
+        captured_cmds = []
+        allow(Open3).to receive(:capture2e) do |*cmd|
+          captured_cmds << cmd
+          cmd.include?("list-panes") ? ["0\n", success_status] : ["", success_status]
+        end
+
+        session.deliver_to_pane(workspace_name: "my-service", pane_index: 1, message: "line one\nline two")
+
+        send_keys_calls = captured_cmds.select { |c| c.include?("send-keys") }
+        expect(send_keys_calls.length).to eq(2)
+        expect(send_keys_calls.last).to include("Enter")
+        expect(send_keys_calls.last).not_to include("line one")
+      end
     end
 
     context "when the pane does not exist" do
