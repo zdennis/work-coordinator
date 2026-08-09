@@ -10,16 +10,16 @@ module WorkCoordinator
     # When the message body matches a known query keyword, returns a plain-text
     # response string (to be sent back via iMessage). When it does not match,
     # returns nil so the message falls through to DispatchAiCommand unchanged.
-    class HandleQuery
+    class HandleQuery # rubocop:disable Metrics/ClassLength
       COMMAND_DESCRIPTIONS = {
-        "init"     => "create config file",
-        "alias"    => "manage aliases",
+        "init" => "create config file",
+        "alias" => "manage aliases",
         "register" => "create work item",
-        "start"    => "activate work item",
-        "status"   => "list all work items",
-        "send"     => "send message via socket",
-        "run"      => "start the daemon",
-        "notify"   => "send a notification"
+        "start" => "activate work item",
+        "status" => "list all work items",
+        "send" => "send message via socket",
+        "run" => "start the daemon",
+        "notify" => "send a notification"
       }.freeze
 
       SHORTHAND_STATE_MAP = {
@@ -41,7 +41,7 @@ module WorkCoordinator
 
       # @param body [String] the message body to match against
       # @return [String, nil] response text, or nil if no query matched
-      def call(body:)
+      def call(body:) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/AbcSize
         case body.strip
         when /\Ahelp\z/i
           help_overview
@@ -67,8 +67,6 @@ module WorkCoordinator
           list_panes
         when /\Aleases\z/i
           list_leases
-        else
-          nil
         end
       end
 
@@ -106,7 +104,9 @@ module WorkCoordinator
 
         if match
           desc = COMMAND_DESCRIPTIONS[match]
-          "#{match}: #{desc}\nUsage: work-coordinator #{match} [options]\nRun 'work-coordinator #{match} --help' for full usage."
+          "#{match}: #{desc}\n" \
+            "Usage: work-coordinator #{match} [options]\n" \
+            "Run 'work-coordinator #{match} --help' for full usage."
         else
           "Unknown command: #{name}. Try 'ai: help commands' for a list."
         end
@@ -138,7 +138,7 @@ module WorkCoordinator
         end
 
         unless matched_state
-          known = Domain::WORK_ITEM_STATES.map(&:to_s).join(", ")
+          known = Domain::WORK_ITEM_STATES.join(", ")
           return "Unknown state: #{filter}. Known states: #{known}"
         end
 
@@ -152,7 +152,7 @@ module WorkCoordinator
         format_work_items(items)
       end
 
-      def item_detail(ref)
+      def item_detail(ref) # rubocop:disable Metrics/AbcSize
         item = @work_item_repo.find_all.find do |wi|
           wi.external_reference&.upcase == ref.upcase
         end
@@ -180,7 +180,7 @@ module WorkCoordinator
         "Recent events (#{events.size}):\n#{lines.join("\n")}"
       end
 
-      def list_panes
+      def list_panes # rubocop:disable Metrics/MethodLength
         panes = begin
           @agent_session.list_all_panes
         rescue StandardError
@@ -212,7 +212,7 @@ module WorkCoordinator
         "Active leases:\n#{lines.join("\n")}"
       end
 
-      def format_work_items(items)
+      def format_work_items(items) # rubocop:disable Metrics/AbcSize
         return "No work items." if items.empty?
 
         truncated = items.length > 10
@@ -222,7 +222,7 @@ module WorkCoordinator
           ref = wi.external_reference || wi.id[0, 8]
           "#{ref.ljust(10)}  #{state_phase.ljust(24)}  #{wi.title}"
         end
-        result = "#{items.length} work item#{"s" if items.length != 1}:\n#{lines.join("\n")}"
+        result = "#{items.length} work item#{'s' if items.length != 1}:\n#{lines.join("\n")}"
         result += "\n... and #{items.length - 10} more" if truncated
         result
       end
@@ -234,8 +234,8 @@ module WorkCoordinator
         case seconds
         when 0..59        then "#{seconds}s ago"
         when 60..3599     then "#{seconds / 60}m ago"
-        when 3600..86399  then "#{seconds / 3600}h ago"
-        else                   "#{seconds / 86400}d ago"
+        when 3600..86_399 then "#{seconds / 3600}h ago"
+        else "#{seconds / 86_400}d ago"
         end
       end
     end

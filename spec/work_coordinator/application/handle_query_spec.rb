@@ -8,21 +8,21 @@ require "work_coordinator/application/handle_query"
 require "work_coordinator/application/event_store"
 
 RSpec.describe WorkCoordinator::Application::HandleQuery do
+  subject(:use_case) do
+    described_class.new(
+      work_item_repo: repo,
+      event_store: event_store,
+      agent_session: agent_session,
+      config: config,
+      message_sender: message_sender
+    )
+  end
+
   let(:repo)           { WorkCoordinator::Adapters::InMemoryWorkItemRepository.new }
   let(:event_store)    { WorkCoordinator::Application::InMemoryEventStore.new }
   let(:agent_session)  { WorkCoordinator::Adapters::FakeAgentSession.new }
   let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
   let(:config)         { instance_double(WorkCoordinator::Config, aliases: {}, path: "~/.config/work-coordinator/config.yml") }
-
-  subject(:use_case) do
-    described_class.new(
-      work_item_repo: repo,
-      event_store:    event_store,
-      agent_session:  agent_session,
-      config:         config,
-      message_sender: message_sender
-    )
-  end
 
   def call(body)
     use_case.call(body: body)
@@ -158,7 +158,7 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
                         phase: nil))
       end
 
-      it "returns the formatted list" do
+      it "returns the formatted list", :aggregate_failures do
         result = call("status")
         expect(result).to include("2 work items:")
         expect(result).to include("MS-123")
@@ -249,10 +249,10 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
                         kind: :jira,
                         repository: "acme-billing",
                         workspace_name: "work:claude.0",
-                        updated_at: Time.now - 47 * 60))
+                        updated_at: Time.now - (47 * 60)))
       end
 
-      it "returns item detail" do
+      it "returns item detail", :aggregate_failures do
         result = call("item MS-123")
         expect(result).to include("MS-123: Fix login timeout")
         expect(result).to include("state: active")
