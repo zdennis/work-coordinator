@@ -88,13 +88,25 @@ module WorkCoordinator
       )
     end
 
-    def handle_ai_command(msg) # rubocop:disable Metrics/AbcSize
+    def handle_ai_command(msg)
       body = "#{msg[:work_item_ref]} #{msg[:body]}".strip
-      if (response = @handle_query.call(body: body))
-        @message_sender.send_message(to: nil, body: response, conversation_id: nil)
-        puts "Query handled: #{body.split.first}"
-        return
-      end
+      return if handle_ai_query?(body)
+
+      run_dispatch_ai_command(body)
+    rescue StandardError => e
+      warn "Error dispatching AI command: #{e.message}"
+    end
+
+    def handle_ai_query?(body)
+      response = @handle_query.call(body: body)
+      return false unless response
+
+      @message_sender.send_message(to: nil, body: response, conversation_id: nil)
+      puts "Query handled: #{body.split.first}"
+      true
+    end
+
+    def run_dispatch_ai_command(body)
       puts "AI command: #{body}"
       result = @dispatch_ai_command.call(body: body)
       if result.dispatched
@@ -102,8 +114,6 @@ module WorkCoordinator
       else
         puts "AI command unmatched (#{result.failure_reason}): #{body}"
       end
-    rescue StandardError => e
-      warn "Error dispatching AI command: #{e.message}"
     end
 
     def build_sender(modes)
@@ -114,7 +124,7 @@ module WorkCoordinator
       end
     end
 
-    def wire! # rubocop:disable Metrics/MethodLength
+    def wire!
       @register_work_item = Application::RegisterWorkItem.new(work_item_repo: @work_item_repo,
                                                               event_store: @event_store)
       @start_work_item    = Application::StartWorkItem.new(work_item_repo: @work_item_repo,
@@ -123,6 +133,10 @@ module WorkCoordinator
                                                           agent_session: @agent_session, event_store: @event_store)
       @notify_human       = Application::NotifyHuman.new(message_sender: @message_sender,
                                                          work_item_repo: @work_item_repo, event_store: @event_store)
+      wire_ai_commands!
+    end
+
+    def wire_ai_commands!
       config = Config.new
       @ai_command_runner   = Adapters::ClaudeWorkspaceCommandRunner.new
       @dispatch_ai_command = Application::DispatchAiCommand.new(
@@ -134,9 +148,13 @@ module WorkCoordinator
         work_item_repo: @work_item_repo,
         event_store: @event_store,
         agent_session: @agent_session,
-        config: Config.new,
+        config: config,
         message_sender: @message_sender
       )
+      wire_delivery!
+    end
+
+    def wire_delivery!
       @deliver_to_main_session = Application::DeliverToMainSession.new(
         agent_session: @agent_session,
         message_sender: @message_sender
