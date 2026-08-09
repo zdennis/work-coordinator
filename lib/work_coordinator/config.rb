@@ -95,8 +95,8 @@ module WorkCoordinator
         # work-coordinator configuration
         ai_command: "#{DEFAULT_AI_COMMAND}"
         slash_commands_enabled: true
-        # auto_launch_workspace: false
-        # workspace_launch_timeout_seconds: 20
+        # auto_launch_workspace: false  # Automatically launch dormant workspaces when routing AI commands via URL
+        # workspace_launch_timeout_seconds: 20  # Max seconds to wait for a launched workspace to become active
         aliases:
           WC: work-coordinator
       YAML

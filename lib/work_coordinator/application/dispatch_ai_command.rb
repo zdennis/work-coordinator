@@ -14,15 +14,17 @@ module WorkCoordinator
         instruction_context: "",
         auto_launch_workspace: false,
         workspace_launch_timeout_seconds: 20,
-        sleep_fn: method(:sleep)
+        sleep_fn: method(:sleep),
+        clock_fn: -> { Time.now }
       )
-        @ai_command_runner              = ai_command_runner
-        @message_sender                 = message_sender
-        @aliases                        = aliases
-        @instruction_context            = instruction_context
-        @auto_launch_workspace          = auto_launch_workspace
+        @ai_command_runner                = ai_command_runner
+        @message_sender                   = message_sender
+        @aliases                          = aliases
+        @instruction_context              = instruction_context
+        @auto_launch_workspace            = auto_launch_workspace
         @workspace_launch_timeout_seconds = workspace_launch_timeout_seconds
-        @sleep_fn = sleep_fn
+        @sleep_fn                         = sleep_fn
+        @clock_fn                         = clock_fn
       end
 
       def call(body:)
@@ -33,11 +35,13 @@ module WorkCoordinator
       private
 
       def url_dispatch(repo:, body:)
-        resolved = resolve_alias(repo)
-        project  = resolved || fuzzy_match(repo, @ai_command_runner.list_all_projects)
+        resolved        = resolve_alias(repo)
+        all_projects    = @ai_command_runner.list_all_projects
+        active_projects = @ai_command_runner.list_projects
+        project         = resolved || fuzzy_match(repo, all_projects)
         return no_workspace_result(repo, body) if project.nil?
 
-        if dormant?(project)
+        unless active_projects.include?(project)
           return dormant_workspace_result(project) unless @auto_launch_workspace
           return launch_timeout_result(project) unless wait_for_launch(project)
         end
@@ -54,22 +58,19 @@ module WorkCoordinator
         run_and_notify(project: project, body: body)
       end
 
-      def dormant?(project)
-        !@ai_command_runner.list_projects.include?(project)
-      end
-
       def wait_for_launch(project)
         @ai_command_runner.launch_workspace(name: project)
-        deadline = Time.now + @workspace_launch_timeout_seconds
+        deadline = @clock_fn.call + @workspace_launch_timeout_seconds
         loop do
           @sleep_fn.call(2)
           return true if @ai_command_runner.list_projects.include?(project)
-          return false if Time.now >= deadline
+          return false if @clock_fn.call >= deadline
         end
       end
 
       def dormant_workspace_result(project)
-        msg = "Workspace '#{project}' is dormant. Enable auto_launch_workspace in config to launch it automatically."
+        msg = "Workspace '#{project}' is not currently running. " \
+              "Enable auto_launch_workspace in config to launch it automatically."
         @message_sender.send_message(to: nil, body: msg, conversation_id: nil)
         Result.new(dispatched: false, project: project, summary: nil, failure_reason: :dormant_workspace)
       end

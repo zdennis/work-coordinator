@@ -236,6 +236,24 @@ ai: add input validation to the registration form
 The daemon extracts a workspace keyword, matches it to an active workspace, runs the instruction
 there, and texts you a summary when it finishes.
 
+## Auto-launch configuration
+
+When a GitHub URL is dispatched and the matched workspace is not currently running, the coordinator can launch it automatically before routing the instruction.
+
+| Config key | Default | Description |
+|------------|---------|-------------|
+| `auto_launch_workspace` | `false` | When `true`, automatically runs `workspace launch <project>` for dormant workspaces found via URL dispatch. Has no effect on plain-text AI dispatch. |
+| `workspace_launch_timeout_seconds` | `20` | How long (in seconds) to wait for the launched workspace to appear in `workspace list` before giving up and sending a timeout notification. |
+
+Example config (`~/.config/work-coordinator/config.yml`):
+
+```yaml
+auto_launch_workspace: true
+workspace_launch_timeout_seconds: 30
+```
+
+When `auto_launch_workspace` is `false` (the default) and a dormant workspace is matched, the coordinator sends you a notification and stops — no launch is attempted. When it is `true` and the workspace does not become active within the timeout, a `:launch_timeout` notification is sent.
+
 ## Gotchas
 
 **`WC_RECIPIENT` is required for messages mode.** Without it the container cannot configure the Messages.app adapter. The daemon will start but outbound notifications will fail.

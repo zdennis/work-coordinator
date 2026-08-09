@@ -6,7 +6,8 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
   let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
 
   def build_use_case(aliases: {}, instruction_context: "", auto_launch_workspace: false,
-                     workspace_launch_timeout_seconds: 20, sleep_fn: method(:sleep), **runner_opts)
+                     workspace_launch_timeout_seconds: 20, sleep_fn: method(:sleep),
+                     clock_fn: -> { Time.now }, **runner_opts)
     runner = WorkCoordinator::Adapters::FakeAiCommandRunner.new(**runner_opts)
     [described_class.new(
       ai_command_runner: runner,
@@ -15,7 +16,8 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
       instruction_context: instruction_context,
       auto_launch_workspace: auto_launch_workspace,
       workspace_launch_timeout_seconds: workspace_launch_timeout_seconds,
-      sleep_fn: sleep_fn
+      sleep_fn: sleep_fn,
+      clock_fn: clock_fn
     ), runner]
   end
 
