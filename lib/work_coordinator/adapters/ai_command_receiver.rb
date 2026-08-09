@@ -3,6 +3,7 @@
 require "work_coordinator/ports/message_receiver"
 require "work_coordinator/application/route_message"
 require "work_coordinator/domain/ai_command"
+require "work_coordinator/domain/slash_command"
 
 module WorkCoordinator
   module Adapters
@@ -41,17 +42,26 @@ module WorkCoordinator
       end
 
       def dispatch_ai_message(msg, body)
-        command = Domain::AiCommand.new(body)
+        slash = Domain::SlashCommand.new(body)
+        if slash.recognized?
+          deliver_to_main(workspace_name: slash.workspace, instructions: slash.instructions)
+          return
+        end
 
+        command = Domain::AiCommand.new(body)
         if command.send_to_main_session?
-          @deliver_to_main_session.call(
-            workspace_name: command.workspace,
-            instructions: command.instructions,
-            recipient: nil # intentional: ack goes to the default WC_RECIPIENT; :from is not forwarded
-          )
+          deliver_to_main(workspace_name: command.workspace, instructions: command.instructions)
         else
           @ai_command_handler.call(msg)
         end
+      end
+
+      def deliver_to_main(workspace_name:, instructions:)
+        @deliver_to_main_session.call(
+          workspace_name: workspace_name,
+          instructions: instructions,
+          recipient: nil # intentional: ack goes to the default WC_RECIPIENT; :from is not forwarded
+        )
       end
     end
   end

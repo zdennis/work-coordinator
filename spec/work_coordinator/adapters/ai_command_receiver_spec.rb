@@ -191,4 +191,100 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
   end
+
+  describe "slash command routing" do
+    subject(:receiver) do
+      described_class.new(
+        inner: inner,
+        ai_command_handler: ai_handler,
+        deliver_to_main_session: deliver_to_main
+      )
+    end
+
+    let(:deliveries) { [] }
+    let(:deliver_to_main) do
+      lambda do |workspace_name:, instructions:, recipient:|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      end
+    end
+
+    # "ai: /build GE add OAuth support" splits as:
+    #   work_item_ref: "/build", body: "GE add OAuth support"
+    context "with /build GE add OAuth support" do
+      let(:messages) { [{ work_item_ref: "/build", body: "GE add OAuth support", received_at: Time.now }] }
+
+      it "routes to deliver_to_main_session with correct workspace and instructions" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "We're building a feature: add OAuth support", recipient: nil }
+        )
+      end
+
+      it "does not call the ai_command_handler" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to be_empty
+      end
+    end
+
+    # "ai: /clear GE" splits as: work_item_ref: "/clear", body: "MS"
+    context "with /clear GE" do
+      let(:messages) { [{ work_item_ref: "/clear", body: "MS", received_at: Time.now }] }
+
+      it "routes to deliver_to_main_session with instructions '/clear'" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "/clear", recipient: nil }
+        )
+      end
+    end
+
+    # "ai: /stop GE" splits as: work_item_ref: "/stop", body: "MS"
+    context "with /stop GE" do
+      let(:messages) { [{ work_item_ref: "/stop", body: "MS", received_at: Time.now }] }
+
+      it "routes to deliver_to_main_session with instructions 'C-c'" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "C-c", recipient: nil }
+        )
+      end
+    end
+
+    # "ai: /test GE" splits as: work_item_ref: "/test", body: "MS"
+    context "with /test GE (no args)" do
+      let(:messages) { [{ work_item_ref: "/test", body: "MS", received_at: Time.now }] }
+
+      it "routes with 'Run the test suite'" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "Run the test suite", recipient: nil }
+        )
+      end
+    end
+
+    # "ai: /test GE user model" splits as: work_item_ref: "/test", body: "GE user model"
+    context "with /test GE user model" do
+      let(:messages) { [{ work_item_ref: "/test", body: "GE user model", received_at: Time.now }] }
+
+      it "routes with 'Run tests: user model'" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "Run tests: user model", recipient: nil }
+        )
+      end
+    end
+
+    # "ai: /unknown GE foo" splits as: work_item_ref: "/unknown", body: "GE foo"
+    # Unrecognized slash verb falls through to ai_command_handler.
+    context "with /unknown GE foo (unrecognized slash verb)" do
+      let(:msg) { { work_item_ref: "/unknown", body: "GE foo", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "falls through to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+        expect(deliveries).to be_empty
+      end
+    end
+  end
 end
