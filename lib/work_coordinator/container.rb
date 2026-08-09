@@ -142,7 +142,8 @@ module WorkCoordinator
       @dispatch_ai_command = Application::DispatchAiCommand.new(
         ai_command_runner: @ai_command_runner,
         message_sender: @message_sender,
-        aliases: config.aliases
+        aliases: config.aliases,
+        instruction_context: config.instruction_context
       )
       @handle_query = Application::HandleQuery.new(
         work_item_repo: @work_item_repo,
@@ -151,14 +152,15 @@ module WorkCoordinator
         config: config,
         message_sender: @message_sender
       )
-      wire_delivery!
+      wire_delivery!(config)
     end
 
-    def wire_delivery!
+    def wire_delivery!(config)
       @deliver_to_main_session = Application::DeliverToMainSession.new(
         agent_session: @agent_session,
         message_sender: @message_sender,
-        aliases: Config.new.aliases
+        aliases: config.aliases,
+        instruction_context: config.instruction_context
       )
     end
   end

@@ -97,6 +97,39 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     end
   end
 
+  context "when instruction_context is configured" do
+    subject(:use_case) do
+      described_class.new(
+        agent_session: agent_session,
+        message_sender: message_sender,
+        instruction_context: "How to work:\n\n$rpi"
+      )
+    end
+
+    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
+
+    it "appends the context to the instructions with a blank line separator" do
+      use_case.call(workspace_name: "my-service", instructions: "research foo", recipient: nil)
+      expect(agent_session.delivered_to_pane.first[:message]).to eq(
+        "research foo\n\nHow to work:\n\n$rpi"
+      )
+    end
+
+    it "uses only the original instructions for the acknowledgment summary" do
+      use_case.call(workspace_name: "my-service", instructions: "research foo", recipient: nil)
+      expect(message_sender.sent_messages.first[:body]).to eq("Sent to my-service: research foo")
+    end
+  end
+
+  context "when instruction_context is empty" do
+    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
+
+    it "delivers instructions unchanged" do
+      use_case.call(workspace_name: "my-service", instructions: "research foo", recipient: nil)
+      expect(agent_session.delivered_to_pane.first[:message]).to eq("research foo")
+    end
+  end
+
   context "when workspace_name is empty" do
     before { agent_session.stub_pane(workspace_name: "", pane_index: 2) }
 

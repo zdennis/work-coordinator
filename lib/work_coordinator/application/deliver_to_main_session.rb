@@ -28,10 +28,12 @@ module WorkCoordinator
       # @param agent_session [Ports::AgentSession]
       # @param message_sender [Ports::MessageSender]
       # @param aliases [Hash] short-name => project-name alias map (case-insensitive lookup)
-      def initialize(agent_session:, message_sender:, aliases: {})
-        @agent_session  = agent_session
-        @message_sender = message_sender
-        @aliases        = aliases
+      # @param instruction_context [String] text appended to every instruction before delivery
+      def initialize(agent_session:, message_sender:, aliases: {}, instruction_context: "")
+        @agent_session       = agent_session
+        @message_sender      = message_sender
+        @aliases             = aliases
+        @instruction_context = instruction_context
       end
 
       # @param workspace_name [String] name (or alias) of the tmux session to target
@@ -40,10 +42,11 @@ module WorkCoordinator
       # @return [Result]
       def call(workspace_name:, instructions:, recipient:)
         resolved = @aliases[workspace_name.strip.upcase] || workspace_name
+        full_message = build_message(instructions)
         @agent_session.deliver_to_pane(
           workspace_name: resolved,
           pane_index: MAIN_PANE_INDEX,
-          message: instructions
+          message: full_message
         )
         summary = instructions.length > 80 ? "#{instructions[0, 80]}..." : instructions
         @message_sender.send_message(to: recipient, body: "Sent to #{resolved}: #{summary}")
@@ -51,6 +54,14 @@ module WorkCoordinator
       rescue StandardError => e
         @message_sender.send_message(to: recipient, body: "Error: #{e.message}")
         Result.new(success: false, error: e.message)
+      end
+
+      private
+
+      def build_message(instructions)
+        return instructions if @instruction_context.nil? || @instruction_context.strip.empty?
+
+        "#{instructions}\n\n#{@instruction_context}"
       end
     end
   end

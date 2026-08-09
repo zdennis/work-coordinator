@@ -75,6 +75,23 @@ RSpec.describe WorkCoordinator::Config do
     end
   end
 
+  describe "#instruction_context" do
+    it "returns an empty string when the config file does not exist" do
+      expect(config.instruction_context).to eq("")
+    end
+
+    it "returns an empty string when not set in the config file" do
+      config.write_defaults!
+      expect(config.instruction_context).to eq("")
+    end
+
+    it "returns the value from the config file when set" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "instruction_context: |\n  How to work:\n\n  $rpi\n")
+      expect(config.instruction_context).to eq("How to work:\n\n$rpi\n")
+    end
+  end
+
   describe "#aliases" do
     it "returns an empty hash when the config file does not exist" do
       expect(config.aliases).to eq({})

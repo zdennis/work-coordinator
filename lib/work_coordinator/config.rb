@@ -30,6 +30,10 @@ module WorkCoordinator
       data.fetch("aliases", {})
     end
 
+    def instruction_context
+      data.fetch("instruction_context", "")
+    end
+
     def resolve_alias(keyword)
       return nil if keyword.nil? || keyword.empty?
 

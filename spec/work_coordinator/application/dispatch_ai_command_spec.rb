@@ -5,9 +5,10 @@ require "spec_helper"
 RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
   let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
 
-  def build_use_case(aliases: {}, **runner_opts)
+  def build_use_case(aliases: {}, instruction_context: "", **runner_opts)
     runner = WorkCoordinator::Adapters::FakeAiCommandRunner.new(**runner_opts)
-    [described_class.new(ai_command_runner: runner, message_sender: message_sender, aliases: aliases), runner]
+    [described_class.new(ai_command_runner: runner, message_sender: message_sender,
+                         aliases: aliases, instruction_context: instruction_context), runner]
   end
 
   describe "happy path" do
@@ -132,6 +133,41 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
 
       expect(result.dispatched).to be(false)
       expect(result.failure_reason).to eq(:no_workspace)
+    end
+  end
+
+  describe "instruction_context" do
+    it "appends context to the instructions passed to run_project" do
+      use_case, runner = build_use_case(
+        instruction_context: "How to work:\n\n$rpi",
+        extract_project_result: "auth",
+        list_projects_result: %w[auth-service],
+        run_project_result: "done",
+        summarize_result: "Auth ran."
+      )
+
+      use_case.call(body: "research foo")
+
+      expect(runner.run_project_calls).to eq([
+                                               { project: "auth-service",
+                                                 instructions: "research foo\n\nHow to work:\n\n$rpi" }
+                                             ])
+    end
+
+    it "passes instructions unchanged when instruction_context is empty" do
+      use_case, runner = build_use_case(
+        instruction_context: "",
+        extract_project_result: "auth",
+        list_projects_result: %w[auth-service],
+        run_project_result: "done",
+        summarize_result: "Auth ran."
+      )
+
+      use_case.call(body: "research foo")
+
+      expect(runner.run_project_calls).to eq([
+                                               { project: "auth-service", instructions: "research foo" }
+                                             ])
     end
   end
 

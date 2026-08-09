@@ -5,10 +5,11 @@ module WorkCoordinator
     class DispatchAiCommand
       Result = Data.define(:dispatched, :project, :summary, :failure_reason)
 
-      def initialize(ai_command_runner:, message_sender:, aliases: {})
-        @ai_command_runner = ai_command_runner
-        @message_sender    = message_sender
-        @aliases           = aliases
+      def initialize(ai_command_runner:, message_sender:, aliases: {}, instruction_context: "")
+        @ai_command_runner   = ai_command_runner
+        @message_sender      = message_sender
+        @aliases             = aliases
+        @instruction_context = instruction_context
       end
 
       def call(body:)
@@ -32,7 +33,8 @@ module WorkCoordinator
       end
 
       def run_and_notify(project:, body:)
-        output  = @ai_command_runner.run_project(project: project, instructions: body)
+        instructions = build_instructions(body)
+        output  = @ai_command_runner.run_project(project: project, instructions: instructions)
         summary = @ai_command_runner.summarize(text: output)
         @message_sender.send_message(to: nil, body: summary, conversation_id: nil)
         Result.new(dispatched: true, project: project, summary: summary, failure_reason: nil)
@@ -42,6 +44,12 @@ module WorkCoordinator
         return nil if keyword.nil? || keyword.empty?
 
         @aliases[keyword.strip.upcase]
+      end
+
+      def build_instructions(body)
+        return body if @instruction_context.nil? || @instruction_context.strip.empty?
+
+        "#{body}\n\n#{@instruction_context}"
       end
 
       def fuzzy_match(keyword, projects)
