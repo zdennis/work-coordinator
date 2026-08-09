@@ -40,6 +40,7 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
       expect(result).to include("help [cmd]")
       expect(result).to include("status [s]")
       expect(result).to include("help slash")
+      expect(result).to include("/verb")
     end
 
     it "matches case-insensitively (HELP)" do

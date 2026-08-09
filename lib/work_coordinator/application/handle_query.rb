@@ -93,6 +93,7 @@ module WorkCoordinator
             new    WORKSPACE - instructions   spawn new pane (not yet implemented)
             bash   WORKSPACE - instructions   spawn new bash pane (not yet implemented)
                    WORKSPACE - instructions   no verb: LLM extraction pipeline
+            /verb  WORKSPACE [args]           slash shorthand (ai: help slash)
         TEXT
       end
 
@@ -104,7 +105,7 @@ module WorkCoordinator
         "CLI commands:\n#{lines.join("\n")}"
       end
 
-      def help_slash_commands
+      def help_slash_commands # rubocop:disable Metrics/MethodLength
         <<~TEXT.chomp
           ai: slash commands:
             /build    WORKSPACE [description]   "We're building a feature: ..."
@@ -117,6 +118,10 @@ module WorkCoordinator
             /push     WORKSPACE                 "Push the current branch"
             /pr       WORKSPACE [description]   "Open a pull request: ..." or "Open a pull request"
             /stop     WORKSPACE                 send Ctrl+C (C-c interrupt)
+          Examples:
+            ai: /build GE add OAuth support
+            ai: /test GE
+            ai: /stop GE
         TEXT
       end
 
