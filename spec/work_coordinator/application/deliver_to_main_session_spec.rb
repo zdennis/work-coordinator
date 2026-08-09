@@ -9,6 +9,9 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     described_class.new(agent_session: agent_session, message_sender: message_sender)
   end
 
+  let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
+  let(:agent_session)  { WorkCoordinator::Adapters::FakeAgentSession.new }
+
   context "when aliases are configured" do
     subject(:use_case) do
       described_class.new(
@@ -32,9 +35,6 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
       expect(message_sender.sent_messages.first[:body]).to eq("Sent to work-coordinator: echo hi")
     end
   end
-
-  let(:agent_session)  { WorkCoordinator::Adapters::FakeAgentSession.new }
-  let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
 
   def call(workspace_name: "my-service", instructions: "add validation", recipient: nil)
     use_case.call(workspace_name: workspace_name, instructions: instructions, recipient: recipient)
@@ -69,7 +69,7 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     it "truncates long instructions to 80 chars in the acknowledgment" do
       long = "a" * 100
       call(instructions: long)
-      expect(message_sender.sent_messages.first[:body]).to eq("Sent to my-service: #{"a" * 80}...")
+      expect(message_sender.sent_messages.first[:body]).to eq("Sent to my-service: #{'a' * 80}...")
     end
 
     it "preserves multiline instructions" do
