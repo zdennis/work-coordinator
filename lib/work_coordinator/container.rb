@@ -90,14 +90,14 @@ module WorkCoordinator
 
     def handle_ai_command(msg) # rubocop:disable Metrics/AbcSize
       body = "#{msg[:work_item_ref]} #{msg[:body]}".strip
-      return if handle_ai_query(body)
+      return if handle_ai_query?(body)
 
       run_dispatch_ai_command(body)
     rescue StandardError => e
       warn "Error dispatching AI command: #{e.message}"
     end
 
-    def handle_ai_query(body)
+    def handle_ai_query?(body)
       response = @handle_query.call(body: body)
       return false unless response
 
