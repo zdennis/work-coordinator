@@ -5,10 +5,18 @@ require "spec_helper"
 RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
   let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
 
-  def build_use_case(aliases: {}, instruction_context: "", **runner_opts)
+  def build_use_case(aliases: {}, instruction_context: "", auto_launch_workspace: false,
+                     workspace_launch_timeout_seconds: 20, sleep_fn: method(:sleep), **runner_opts)
     runner = WorkCoordinator::Adapters::FakeAiCommandRunner.new(**runner_opts)
-    [described_class.new(ai_command_runner: runner, message_sender: message_sender,
-                         aliases: aliases, instruction_context: instruction_context), runner]
+    [described_class.new(
+      ai_command_runner: runner,
+      message_sender: message_sender,
+      aliases: aliases,
+      instruction_context: instruction_context,
+      auto_launch_workspace: auto_launch_workspace,
+      workspace_launch_timeout_seconds: workspace_launch_timeout_seconds,
+      sleep_fn: sleep_fn
+    ), runner]
   end
 
   describe "happy path" do
@@ -253,13 +261,119 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
 
     it "returns no_workspace when URL repo name has no matching project" do
       use_case, _runner = build_use_case(
-        list_projects_result: %w[acme-billing]
+        list_projects_result: %w[acme-billing],
+        list_all_projects_result: %w[acme-billing]
       )
 
       result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
 
       expect(result.dispatched).to be(false)
       expect(result.failure_reason).to eq(:no_workspace)
+    end
+  end
+
+  describe "auto-launch dormant workspace" do
+    let(:no_sleep) { ->(_) {} }
+
+    context "when auto_launch_workspace is false" do
+      it "returns dormant_workspace when the project is dormant" do
+        use_case, runner = build_use_case(
+          auto_launch_workspace: false,
+          sleep_fn: no_sleep,
+          list_all_projects_result: %w[dormant-project],
+          list_projects_result: [],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/org/dormant-project/pull/1")
+
+        expect(result.dispatched).to be(false)
+        expect(result.failure_reason).to eq(:dormant_workspace)
+        expect(runner.launch_workspace_calls).to be_empty
+      end
+
+      it "proceeds normally when project is already active" do
+        use_case, runner = build_use_case(
+          auto_launch_workspace: false,
+          sleep_fn: no_sleep,
+          list_all_projects_result: %w[active-project],
+          list_projects_result: %w[active-project],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/org/active-project/pull/1")
+
+        expect(result.dispatched).to be(true)
+        expect(runner.launch_workspace_calls).to be_empty
+      end
+    end
+
+    context "when auto_launch_workspace is true" do
+      it "launches and delivers when project appears within timeout" do
+        use_case, runner = build_use_case(
+          auto_launch_workspace: true,
+          workspace_launch_timeout_seconds: 10,
+          sleep_fn: no_sleep,
+          list_all_projects_result: %w[slow-project],
+          list_projects_results: [[], %w[slow-project]],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/org/slow-project/pull/1")
+
+        expect(result.dispatched).to be(true)
+        expect(runner.launch_workspace_calls).to eq(["slow-project"])
+      end
+
+      it "skips launch when project is already active" do
+        use_case, runner = build_use_case(
+          auto_launch_workspace: true,
+          sleep_fn: no_sleep,
+          list_all_projects_result: %w[active-project],
+          list_projects_result: %w[active-project],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/org/active-project/pull/1")
+
+        expect(result.dispatched).to be(true)
+        expect(runner.launch_workspace_calls).to be_empty
+      end
+
+      it "returns launch_timeout when project never appears" do
+        use_case, _runner = build_use_case(
+          auto_launch_workspace: true,
+          workspace_launch_timeout_seconds: 0,
+          sleep_fn: no_sleep,
+          list_all_projects_result: %w[stuck-project],
+          list_projects_result: []
+        )
+
+        result = use_case.call(body: "https://github.com/org/stuck-project/pull/1")
+
+        expect(result.dispatched).to be(false)
+        expect(result.failure_reason).to eq(:launch_timeout)
+        expect(message_sender.sent_messages.last[:body]).to include("Workspace stuck-project did not start within 0s")
+      end
+
+      it "does not auto-launch for AI-extracted (non-URL) dispatch" do
+        use_case, runner = build_use_case(
+          auto_launch_workspace: true,
+          sleep_fn: no_sleep,
+          extract_project_result: "some-project",
+          list_projects_result: %w[some-project],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        use_case.call(body: "fix the some-project service")
+
+        expect(runner.launch_workspace_calls).to be_empty
+      end
     end
   end
 end

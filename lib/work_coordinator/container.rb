@@ -150,7 +150,9 @@ module WorkCoordinator
         ai_command_runner: @ai_command_runner,
         message_sender: @message_sender,
         aliases: config.aliases,
-        instruction_context: config.instruction_context
+        instruction_context: config.instruction_context,
+        auto_launch_workspace: config.auto_launch_workspace,
+        workspace_launch_timeout_seconds: config.workspace_launch_timeout_seconds
       )
     end
 

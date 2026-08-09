@@ -38,6 +38,14 @@ module WorkCoordinator
       data.fetch("slash_commands_enabled", true)
     end
 
+    def auto_launch_workspace
+      data.fetch("auto_launch_workspace", false)
+    end
+
+    def workspace_launch_timeout_seconds
+      data.fetch("workspace_launch_timeout_seconds", 20)
+    end
+
     def resolve_alias(keyword)
       return nil if keyword.nil? || keyword.empty?
 
@@ -87,6 +95,8 @@ module WorkCoordinator
         # work-coordinator configuration
         ai_command: "#{DEFAULT_AI_COMMAND}"
         slash_commands_enabled: true
+        # auto_launch_workspace: false
+        # workspace_launch_timeout_seconds: 20
         aliases:
           WC: work-coordinator
       YAML

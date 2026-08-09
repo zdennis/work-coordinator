@@ -10,6 +10,13 @@ module WorkCoordinator
       # @return [Array<String>] names of active workspaces
       def list_projects = raise NotImplementedError
 
+      # @return [Array<String>] names of all workspaces (active and dormant)
+      def list_all_projects = raise NotImplementedError
+
+      # @param name [String] workspace name to launch
+      # @return [void]
+      def launch_workspace(name:) = raise NotImplementedError
+
       # @param project [String] matched workspace name
       # @param instructions [String] the full freeform instruction
       # @return [String] stdout from the workspace run

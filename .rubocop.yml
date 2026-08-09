@@ -27,6 +27,9 @@ Metrics/BlockLength:
     - "spec/**/*"
     - "bin/work-coordinator"
 
+Metrics/ParameterLists:
+  Max: 8
+
 Metrics/MethodLength:
   Max: 15
 

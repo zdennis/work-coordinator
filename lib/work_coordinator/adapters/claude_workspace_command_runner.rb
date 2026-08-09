@@ -36,6 +36,18 @@ module WorkCoordinator
         stdout.lines.map(&:strip).reject(&:empty?)
       end
 
+      def list_all_projects
+        stdout, status = run(@workspace_bin, "list", "--all")
+        raise "workspace list --all failed" unless status.success?
+
+        stdout.lines.map(&:strip).reject(&:empty?)
+      end
+
+      def launch_workspace(name:)
+        _, status = run(@workspace_bin, "launch", name)
+        raise "workspace launch failed for #{name}" unless status.success?
+      end
+
       def run_project(project:, instructions:)
         command = "#{@config.ai_command} #{Shellwords.escape(instructions)}"
         stdout, status = run(@workspace_bin, "run", project, command,

@@ -105,6 +105,58 @@ RSpec.describe WorkCoordinator::Adapters::ClaudeWorkspaceCommandRunner do
     end
   end
 
+  describe "#list_all_projects" do
+    it "calls workspace list --all and returns trimmed non-empty lines" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"my-ai -p\"\n")
+      runner = build_runner(workspace_bin: "ws")
+
+      allow(Open3).to receive(:capture2e).with("ws", "list", "--all").and_return(
+        ["auth-service\ndormant-project\n", double(success?: true)]
+      )
+
+      expect(runner.list_all_projects).to eq(%w[auth-service dormant-project])
+    end
+
+    it "raises when workspace list --all fails" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"my-ai -p\"\n")
+      runner = build_runner(workspace_bin: "ws")
+
+      allow(Open3).to receive(:capture2e).and_return(["", double(success?: false)])
+
+      expect { runner.list_all_projects }.to raise_error(RuntimeError, /workspace list --all failed/)
+    end
+  end
+
+  describe "#launch_workspace" do
+    it "calls workspace launch with the project name" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"my-ai -p\"\n")
+      runner = build_runner(workspace_bin: "ws")
+
+      captured_cmd = nil
+      allow(Open3).to receive(:capture2e) do |*cmd|
+        captured_cmd = cmd
+        ["", double(success?: true)]
+      end
+
+      runner.launch_workspace(name: "my-project")
+
+      expect(captured_cmd).to eq(%w[ws launch my-project])
+    end
+
+    it "raises when workspace launch fails" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"my-ai -p\"\n")
+      runner = build_runner(workspace_bin: "ws")
+
+      allow(Open3).to receive(:capture2e).and_return(["", double(success?: false)])
+
+      expect { runner.launch_workspace(name: "bad-project") }.to raise_error(RuntimeError, /workspace launch failed/)
+    end
+  end
+
   describe "#run_project" do
     it "builds the command string from ai_command and passes it to workspace run" do
       FileUtils.mkdir_p(File.dirname(config_path))

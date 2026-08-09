@@ -191,6 +191,36 @@ RSpec.describe WorkCoordinator::Config do
     end
   end
 
+  describe "#auto_launch_workspace" do
+    it "returns false when config file does not exist" do
+      expect(config.auto_launch_workspace).to be(false)
+    end
+
+    it "returns false when not set in config file" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"claude -p\"\n")
+      expect(config.auto_launch_workspace).to be(false)
+    end
+
+    it "returns true when set to true in config file" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "auto_launch_workspace: true\n")
+      expect(config.auto_launch_workspace).to be(true)
+    end
+  end
+
+  describe "#workspace_launch_timeout_seconds" do
+    it "returns 20 when config file does not exist" do
+      expect(config.workspace_launch_timeout_seconds).to eq(20)
+    end
+
+    it "returns configured value when set" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "workspace_launch_timeout_seconds: 60\n")
+      expect(config.workspace_launch_timeout_seconds).to eq(60)
+    end
+  end
+
   describe "#remove_alias" do
     it "returns nil and makes no changes when the alias does not exist" do
       config.write_defaults!

@@ -7,23 +7,78 @@ module WorkCoordinator
     class DispatchAiCommand
       Result = Data.define(:dispatched, :project, :summary, :failure_reason)
 
-      def initialize(ai_command_runner:, message_sender:, aliases: {}, instruction_context: "")
-        @ai_command_runner   = ai_command_runner
-        @message_sender      = message_sender
-        @aliases             = aliases
-        @instruction_context = instruction_context
+      def initialize(
+        ai_command_runner:,
+        message_sender:,
+        aliases: {},
+        instruction_context: "",
+        auto_launch_workspace: false,
+        workspace_launch_timeout_seconds: 20,
+        sleep_fn: method(:sleep)
+      )
+        @ai_command_runner              = ai_command_runner
+        @message_sender                 = message_sender
+        @aliases                        = aliases
+        @instruction_context            = instruction_context
+        @auto_launch_workspace          = auto_launch_workspace
+        @workspace_launch_timeout_seconds = workspace_launch_timeout_seconds
+        @sleep_fn = sleep_fn
       end
 
       def call(body:)
-        keyword = extract_keyword(body)
+        repo = Domain::GithubUrlExtractor.new(body).repo_name
+        repo ? url_dispatch(repo: repo, body: body) : ai_dispatch(body: body)
+      end
+
+      private
+
+      def url_dispatch(repo:, body:)
+        resolved = resolve_alias(repo)
+        project  = resolved || fuzzy_match(repo, @ai_command_runner.list_all_projects)
+        return no_workspace_result(repo, body) if project.nil?
+
+        if dormant?(project)
+          return dormant_workspace_result(project) unless @auto_launch_workspace
+          return launch_timeout_result(project) unless wait_for_launch(project)
+        end
+
+        run_and_notify(project: project, body: body)
+      end
+
+      def ai_dispatch(body:)
+        keyword  = @ai_command_runner.extract_project(body: body)
         resolved = resolve_alias(keyword)
-        project = resolved || fuzzy_match(keyword, @ai_command_runner.list_projects)
+        project  = resolved || fuzzy_match(keyword, @ai_command_runner.list_projects)
         return no_workspace_result(keyword, body) if project.nil?
 
         run_and_notify(project: project, body: body)
       end
 
-      private
+      def dormant?(project)
+        !@ai_command_runner.list_projects.include?(project)
+      end
+
+      def wait_for_launch(project)
+        @ai_command_runner.launch_workspace(name: project)
+        deadline = Time.now + @workspace_launch_timeout_seconds
+        loop do
+          @sleep_fn.call(2)
+          return true if @ai_command_runner.list_projects.include?(project)
+          return false if Time.now >= deadline
+        end
+      end
+
+      def dormant_workspace_result(project)
+        msg = "Workspace '#{project}' is dormant. Enable auto_launch_workspace in config to launch it automatically."
+        @message_sender.send_message(to: nil, body: msg, conversation_id: nil)
+        Result.new(dispatched: false, project: project, summary: nil, failure_reason: :dormant_workspace)
+      end
+
+      def launch_timeout_result(project)
+        msg = "Workspace #{project} did not start within #{@workspace_launch_timeout_seconds}s"
+        @message_sender.send_message(to: nil, body: msg, conversation_id: nil)
+        Result.new(dispatched: false, project: project, summary: nil, failure_reason: :launch_timeout)
+      end
 
       def no_workspace_result(keyword, body)
         @message_sender.send_message(
@@ -40,13 +95,6 @@ module WorkCoordinator
         summary = @ai_command_runner.summarize(text: output)
         @message_sender.send_message(to: nil, body: summary, conversation_id: nil)
         Result.new(dispatched: true, project: project, summary: summary, failure_reason: nil)
-      end
-
-      def extract_keyword(body)
-        repo = Domain::GithubUrlExtractor.new(body).repo_name
-        return repo if repo
-
-        @ai_command_runner.extract_project(body: body)
       end
 
       def resolve_alias(keyword)
