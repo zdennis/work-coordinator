@@ -17,7 +17,8 @@ module WorkCoordinator
     #   GithubUrlExtractor.new("plain text no url").repo_name
     #   # => nil
     class GithubUrlExtractor
-      PATTERN = %r{https?://github\.com/[^/]+/([^/\s?#]+)}i
+      PATTERN            = %r{https?://github\.com/[^/]+/([^/\s?#]+)}i
+      OWNER_REPO_PATTERN = %r{https?://github\.com/([^/\s?#]+/[^/\s?#]+)}i
 
       def initialize(text)
         @text = text.to_s
@@ -25,6 +26,11 @@ module WorkCoordinator
 
       def repo_name
         m = PATTERN.match(@text)
+        m && m[1]
+      end
+
+      def owner_repo
+        m = OWNER_REPO_PATTERN.match(@text)
         m && m[1]
       end
     end
