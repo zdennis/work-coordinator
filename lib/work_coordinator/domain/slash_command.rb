@@ -12,7 +12,7 @@ module WorkCoordinator
     #   SlashCommand.new("/stop GE").instructions                    # => "C-c"
     class SlashCommand
       KNOWN_VERBS = %w[build research clear test fix review commit push pr stop].freeze
-      PATTERN = %r{\A/(?<verb>\w+)\s+(?<workspace>\S+)(?:\s+(?<args>.+))?\z}mi
+      PATTERN = %r{\A/(?<verb>\w+)\s+(?<workspace>\S+)(?:\s+(?<args>.+))?\z}i
 
       attr_reader :verb, :workspace, :args
 
@@ -33,10 +33,6 @@ module WorkCoordinator
         KNOWN_VERBS.include?(verb)
       end
 
-      def send_to_main_session?
-        recognized?
-      end
-
       def instructions # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
         case verb
         when "build"    then args ? "We're building a feature: #{args}" : "Build a feature"
@@ -49,6 +45,7 @@ module WorkCoordinator
         when "push"     then "Push the current branch"
         when "pr"       then args ? "Open a pull request: #{args}" : "Open a pull request"
         when "stop"     then "C-c"
+        else raise "instructions not defined for recognized verb: #{verb}"
         end
       end
     end

@@ -53,15 +53,6 @@ RSpec.describe WorkCoordinator::Domain::SlashCommand do
     end
   end
 
-  # --- send_to_main_session? ---
-
-  describe "#send_to_main_session?" do
-    it "delegates to recognized?" do
-      expect(described_class.new("/build GE foo").send_to_main_session?).to be true
-      expect(described_class.new("/unknown GE foo").send_to_main_session?).to be false
-    end
-  end
-
   # --- instructions ---
 
   describe "#instructions" do
@@ -134,6 +125,12 @@ RSpec.describe WorkCoordinator::Domain::SlashCommand do
 
     it "stop" do
       expect(described_class.new("/stop GE").instructions).to eq("C-c")
+    end
+
+    it "raises for an unrecognized verb that somehow bypasses recognized?" do
+      cmd = described_class.new("/build GE foo")
+      cmd.instance_variable_set(:@verb, "unknown")
+      expect { cmd.instructions }.to raise_error(RuntimeError, /instructions not defined/)
     end
   end
 
