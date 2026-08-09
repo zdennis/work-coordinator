@@ -73,6 +73,30 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
       expect(result.dispatched).to be(true)
       expect(result.project).to eq("auth-service")
     end
+
+    context "with hyphens/underscores" do
+      it "matches hyphenated needle to underscored project name" do
+        use_case, _runner = build_use_case(
+          extract_project_result: "experimentation-service",
+          list_projects_result: %w[experimentation_service acme-billing],
+          run_project_result: "done",
+          summarize_result: "Ran."
+        )
+        result = use_case.call(body: "fix experimentation-service")
+        expect(result.project).to eq("experimentation_service")
+      end
+
+      it "matches underscored needle to hyphenated project name" do
+        use_case, _runner = build_use_case(
+          extract_project_result: "my_project",
+          list_projects_result: %w[my-project other-service],
+          run_project_result: "done",
+          summarize_result: "Ran."
+        )
+        result = use_case.call(body: "fix my_project")
+        expect(result.project).to eq("my-project")
+      end
+    end
   end
 
   describe "alias resolution" do

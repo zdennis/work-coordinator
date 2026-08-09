@@ -61,15 +61,23 @@ module WorkCoordinator
         "#{body}\n\n#{@instruction_context}"
       end
 
+      def normalize(str)
+        str.gsub("-", "_")
+      end
+
       def fuzzy_match(keyword, projects)
         return nil if keyword.nil? || keyword.empty?
 
-        needle = keyword.downcase.strip
-        candidates = projects.select do |p|
-          name = p.downcase
-          name.include?(needle) || needle.include?(name)
-        end
-        candidates.min_by { |p| (p.length - needle.length).abs }
+        needle = normalize(keyword.downcase.strip)
+        match_candidates(projects, needle)
+          .min_by { |_, name| (name.length - needle.length).abs }
+          &.first
+      end
+
+      def match_candidates(projects, needle)
+        projects
+          .map { |p| [p, normalize(p.downcase)] }
+          .select { |_, name| name.include?(needle) || needle.include?(name) }
       end
     end
   end
