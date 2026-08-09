@@ -106,6 +106,28 @@ RSpec.describe WorkCoordinator::Adapters::TmuxAgentSession do
       end
     end
 
+    context "when the message is a control sequence (e.g. C-c)" do
+      before do
+        allow(Open3).to receive(:capture2e) do |*cmd|
+          cmd.include?("list-panes") ? ["0\n", success_status] : ["", success_status]
+        end
+      end
+
+      it "omits the trailing Enter so the agent is not immediately re-prompted" do
+        captured_cmds = []
+        allow(Open3).to receive(:capture2e) do |*cmd|
+          captured_cmds << cmd
+          cmd.include?("list-panes") ? ["0\n", success_status] : ["", success_status]
+        end
+
+        session.deliver_to_pane(workspace_name: "my-service", pane_index: 1, message: "C-c")
+
+        send_keys_call = captured_cmds.find { |c| c.include?("send-keys") }
+        expect(send_keys_call).not_to include("Enter")
+        expect(send_keys_call).to include("C-c")
+      end
+    end
+
     context "when send-keys fails" do
       before do
         allow(Open3).to receive(:capture2e) do |*cmd|

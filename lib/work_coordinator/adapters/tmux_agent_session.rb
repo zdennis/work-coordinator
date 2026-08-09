@@ -114,7 +114,8 @@ module WorkCoordinator
       end
 
       def send_keys!(target, message)
-        out, status = run_command(["tmux", "send-keys", "-t", target, message, "Enter"])
+        keys = control_sequence?(message) ? [message] : [message, "Enter"]
+        out, status = run_command(["tmux", "send-keys", "-t", target, *keys])
         raise "tmux send-keys failed: #{out}" unless status.success?
 
         # Multiline messages put Claude Code into multiline input mode, where the
@@ -124,6 +125,13 @@ module WorkCoordinator
 
         out, status = run_command(["tmux", "send-keys", "-t", target, "Enter"])
         raise "tmux send-keys failed (submit): #{out}" unless status.success?
+      end
+
+      # Returns true for bare tmux control-key names (e.g. "C-c", "C-z").
+      # These are sent directly without a trailing Enter — appending Enter after
+      # an interrupt would immediately submit an empty prompt to the agent.
+      def control_sequence?(message)
+        message.match?(/\AC-[a-zA-Z]\z/)
       end
     end
   end
