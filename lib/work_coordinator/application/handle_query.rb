@@ -72,7 +72,7 @@ module WorkCoordinator
 
       private
 
-      def help_overview
+      def help_overview # rubocop:disable Metrics/MethodLength
         <<~TEXT.chomp
           ai: queries:
             help [cmd]     usage for a command
@@ -85,7 +85,11 @@ module WorkCoordinator
             panes          active tmux panes
             leases         resource leases
           ai: actions:
-            [claude|new|bash] WORKSPACE - instructions
+            claude WORKSPACE - instructions   deliver to main session (pane 1)
+            main   WORKSPACE - instructions   alias for claude
+            new    WORKSPACE - instructions   spawn new pane (via workspace run)
+            bash   WORKSPACE - instructions   spawn new bash pane (via workspace run)
+                   WORKSPACE - instructions   no verb: same as new
         TEXT
       end
 

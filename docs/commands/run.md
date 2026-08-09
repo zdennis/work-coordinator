@@ -189,29 +189,36 @@ Query messages return a plain-text reply via iMessage and do not touch any tmux 
 Action messages run instructions in a workspace tmux pane. The format is:
 
 ```
-ai: [verb] WORKSPACE - instructions
-```
-
-The verb and workspace name can appear in either order:
-
-```
-ai: claude GE - add input validation to the registration form
-ai: GE claude - add input validation to the registration form
+ai: VERB WORKSPACE - instructions
 ```
 
 | Verb | Behavior |
 |------|----------|
-| `claude` _(or omitted)_ | Send instructions to the default pane for the workspace |
-| `new` | Split a new pane and run instructions there |
-| `bash` | Split a new bash pane and run instructions there |
+| `claude` | Deliver instructions directly to pane 1 of the named workspace session. Acks "Sent to WORKSPACE" on success. |
+| `main` | Alias for `claude`. Same behavior. |
+| `new` | Spawn a new pane via `workspace run WORKSPACE '...' --split --wait --close`. |
+| `bash` | Spawn a new bash pane via `workspace run` (same pipeline as `new`). |
+| _(omitted)_ | No verb: use the LLM extraction pipeline (same as `new`). |
 
-When no verb is given, the pipeline is:
+**`claude` and `main` bypass the LLM.** No `workspace run` is invoked. The instruction text is
+sent as-is to the first pane (pane 1 in domain terms, tmux pane index 0) of window 0 in the named
+session. If the session or pane does not exist, an error is returned via iMessage and nothing is
+delivered to tmux.
+
+Examples:
+
+```
+ai: claude GE - add input validation to the registration form
+ai: main growth-engine - investigate the memory leak
+```
+
+**`new`, `bash`, and verb-omitted** use the full dispatch pipeline:
 
 1. `claude -p` extracts a workspace keyword from the instruction text
 2. `workspace list` retrieves the active projects
 3. The keyword is resolved via alias lookup, then fuzzy-matched against project names
 4. If no match is found, `send-message` notifies you immediately and stops
-5. `workspace run <project> '<instruction>' --split --wait --close` runs the instruction in that project's tmux session
+5. `workspace run <project> '<instruction>' --split --wait --close` runs the instruction
 6. `claude -p` summarizes the output in 1–3 sentences
 7. `send-message` delivers the summary back to you
 
@@ -221,7 +228,8 @@ Example — send this iMessage:
 ai: add input validation to the registration form
 ```
 
-The daemon extracts a workspace keyword, matches it to an active workspace, runs the instruction there, and texts you a summary when it finishes.
+The daemon extracts a workspace keyword, matches it to an active workspace, runs the instruction
+there, and texts you a summary when it finishes.
 
 ## Gotchas
 
