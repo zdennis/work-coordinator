@@ -16,6 +16,8 @@ module WorkCoordinator
         @messages = []
         @next_id = 0
         @all_panes = []
+        @pane_deliveries = []
+        @stubbed_panes = []
       end
 
       # Allocates a new session identifier for the work item and activates it.
@@ -72,6 +74,42 @@ module WorkCoordinator
       # @return [Array<String>] configured pane identifiers, empty by default
       def list_all_panes
         @all_panes.dup
+      end
+
+      # Delivers a message to a pane, respecting the stub_pane configuration.
+      #
+      # @param workspace_name [String]
+      # @param pane_index [Integer] 1-based domain pane index
+      # @param message [String]
+      # @raise [Ports::AgentSession::PaneNotFoundError] when the pane has not been stubbed
+      def deliver_to_pane(workspace_name:, pane_index:, message:)
+        unless pane_stubbed?(workspace_name: workspace_name, pane_index: pane_index)
+          raise Ports::AgentSession::PaneNotFoundError,
+                "pane #{pane_index} not stubbed for session '#{workspace_name}'"
+        end
+
+        @pane_deliveries << { workspace_name: workspace_name, pane_index: pane_index, message: message }
+      end
+
+      # Returns all deliver_to_pane calls recorded so far, in order.
+      #
+      # @return [Array<Hash{Symbol=>Object}>] each entry has :workspace_name, :pane_index, :message
+      def delivered_to_pane
+        @pane_deliveries.dup
+      end
+
+      # Configures a pane as present for deliver_to_pane existence checks.
+      #
+      # @param workspace_name [String]
+      # @param pane_index [Integer] 1-based domain pane index
+      def stub_pane(workspace_name:, pane_index:)
+        @stubbed_panes << { workspace_name: workspace_name, pane_index: pane_index }
+      end
+
+      private
+
+      def pane_stubbed?(workspace_name:, pane_index:)
+        @stubbed_panes.any? { |p| p[:workspace_name] == workspace_name && p[:pane_index] == pane_index }
       end
     end
   end
