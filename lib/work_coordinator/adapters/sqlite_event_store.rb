@@ -50,6 +50,17 @@ module WorkCoordinator
           .map { |r| to_domain(r) }
       end
 
+      # Returns the most recent events across all work items.
+      #
+      # @param limit [Integer] maximum number of events to return (default 5)
+      # @return [Array<Domain::Event>] newest first
+      def recent(limit: 5)
+        Persistence::Models::EventRecord
+          .order(occurred_at: :desc)
+          .limit(limit)
+          .map { |r| to_domain(r) }
+      end
+
       # @param type [Symbol, String]
       # @param work_item_id [String, nil] when nil, searches across all work items
       # @return [Domain::Event, nil] most recent event of that type

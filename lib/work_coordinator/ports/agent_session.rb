@@ -30,6 +30,9 @@ module WorkCoordinator
       # @param work_item_id [String]
       # @return [String, nil] session identifier, or nil when no session is live
       def active_session(work_item_id:) = raise NotImplementedError
+
+      # @return [Array<String>] all currently active pane identifiers
+      def list_all_panes = raise NotImplementedError
     end
   end
 end
