@@ -1,0 +1,132 @@
+# frozen_string_literal: true
+
+require "work_coordinator/domain/ai_command"
+
+RSpec.describe WorkCoordinator::Domain::AiCommand do
+  subject(:command) { described_class.new(body) }
+
+  # --- attribute parsing ---
+
+  context "with 'claude GE - add validation'" do
+    let(:body) { "claude GE - add validation" }
+
+    it { expect(command.verb).to eq("claude") }
+    it { expect(command.workspace).to eq("MS") }
+    it { expect(command.instructions).to eq("add validation") }
+  end
+
+  context "with 'main my-service - refactor auth'" do
+    let(:body) { "main my-service - refactor auth" }
+
+    it { expect(command.verb).to eq("main") }
+    it { expect(command.workspace).to eq("my-service") }
+    it { expect(command.instructions).to eq("refactor auth") }
+  end
+
+  context "with 'new GE - open a bash pane'" do
+    let(:body) { "new GE - open a bash pane" }
+
+    it { expect(command.verb).to eq("new") }
+    it { expect(command.workspace).to eq("MS") }
+  end
+
+  context "with 'bash GE - run tests'" do
+    let(:body) { "bash GE - run tests" }
+
+    it { expect(command.verb).to eq("bash") }
+    it { expect(command.workspace).to eq("MS") }
+    it { expect(command.instructions).to eq("run tests") }
+  end
+
+  context "without a verb: 'GE - add validation'" do
+    let(:body) { "GE - add validation" }
+
+    it { expect(command.verb).to be_nil }
+    it { expect(command.workspace).to eq("MS") }
+    it { expect(command.instructions).to eq("add validation") }
+  end
+
+  context "without verb or separator: 'add validation to the form'" do
+    let(:body) { "add validation to the form" }
+
+    it { expect(command.verb).to be_nil }
+    it { expect(command.workspace).to be_nil }
+    it { expect(command.instructions).to eq("add validation to the form") }
+  end
+
+  context "with multiline instructions" do
+    let(:body) { "claude GE - step one\nstep two" }
+
+    it { expect(command.instructions).to eq("step one\nstep two") }
+  end
+
+  context "with mixed case verb: 'CLAUDE GE - foo'" do
+    let(:body) { "CLAUDE GE - foo" }
+
+    it "normalizes verb to lowercase" do
+      expect(command.verb).to eq("claude")
+    end
+
+    it { is_expected.to be_send_to_main_session }
+  end
+
+  # --- send_to_main_session? ---
+
+  describe "#send_to_main_session?" do
+    it "is true for verb 'claude'" do
+      expect(described_class.new("claude GE - foo").send_to_main_session?).to be true
+    end
+
+    it "is true for verb 'main'" do
+      expect(described_class.new("main GE - foo").send_to_main_session?).to be true
+    end
+
+    it "is false for verb 'new'" do
+      expect(described_class.new("new GE - foo").send_to_main_session?).to be false
+    end
+
+    it "is false for verb 'bash'" do
+      expect(described_class.new("bash GE - foo").send_to_main_session?).to be false
+    end
+
+    it "is false when no verb is present" do
+      expect(described_class.new("GE - foo").send_to_main_session?).to be false
+    end
+
+    it "is false when body has no separator" do
+      expect(described_class.new("add some feature").send_to_main_session?).to be false
+    end
+  end
+
+  # --- new_session? ---
+
+  describe "#new_session?" do
+    it "is true for verb 'new'" do
+      expect(described_class.new("new GE - foo").new_session?).to be true
+    end
+
+    it "is true when body has no verb or separator (free-form dispatch)" do
+      expect(described_class.new("add some feature").new_session?).to be true
+    end
+
+    it "is false for verb 'claude'" do
+      expect(described_class.new("claude GE - foo").new_session?).to be false
+    end
+  end
+
+  # --- bash_session? ---
+
+  describe "#bash_session?" do
+    it "is true for verb 'bash'" do
+      expect(described_class.new("bash GE - foo").bash_session?).to be true
+    end
+
+    it "is false for any other verb" do
+      expect(described_class.new("claude GE - foo").bash_session?).to be false
+    end
+
+    it "is false when no verb present" do
+      expect(described_class.new("GE - foo").bash_session?).to be false
+    end
+  end
+end
