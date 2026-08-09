@@ -66,6 +66,17 @@ module WorkCoordinator
         out.split("\n").include?(target) ? target : nil
       end
 
+      # Returns all currently active tmux pane identifiers.
+      #
+      # @return [Array<String>] pane targets of the form `session:window.pane`
+      def list_all_panes
+        out, status = run_command(["tmux", "list-panes", "-a", "-F",
+                                   "\#{session_name}:\#{window_name}.\#{pane_index}"])
+        return [] unless status.success?
+
+        out.split("\n").reject(&:empty?)
+      end
+
       private
 
       def run_command(cmd)
