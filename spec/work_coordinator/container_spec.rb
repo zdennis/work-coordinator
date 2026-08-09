@@ -34,6 +34,8 @@ RSpec.describe WorkCoordinator::Container do
     expect(container.inbound_message_repo)
       .to be_an_instance_of(WorkCoordinator::Adapters::SqliteInboundMessageRepository)
     expect(container.message_sender).to be_an_instance_of(WorkCoordinator::Adapters::AppleScriptMessageSender)
+    expect(container.deliver_to_main_session)
+      .to be_an_instance_of(WorkCoordinator::Application::DeliverToMainSession)
   end
 
   it "wraps both receivers when both modes are given" do
