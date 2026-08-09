@@ -18,12 +18,12 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
       )
     end
 
-    before { agent_session.stub_pane(workspace_name: "work-coordinator", pane_index: 1) }
+    before { agent_session.stub_pane(workspace_name: "work-coordinator", pane_index: 2) }
 
     it "resolves the alias to the full session name before delivery" do
       use_case.call(workspace_name: "WC", instructions: "echo hi", recipient: nil)
       expect(agent_session.delivered_to_pane).to contain_exactly(
-        hash_including(workspace_name: "work-coordinator", pane_index: 1, message: "echo hi")
+        hash_including(workspace_name: "work-coordinator", pane_index: 2, message: "echo hi")
       )
     end
 
@@ -41,7 +41,7 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
   end
 
   context "when the pane exists" do
-    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 1) }
+    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
 
     it "returns a successful Result" do
       expect(call).to have_attributes(success: true, error: nil)
@@ -50,7 +50,7 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     it "delivers the instructions to domain pane 1 of the workspace" do
       call
       expect(agent_session.delivered_to_pane).to contain_exactly(
-        hash_including(workspace_name: "my-service", pane_index: 1, message: "add validation")
+        hash_including(workspace_name: "my-service", pane_index: 2, message: "add validation")
       )
     end
 
@@ -76,7 +76,7 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     it "returns a failed Result" do
       result = call
       expect(result).to have_attributes(success: false)
-      expect(result.error).to include("pane 1 not stubbed")
+      expect(result.error).to include("pane 2 not stubbed")
     end
 
     it "sends the error message to the recipient" do
@@ -92,7 +92,7 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
   end
 
   context "when workspace_name is empty" do
-    before { agent_session.stub_pane(workspace_name: "", pane_index: 1) }
+    before { agent_session.stub_pane(workspace_name: "", pane_index: 2) }
 
     it "still sends to whatever workspace was given" do
       call(workspace_name: "")

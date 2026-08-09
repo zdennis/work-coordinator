@@ -17,7 +17,7 @@ module WorkCoordinator
       # @!attribute [r] error [String, nil]
       Result = Data.define(:success, :error)
 
-      MAIN_PANE_INDEX = 1
+      MAIN_PANE_INDEX = 2
 
       # @param agent_session [Ports::AgentSession]
       # @param message_sender [Ports::MessageSender]
