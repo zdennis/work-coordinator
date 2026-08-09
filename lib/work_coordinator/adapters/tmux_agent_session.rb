@@ -77,6 +77,35 @@ module WorkCoordinator
         out.split("\n").reject(&:empty?)
       end
 
+      # Delivers a message to a specific pane of an already-running tmux session.
+      #
+      # Domain pane indices are 1-based; tmux pane indices are 0-based.
+      # Domain pane 1 → tmux pane 0 (the first pane in window 0).
+      #
+      # @param workspace_name [String] tmux session name
+      # @param pane_index [Integer] 1-based domain pane index
+      # @param message [String]
+      # @return [void]
+      # @raise [Ports::AgentSession::PaneNotFoundError] when the pane does not exist
+      # @raise [RuntimeError] when tmux send-keys reports failure
+      def deliver_to_pane(workspace_name:, pane_index:, message:)
+        tmux_pane_index = pane_index - 1
+        window_target   = "#{workspace_name}:0"
+
+        out, status = run_command(["tmux", "list-panes", "-t", window_target, "-F", "\#{pane_index}"])
+        existing_indices = status.success? ? out.split("\n").map(&:to_i) : []
+
+        unless existing_indices.include?(tmux_pane_index)
+          raise Ports::AgentSession::PaneNotFoundError,
+                "pane #{pane_index} not found in session '#{workspace_name}' " \
+                "(tmux window #{window_target} has panes: #{existing_indices.inspect})"
+        end
+
+        pane_target = "#{workspace_name}:0.#{tmux_pane_index}"
+        out, status = run_command(["tmux", "send-keys", "-t", pane_target, message, "Enter"])
+        raise "tmux send-keys failed: #{out}" unless status.success?
+      end
+
       private
 
       def run_command(cmd)
