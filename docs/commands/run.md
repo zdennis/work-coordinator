@@ -161,11 +161,55 @@ The `reply:` prefix is case-insensitive. It always routes to the work item from 
 
 ### AI command dispatch (messages mode only)
 
-In `messages` mode, any `ai: ` message that does not match a work item ref is treated as a freeform AI instruction. The pipeline:
+In `messages` mode, any `ai: ` message that does not match a work item ref is dispatched through one of two paths: a **query** that returns information, or an **action** that runs instructions in a workspace.
+
+#### Queries
+
+Query messages return a plain-text reply via iMessage and do not touch any tmux pane. The body is matched against a set of reserved keywords:
+
+| Message | What it returns |
+|---------|----------------|
+| `ai: help` | Overview of ai: syntax and all query keywords |
+| `ai: help commands` | List of all CLI commands with descriptions |
+| `ai: help <cmd>` | Usage summary for one command (fuzzy match) |
+| `ai: aliases` | All configured workspace aliases |
+| `ai: config` | Current config settings |
+| `ai: status` | All work items with state and phase |
+| `ai: status <state>` | Work items filtered to one state (fuzzy match) |
+| `ai: blocked` | Shorthand for `status blocked` |
+| `ai: waiting` | Shorthand for `status waiting_for_human` |
+| `ai: active` | Shorthand for `status active` |
+| `ai: item REF` | Full detail for one work item by external reference |
+| `ai: recent [n]` | Last N events across all work items (default 5) |
+| `ai: panes` | Active tmux panes correlated to work items |
+| `ai: leases` | Active resource leases |
+
+#### Actions
+
+Action messages run instructions in a workspace tmux pane. The format is:
+
+```
+ai: [verb] WORKSPACE - instructions
+```
+
+The verb and workspace name can appear in either order:
+
+```
+ai: claude GE - add input validation to the registration form
+ai: GE claude - add input validation to the registration form
+```
+
+| Verb | Behavior |
+|------|----------|
+| `claude` _(or omitted)_ | Send instructions to the default pane for the workspace |
+| `new` | Split a new pane and run instructions there |
+| `bash` | Split a new bash pane and run instructions there |
+
+When no verb is given, the pipeline is:
 
 1. `claude -p` extracts a workspace keyword from the instruction text
 2. `workspace list` retrieves the active projects
-3. The keyword is fuzzy-matched against project names
+3. The keyword is resolved via alias lookup, then fuzzy-matched against project names
 4. If no match is found, `send-message` notifies you immediately and stops
 5. `workspace run <project> '<instruction>' --split --wait --close` runs the instruction in that project's tmux session
 6. `claude -p` summarizes the output in 1–3 sentences
@@ -177,7 +221,7 @@ Example — send this iMessage:
 ai: add input validation to the registration form
 ```
 
-The daemon extracts `registration`, matches it to an active workspace, runs the instruction there, and texts you a summary when it finishes.
+The daemon extracts a workspace keyword, matches it to an active workspace, runs the instruction there, and texts you a summary when it finishes.
 
 ## Gotchas
 
