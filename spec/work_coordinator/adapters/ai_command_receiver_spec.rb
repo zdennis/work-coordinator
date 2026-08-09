@@ -4,7 +4,11 @@ require "spec_helper"
 
 RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
   subject(:receiver) do
-    described_class.new(inner: inner, ai_command_handler: ai_handler)
+    described_class.new(
+      inner: inner,
+      ai_command_handler: ai_handler,
+      deliver_to_main_session: ->(**) {}
+    )
   end
 
   let(:messages) { [] }
@@ -78,6 +82,113 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       receiver.stop
 
       expect(inner.stopped?).to be(true)
+    end
+  end
+
+  describe "verb routing" do
+    # Verb routing contexts share a recording deliver_to_main_session callable
+    # and override subject to inject it.
+
+    subject(:receiver) do
+      described_class.new(
+        inner: inner,
+        ai_command_handler: ai_handler,
+        deliver_to_main_session: deliver_to_main
+      )
+    end
+
+    let(:deliveries) { [] }
+    let(:deliver_to_main) do
+      lambda do |workspace_name:, instructions:, recipient:|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      end
+    end
+
+    # "ai: claude GE - add validation" is split by MessagesInboxPoller as:
+    #   work_item_ref: "claude", body: "GE - add validation"
+    context "with verb 'claude' (e.g. ai: claude GE - add validation)" do
+      let(:messages) { [{ work_item_ref: "claude", body: "GE - add validation", received_at: Time.now }] }
+
+      it "routes to deliver_to_main_session with correct args" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "add validation", recipient: nil }
+        )
+      end
+
+      it "does not call the ai_command_handler" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to be_empty
+      end
+
+      it "does not yield to the outer block" do
+        yielded = []
+        receiver.start { |m| yielded << m }
+        expect(yielded).to be_empty
+      end
+    end
+
+    context "with verb 'main' (e.g. ai: main GE - refactor)" do
+      let(:messages) { [{ work_item_ref: "main", body: "GE - refactor", received_at: Time.now }] }
+
+      it "routes to deliver_to_main_session" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "refactor", recipient: nil }
+        )
+      end
+
+      it "does not call the ai_command_handler" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to be_empty
+      end
+    end
+
+    context "with verb 'new' (e.g. ai: new GE - split pane)" do
+      let(:msg) { { work_item_ref: "new", body: "GE - split pane", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "routes to ai_command_handler, not deliver_to_main_session" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+        expect(deliveries).to be_empty
+      end
+    end
+
+    context "with verb 'bash' (e.g. ai: bash GE - run tests)" do
+      let(:msg) { { work_item_ref: "bash", body: "GE - run tests", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "routes to ai_command_handler, not deliver_to_main_session" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+        expect(deliveries).to be_empty
+      end
+    end
+
+    # "ai: GE - do something" splits as work_item_ref: "MS", body: "- do something"
+    # Reassembled: "GE - do something" → AiCommand has no verb, send_to_main_session? = false
+    context "without a verb (e.g. ai: GE - do something)" do
+      let(:msg) { { work_item_ref: "MS", body: "- do something", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "routes to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+        expect(deliveries).to be_empty
+      end
+    end
+
+    # "ai: what is the status" splits as work_item_ref: "what", body: "is the status"
+    context "with free-form text (e.g. ai: what is the status)" do
+      let(:msg) { { work_item_ref: "what", body: "is the status", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "routes to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+        expect(deliveries).to be_empty
+      end
     end
   end
 end
