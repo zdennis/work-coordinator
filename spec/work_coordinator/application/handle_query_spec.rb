@@ -33,7 +33,7 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
   # -------------------------------------------------------------------------
 
   describe "help" do
-    it "returns the help overview" do
+    it "returns the help overview", :aggregate_failures do
       result = call("help")
       expect(result).to include("ai: queries:")
       expect(result).to include("ai: actions:")
