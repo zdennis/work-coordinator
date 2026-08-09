@@ -60,6 +60,54 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
     it { expect(command.instructions).to eq("step one\nstep two") }
   end
 
+  # --- malformed inputs ---
+
+  context "with 'claude GE' (verb present, no separator)" do
+    let(:body) { "claude GE" }
+
+    it { expect(command.verb).to be_nil }
+    it { expect(command.workspace).to be_nil }
+    it { expect(command.instructions).to eq("claude GE") }
+    it { is_expected.not_to be_send_to_main_session }
+  end
+
+  context "with 'claude - do something' (verb present, no workspace before dash)" do
+    # PATTERN requires WORKSPACE before the dash; "claude - do something" matches with
+    # verb=nil, workspace="claude" (the verb token is parsed as the workspace because
+    # the optional verb group is absent). send_to_main_session? is false since verb is nil.
+    let(:body) { "claude - do something" }
+
+    it "does not raise" do
+      expect { command }.not_to raise_error
+    end
+
+    it { expect(command.verb).to be_nil }
+    it { expect(command.workspace).to eq("claude") }
+    it { expect(command.instructions).to eq("do something") }
+    it { is_expected.not_to be_send_to_main_session }
+  end
+
+  context "with 'claude' alone" do
+    let(:body) { "claude" }
+
+    it "does not raise" do
+      expect { command }.not_to raise_error
+    end
+
+    it { expect(command.verb).to be_nil }
+    it { expect(command.workspace).to be_nil }
+    it { is_expected.not_to be_send_to_main_session }
+  end
+
+  context "with 'GE - instructions' (no verb, workspace and instructions present)" do
+    let(:body) { "GE - instructions" }
+
+    it { expect(command.verb).to be_nil }
+    it { expect(command.workspace).to eq("MS") }
+    it { expect(command.instructions).to eq("instructions") }
+    it { is_expected.not_to be_send_to_main_session }
+  end
+
   context "with mixed case verb: 'CLAUDE GE - foo'" do
     let(:body) { "CLAUDE GE - foo" }
 

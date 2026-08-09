@@ -46,6 +46,10 @@ module WorkCoordinator
       #
       # Reserved for future routing use.
       #
+      # Note: returns true for both the explicit `new` verb AND free-form bodies that
+      # did not match PATTERN (verb.nil? && workspace.nil?). When `new` routing is
+      # implemented, revisit this conflation and split the two cases.
+      #
       # @return [Boolean]
       def new_session?
         verb == "new" || (verb.nil? && workspace.nil?)

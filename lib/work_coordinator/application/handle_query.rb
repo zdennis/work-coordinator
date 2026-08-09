@@ -87,9 +87,9 @@ module WorkCoordinator
           ai: actions:
             claude WORKSPACE - instructions   deliver to main session (pane 1)
             main   WORKSPACE - instructions   alias for claude
-            new    WORKSPACE - instructions   spawn new pane (via workspace run)
-            bash   WORKSPACE - instructions   spawn new bash pane (via workspace run)
-                   WORKSPACE - instructions   no verb: same as new
+            new    WORKSPACE - instructions   spawn new pane (not yet implemented)
+            bash   WORKSPACE - instructions   spawn new bash pane (not yet implemented)
+                   WORKSPACE - instructions   no verb: LLM extraction pipeline
         TEXT
       end
 
