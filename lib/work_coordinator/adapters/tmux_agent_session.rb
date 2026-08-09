@@ -90,6 +90,8 @@ module WorkCoordinator
       # @raise [RuntimeError] when tmux send-keys reports failure
       def deliver_to_pane(workspace_name:, pane_index:, message:)
         tmux_pane_index = pane_index - 1
+        # Assumes tmux window base-index of 0 (the default). Users with base-index 1
+        # in ~/.tmux.conf will see PaneNotFoundError.
         window_target   = "#{workspace_name}:0"
 
         out, status = run_command(["tmux", "list-panes", "-t", window_target, "-F", "\#{pane_index}"])

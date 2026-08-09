@@ -196,9 +196,9 @@ ai: VERB WORKSPACE - instructions
 |------|----------|
 | `claude` | Deliver instructions directly to pane 1 of the named workspace session. Acks "Sent to WORKSPACE" on success. |
 | `main` | Alias for `claude`. Same behavior. |
-| `new` | Spawn a new pane via `workspace run WORKSPACE '...' --split --wait --close`. |
-| `bash` | Spawn a new bash pane via `workspace run` (same pipeline as `new`). |
-| _(omitted)_ | No verb: use the LLM extraction pipeline (same as `new`). |
+| `new` | _(not yet implemented)_ Intended to spawn a new pane via `workspace run WORKSPACE '...' --split --wait --close`. Falls through to the LLM extraction pipeline today. |
+| `bash` | _(not yet implemented)_ Intended to spawn a new bash pane via `workspace run`. Falls through to the LLM extraction pipeline today. |
+| _(omitted)_ | No verb: use the LLM extraction pipeline. |
 
 **`claude` and `main` bypass the LLM.** No `workspace run` is invoked. The instruction text is
 sent as-is to the first pane (pane 1 in domain terms, tmux pane index 0) of window 0 in the named
