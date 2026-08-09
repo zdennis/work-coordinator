@@ -31,10 +31,13 @@ module WorkCoordinator
     #   @return [Application::DispatchAiCommand]
     # @!attribute [r] handle_query
     #   @return [Application::HandleQuery]
+    # @!attribute [r] deliver_to_main_session
+    #   @return [Application::DeliverToMainSession]
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
                 :message_receiver, :inbound_message_repo, :route_message,
                 :register_work_item, :start_work_item, :notify_human,
-                :ai_command_runner, :dispatch_ai_command, :handle_query
+                :ai_command_runner, :dispatch_ai_command, :handle_query,
+                :deliver_to_main_session
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -78,10 +81,14 @@ module WorkCoordinator
     def build_messages_receiver
       @inbound_message_repo ||= Adapters::SqliteInboundMessageRepository.new
       poller = Adapters::MessagesInboxPoller.new(inbound_message_repo: @inbound_message_repo)
-      Adapters::AiCommandReceiver.new(inner: poller, ai_command_handler: method(:handle_ai_command))
+      Adapters::AiCommandReceiver.new(
+        inner: poller,
+        ai_command_handler: method(:handle_ai_command),
+        deliver_to_main_session: @deliver_to_main_session
+      )
     end
 
-    def handle_ai_command(msg)
+    def handle_ai_command(msg) # rubocop:disable Metrics/AbcSize
       body = "#{msg[:work_item_ref]} #{msg[:body]}".strip
       if (response = @handle_query.call(body: body))
         @message_sender.send_message(to: nil, body: response, conversation_id: nil)
@@ -107,7 +114,7 @@ module WorkCoordinator
       end
     end
 
-    def wire!
+    def wire! # rubocop:disable Metrics/MethodLength
       @register_work_item = Application::RegisterWorkItem.new(work_item_repo: @work_item_repo,
                                                               event_store: @event_store)
       @start_work_item    = Application::StartWorkItem.new(work_item_repo: @work_item_repo,
@@ -125,9 +132,13 @@ module WorkCoordinator
       )
       @handle_query = Application::HandleQuery.new(
         work_item_repo: @work_item_repo,
-        event_store:    @event_store,
-        agent_session:  @agent_session,
-        config:         Config.new,
+        event_store: @event_store,
+        agent_session: @agent_session,
+        config: Config.new,
+        message_sender: @message_sender
+      )
+      @deliver_to_main_session = Application::DeliverToMainSession.new(
+        agent_session: @agent_session,
         message_sender: @message_sender
       )
     end
