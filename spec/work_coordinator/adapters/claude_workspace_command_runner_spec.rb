@@ -129,6 +129,46 @@ RSpec.describe WorkCoordinator::Adapters::ClaudeWorkspaceCommandRunner do
     end
   end
 
+  describe "#list_all_projects_with_urls" do
+    it "calls workspace list --all --show-urls --json and parses JSON" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"my-ai -p\"\n")
+      runner = build_runner(workspace_bin: "ws")
+
+      allow(Open3).to receive(:capture2e).with("ws", "list", "--all", "--show-urls", "--json").and_return(
+        [%([{"name":"auth-service","url":"https://github.com/acme/auth-service"}]\n), double(success?: true)]
+      )
+
+      expect(runner.list_all_projects_with_urls).to eq(
+        [{ name: "auth-service", url: "https://github.com/acme/auth-service" }]
+      )
+    end
+
+    it "handles null url in JSON" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"my-ai -p\"\n")
+      runner = build_runner(workspace_bin: "ws")
+
+      allow(Open3).to receive(:capture2e).with("ws", "list", "--all", "--show-urls", "--json").and_return(
+        [%([{"name":"dormant-project","url":null}]\n), double(success?: true)]
+      )
+
+      expect(runner.list_all_projects_with_urls).to eq([{ name: "dormant-project", url: nil }])
+    end
+
+    it "raises when command fails" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "ai_command: \"my-ai -p\"\n")
+      runner = build_runner(workspace_bin: "ws")
+
+      allow(Open3).to receive(:capture2e).and_return(["", double(success?: false)])
+
+      expect { runner.list_all_projects_with_urls }.to raise_error(
+        RuntimeError, /workspace list --all --show-urls --json failed/
+      )
+    end
+  end
+
   describe "#launch_workspace" do
     it "calls workspace launch with the project name" do
       FileUtils.mkdir_p(File.dirname(config_path))

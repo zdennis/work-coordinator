@@ -13,6 +13,9 @@ module WorkCoordinator
       # @return [Array<String>] names of all workspaces (active and dormant)
       def list_all_projects = raise NotImplementedError
 
+      # @return [Array<Hash>] each hash has :name (String) and :url (String or nil)
+      def list_all_projects_with_urls = raise NotImplementedError
+
       # @param name [String] workspace name to launch
       # @return [void]
       def launch_workspace(name:) = raise NotImplementedError

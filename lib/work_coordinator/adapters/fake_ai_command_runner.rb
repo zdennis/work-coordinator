@@ -14,19 +14,21 @@ module WorkCoordinator
         list_projects_result: [],
         list_projects_results: nil,
         list_all_projects_result: nil,
+        list_all_projects_with_urls_result: nil,
         run_project_result: "fake output",
         summarize_result: "Fake summary."
       )
-        @extract_project_result         = extract_project_result
-        @list_projects_result           = list_projects_result
-        @list_projects_results          = list_projects_results
-        @list_projects_call_count       = 0
-        @list_all_projects_result_given = list_all_projects_result
-        @run_project_result             = run_project_result
-        @summarize_result               = summarize_result
-        @extract_project_calls          = []
-        @run_project_calls              = []
-        @launch_workspace_calls         = []
+        @extract_project_result                  = extract_project_result
+        @list_projects_result                    = list_projects_result
+        @list_projects_results                   = list_projects_results
+        @list_projects_call_count                = 0
+        @list_all_projects_result_given          = list_all_projects_result
+        @list_all_projects_with_urls_result_given = list_all_projects_with_urls_result
+        @run_project_result                      = run_project_result
+        @summarize_result                        = summarize_result
+        @extract_project_calls                   = []
+        @run_project_calls                       = []
+        @launch_workspace_calls                  = []
       end
 
       def extract_project(body:)
@@ -46,6 +48,14 @@ module WorkCoordinator
 
       def list_all_projects
         (@list_all_projects_result_given || @list_projects_result).dup
+      end
+
+      def list_all_projects_with_urls
+        if @list_all_projects_with_urls_result_given
+          @list_all_projects_with_urls_result_given.dup
+        else
+          list_all_projects.map { |p| { name: p, url: nil } }
+        end
       end
 
       def launch_workspace(name:)

@@ -35,10 +35,8 @@ module WorkCoordinator
       private
 
       def url_dispatch(repo:, body:)
-        resolved        = resolve_alias(repo)
-        all_projects    = @ai_command_runner.list_all_projects
         active_projects = @ai_command_runner.list_projects
-        project         = resolved || fuzzy_match(repo, all_projects)
+        project         = resolve_url_project(repo: repo, body: body)
         return no_workspace_result(repo, body) if project.nil?
 
         unless active_projects.include?(project)
@@ -47,6 +45,16 @@ module WorkCoordinator
         end
 
         run_and_notify(project: project, body: body)
+      end
+
+      def resolve_url_project(repo:, body:)
+        resolved = resolve_alias(repo)
+        return resolved if resolved
+
+        owner_repo         = Domain::GithubUrlExtractor.new(body).owner_repo
+        projects_with_urls = @ai_command_runner.list_all_projects_with_urls
+        all_projects       = projects_with_urls.map { |p| p[:name] }
+        url_match(owner_repo, projects_with_urls) || fuzzy_match(repo, all_projects)
       end
 
       def ai_dispatch(body:)
@@ -127,6 +135,30 @@ module WorkCoordinator
         projects
           .map { |p| [p, normalize(p.downcase)] }
           .select { |_, name| name.include?(needle) || needle.include?(name) }
+      end
+
+      def url_match(owner_repo, projects_with_urls)
+        return nil if owner_repo.nil?
+
+        candidates = projects_with_urls.select { |w| normalize_git_url(w[:url]) == owner_repo }
+        return nil if candidates.empty?
+
+        best_url_candidate(candidates, owner_repo.split("/").last)
+      end
+
+      def best_url_candidate(candidates, repo_name)
+        exact = candidates.find { |w| w[:name] == repo_name }
+        return exact[:name] if exact
+
+        candidates.min_by { |w| (w[:name].length - repo_name.length).abs }[:name]
+      end
+
+      def normalize_git_url(url)
+        return nil if url.nil?
+
+        u     = url.sub(/\.git$/, "").sub(%r{/+$}, "")
+        parts = u.split(%r{[:/]})
+        parts.last(2).join("/")
       end
     end
   end

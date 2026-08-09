@@ -272,6 +272,123 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
       expect(result.dispatched).to be(false)
       expect(result.failure_reason).to eq(:no_workspace)
     end
+
+    describe "URL-based workspace matching" do
+      it "matches via git remote URL (ssh format without .git)" do
+        use_case, _runner = build_use_case(
+          list_all_projects_with_urls_result: [
+            { name: "my-service", url: "git@github.com:acme/my-service" }
+          ],
+          list_projects_result: %w[my-service],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
+
+        expect(result.dispatched).to be(true)
+        expect(result.project).to eq("my-service")
+      end
+
+      it "matches via git remote URL (ssh format with .git suffix)" do
+        use_case, _runner = build_use_case(
+          list_all_projects_with_urls_result: [
+            { name: "my-service", url: "git@github.com:acme/my-service.git" }
+          ],
+          list_projects_result: %w[my-service],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
+
+        expect(result.dispatched).to be(true)
+        expect(result.project).to eq("my-service")
+      end
+
+      it "prefers exact name match over worktree name when multiple workspaces share the same remote" do
+        use_case, _runner = build_use_case(
+          list_all_projects_with_urls_result: [
+            { name: "my-service-pr-826", url: "git@github.com:acme/my-service" },
+            { name: "my-service", url: "git@github.com:acme/my-service" }
+          ],
+          list_projects_result: %w[my-service my-service-pr-826],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
+
+        expect(result.dispatched).to be(true)
+        expect(result.project).to eq("my-service")
+      end
+
+      it "does NOT match billing-client for a billing URL" do
+        use_case, _runner = build_use_case(
+          list_all_projects_with_urls_result: [
+            { name: "billing", url: "git@github.com:acme/billing.git" },
+            { name: "billing-client", url: "git@github.com:acme/billing-client.git" }
+          ],
+          list_projects_result: %w[billing billing-client],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/acme/billing/pull/1")
+
+        expect(result.dispatched).to be(true)
+        expect(result.project).to eq("billing")
+      end
+
+      it "falls back to fuzzy name match when workspace url is nil" do
+        use_case, _runner = build_use_case(
+          list_all_projects_with_urls_result: [
+            { name: "my-service", url: nil }
+          ],
+          list_projects_result: %w[my-service],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
+
+        expect(result.dispatched).to be(true)
+        expect(result.project).to eq("my-service")
+      end
+
+      it "matches via git remote URL with trailing slash" do
+        use_case, _runner = build_use_case(
+          list_all_projects_with_urls_result: [
+            { name: "my-service", url: "https://github.com/acme/my-service/" }
+          ],
+          list_projects_result: %w[my-service],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
+
+        expect(result.dispatched).to be(true)
+        expect(result.project).to eq("my-service")
+      end
+
+      it "falls back to fuzzy name match when no workspace URL matches" do
+        use_case, _runner = build_use_case(
+          list_all_projects_with_urls_result: [
+            { name: "my-service", url: "git@github.com:acme/my-service" },
+            { name: "billing", url: "git@github.com:acme/billing" }
+          ],
+          list_projects_result: %w[my-service billing],
+          run_project_result: "done",
+          summarize_result: "Done."
+        )
+
+        result = use_case.call(body: "https://github.com/acme/other-repo/pull/5")
+
+        expect(result.dispatched).to be(false)
+        expect(result.failure_reason).to eq(:no_workspace)
+      end
+    end
   end
 
   describe "auto-launch dormant workspace" do

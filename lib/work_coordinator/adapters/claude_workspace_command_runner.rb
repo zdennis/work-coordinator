@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require "open3"
 require "shellwords"
 require "work_coordinator/ports/ai_command_runner"
@@ -41,6 +42,13 @@ module WorkCoordinator
         raise "workspace list --all failed" unless status.success?
 
         stdout.lines.map(&:strip).reject(&:empty?)
+      end
+
+      def list_all_projects_with_urls
+        stdout, status = run(@workspace_bin, "list", "--all", "--show-urls", "--json")
+        raise "workspace list --all --show-urls --json failed" unless status.success?
+
+        JSON.parse(stdout, symbolize_names: true).map { |w| { name: w[:name], url: w[:url] } }
       end
 
       def launch_workspace(name:)
