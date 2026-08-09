@@ -169,9 +169,10 @@ Query messages return a plain-text reply via iMessage and do not touch any tmux 
 
 | Message | What it returns |
 |---------|----------------|
-| `ai: help` | Overview of ai: syntax and all query keywords |
-| `ai: help commands` | List of all CLI commands with descriptions |
-| `ai: help <cmd>` | Usage summary for one command (fuzzy match) |
+| `ai: help` or `ai: /help` | Overview of ai: syntax and all query keywords |
+| `ai: help commands` or `ai: /help commands` | List of all CLI commands with descriptions |
+| `ai: help slash` or `ai: /help slash` | Reference for all slash command verbs |
+| `ai: help <cmd>` or `ai: /help <cmd>` | Usage summary for one command (fuzzy match) |
 | `ai: aliases` | All configured workspace aliases |
 | `ai: config` | Current config settings |
 | `ai: status` | All work items with state and phase |
@@ -186,10 +187,11 @@ Query messages return a plain-text reply via iMessage and do not touch any tmux 
 
 #### Actions
 
-Action messages run instructions in a workspace tmux pane. The format is:
+Action messages run instructions in a workspace tmux pane. Two formats are supported:
 
 ```
 ai: VERB WORKSPACE - instructions
+ai: /verb WORKSPACE [args]
 ```
 
 | Verb | Behavior |
@@ -199,6 +201,8 @@ ai: VERB WORKSPACE - instructions
 | `new` | _(not yet implemented)_ Intended to spawn a new pane via `workspace run WORKSPACE '...' --split --wait --close`. Falls through to the LLM extraction pipeline today. |
 | `bash` | _(not yet implemented)_ Intended to spawn a new bash pane via `workspace run`. Falls through to the LLM extraction pipeline today. |
 | _(omitted)_ | No verb: use the LLM extraction pipeline. |
+
+**Slash shorthand** delivers to the main session using a compact format — no dash or `instructions` keyword needed. `ai: /help slash` lists all verbs. Examples: `ai: /build GE add OAuth`, `ai: /test GE`, `ai: /stop GE`. Slash routing can be disabled globally by setting `slash_commands_enabled: false` in `~/.config/work-coordinator/config.yml`.
 
 **`claude` and `main` bypass the LLM.** No `workspace run` is invoked. The instruction text is
 sent as-is to the first pane (pane 1 in domain terms, tmux pane index 0) of window 0 in the named
@@ -214,13 +218,14 @@ ai: main my-service - investigate the memory leak
 
 **`new`, `bash`, and verb-omitted** use the full dispatch pipeline:
 
-1. `claude -p` extracts a workspace keyword from the instruction text
-2. `workspace list` retrieves the active projects
-3. The keyword is resolved via alias lookup, then fuzzy-matched against project names
-4. If no match is found, `send-message` notifies you immediately and stops
-5. `workspace run <project> '<instruction>' --split --wait --close` runs the instruction
-6. `claude -p` summarizes the output in 1–3 sentences
-7. `send-message` delivers the summary back to you
+1. If the instruction contains a GitHub URL (`https://github.com/OWNER/REPO/...`), the repo name is extracted and used as the keyword directly — no AI call needed
+2. Otherwise `claude -p` extracts a workspace keyword from the instruction text
+3. `workspace list` retrieves the active projects
+4. The keyword is resolved via alias lookup, then fuzzy-matched against project names
+5. If no match is found, `send-message` notifies you immediately and stops
+6. `workspace run <project> '<instruction>' --split --wait --close` runs the instruction
+7. `claude -p` summarizes the output in 1–3 sentences
+8. `send-message` delivers the summary back to you
 
 Example — send this iMessage:
 

@@ -34,6 +34,10 @@ module WorkCoordinator
       data.fetch("instruction_context", "")
     end
 
+    def slash_commands_enabled?
+      data.fetch("slash_commands_enabled", true)
+    end
+
     def resolve_alias(keyword)
       return nil if keyword.nil? || keyword.empty?
 
@@ -82,6 +86,7 @@ module WorkCoordinator
       <<~YAML
         # work-coordinator configuration
         ai_command: "#{DEFAULT_AI_COMMAND}"
+        slash_commands_enabled: true
         aliases:
           WC: work-coordinator
       YAML

@@ -84,7 +84,8 @@ module WorkCoordinator
       Adapters::AiCommandReceiver.new(
         inner: poller,
         ai_command_handler: method(:handle_ai_command),
-        deliver_to_main_session: @deliver_to_main_session
+        deliver_to_main_session: @deliver_to_main_session,
+        slash_commands_enabled: Config.new.slash_commands_enabled?
       )
     end
 
@@ -139,20 +140,28 @@ module WorkCoordinator
     def wire_ai_commands!
       config = Config.new
       @ai_command_runner   = Adapters::ClaudeWorkspaceCommandRunner.new
-      @dispatch_ai_command = Application::DispatchAiCommand.new(
+      @dispatch_ai_command = build_dispatch_ai_command(config)
+      @handle_query        = build_handle_query(config)
+      wire_delivery!(config)
+    end
+
+    def build_dispatch_ai_command(config)
+      Application::DispatchAiCommand.new(
         ai_command_runner: @ai_command_runner,
         message_sender: @message_sender,
         aliases: config.aliases,
         instruction_context: config.instruction_context
       )
-      @handle_query = Application::HandleQuery.new(
+    end
+
+    def build_handle_query(config)
+      Application::HandleQuery.new(
         work_item_repo: @work_item_repo,
         event_store: @event_store,
         agent_session: @agent_session,
         config: config,
         message_sender: @message_sender
       )
-      wire_delivery!(config)
     end
 
     def wire_delivery!(config)

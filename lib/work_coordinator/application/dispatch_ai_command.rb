@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "work_coordinator/domain/github_url_extractor"
+
 module WorkCoordinator
   module Application
     class DispatchAiCommand
@@ -13,7 +15,7 @@ module WorkCoordinator
       end
 
       def call(body:)
-        keyword = @ai_command_runner.extract_project(body: body)
+        keyword = extract_keyword(body)
         resolved = resolve_alias(keyword)
         project = resolved || fuzzy_match(keyword, @ai_command_runner.list_projects)
         return no_workspace_result(keyword, body) if project.nil?
@@ -38,6 +40,13 @@ module WorkCoordinator
         summary = @ai_command_runner.summarize(text: output)
         @message_sender.send_message(to: nil, body: summary, conversation_id: nil)
         Result.new(dispatched: true, project: project, summary: summary, failure_reason: nil)
+      end
+
+      def extract_keyword(body)
+        repo = Domain::GithubUrlExtractor.new(body).repo_name
+        return repo if repo
+
+        @ai_command_runner.extract_project(body: body)
       end
 
       def resolve_alias(keyword)

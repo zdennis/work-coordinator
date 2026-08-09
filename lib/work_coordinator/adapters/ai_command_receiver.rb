@@ -10,10 +10,11 @@ module WorkCoordinator
     class AiCommandReceiver
       include Ports::MessageReceiver
 
-      def initialize(inner:, ai_command_handler:, deliver_to_main_session:)
+      def initialize(inner:, ai_command_handler:, deliver_to_main_session:, slash_commands_enabled: true)
         @inner                   = inner
         @ai_command_handler      = ai_command_handler
         @deliver_to_main_session = deliver_to_main_session
+        @slash_commands_enabled  = slash_commands_enabled
       end
 
       def start(&block)
@@ -42,10 +43,12 @@ module WorkCoordinator
       end
 
       def dispatch_ai_message(msg, body)
-        slash = Domain::SlashCommand.new(body)
-        if slash.recognized?
-          deliver_to_main(workspace_name: slash.workspace, instructions: slash.instructions)
-          return
+        if @slash_commands_enabled
+          slash = Domain::SlashCommand.new(body)
+          if slash.recognized?
+            deliver_to_main(workspace_name: slash.workspace, instructions: slash.instructions)
+            return
+          end
         end
 
         command = Domain::AiCommand.new(body)

@@ -287,4 +287,35 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
   end
+
+  describe "slash_commands_enabled: false" do
+    subject(:receiver) do
+      described_class.new(
+        inner: inner,
+        ai_command_handler: ai_handler,
+        deliver_to_main_session: deliver_to_main,
+        slash_commands_enabled: false
+      )
+    end
+
+    let(:deliveries) { [] }
+    let(:deliver_to_main) do
+      lambda do |workspace_name:, instructions:, recipient:|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      end
+    end
+
+    # "ai: /build GE add OAuth" would normally be routed to deliver_to_main.
+    # With slash_commands_enabled: false it should fall through to ai_command_handler.
+    context "with a recognized slash command /build GE" do
+      let(:msg) { { work_item_ref: "/build", body: "GE add OAuth", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "bypasses slash command routing and calls ai_command_handler instead" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+        expect(deliveries).to be_empty
+      end
+    end
+  end
 end

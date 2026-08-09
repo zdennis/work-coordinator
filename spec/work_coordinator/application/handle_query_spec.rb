@@ -47,6 +47,16 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
       result = call("HELP")
       expect(result).to include("ai: queries:")
     end
+
+    it "matches /help slash command syntax" do
+      result = call("/help")
+      expect(result).to include("ai: queries:")
+    end
+
+    it "matches /help slash syntax case-insensitively" do
+      result = call("/HELP")
+      expect(result).to include("ai: queries:")
+    end
   end
 
   # -------------------------------------------------------------------------
@@ -71,6 +81,11 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
       expect(result).to include("/push")
       expect(result).to include("/pr")
       expect(result).to include("/stop")
+    end
+
+    it "also matches /help slash syntax" do
+      result = call("/help slash")
+      expect(result).to include("ai: slash commands:")
     end
 
     it "matches case-insensitively (HELP SLASH)" do

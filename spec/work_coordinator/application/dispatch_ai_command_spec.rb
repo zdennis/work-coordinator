@@ -184,4 +184,58 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
       expect(result.failure_reason).to eq(:no_workspace)
     end
   end
+
+  describe "GitHub URL extraction" do
+    it "extracts repo name from a GitHub PR URL without calling the AI runner" do
+      use_case, runner = build_use_case(
+        list_projects_result: %w[my-service acme-billing],
+        run_project_result: "done",
+        summarize_result: "Growth engine ran."
+      )
+
+      result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
+
+      expect(result.dispatched).to be(true)
+      expect(result.project).to eq("my-service")
+      expect(runner.extract_project_calls).to be_empty
+    end
+
+    it "fuzzy-matches a GitHub repo name against the project list when a URL is present" do
+      use_case, runner = build_use_case(
+        list_projects_result: %w[my-service acme-billing],
+        run_project_result: "done",
+        summarize_result: "Done."
+      )
+
+      result = use_case.call(body: "check https://github.com/acme/my-service/pull/830")
+
+      expect(result.dispatched).to be(true)
+      expect(result.project).to eq("my-service")
+      expect(runner.extract_project_calls).to be_empty
+    end
+
+    it "falls back to AI extraction when no GitHub URL is present" do
+      use_case, runner = build_use_case(
+        extract_project_result: "auth",
+        list_projects_result: %w[auth-service],
+        run_project_result: "done",
+        summarize_result: "Auth ran."
+      )
+
+      use_case.call(body: "fix the auth service")
+
+      expect(runner.extract_project_calls).to eq(["fix the auth service"])
+    end
+
+    it "returns no_workspace when URL repo name has no matching project" do
+      use_case, _runner = build_use_case(
+        list_projects_result: %w[acme-billing]
+      )
+
+      result = use_case.call(body: "https://github.com/acme/my-service/pull/830")
+
+      expect(result.dispatched).to be(false)
+      expect(result.failure_reason).to eq(:no_workspace)
+    end
+  end
 end

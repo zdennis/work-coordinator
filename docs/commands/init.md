@@ -36,11 +36,14 @@ First-time setup:
 work-coordinator init
 ```
 
-Then edit the config to change the AI command:
+Then edit the config to customise it:
 
-```bash
+```yaml
 # ~/.config/work-coordinator/config.yml
 ai_command: "claude --dangerously-skip-permissions -p"
+slash_commands_enabled: true   # set to false to disable /verb shorthand routing
+aliases:
+  WC: work-coordinator
 ```
 
 ## Gotchas

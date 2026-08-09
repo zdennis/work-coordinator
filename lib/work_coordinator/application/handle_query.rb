@@ -43,13 +43,13 @@ module WorkCoordinator
       # @return [String, nil] response text, or nil if no query matched
       def call(body:) # rubocop:disable Metrics/MethodLength, Metrics/CyclomaticComplexity, Metrics/AbcSize
         case body.strip
-        when /\Ahelp\z/i
+        when /\Ahelp\z/i, %r{\A/help\z}i
           help_overview
-        when /\Ahelp commands\z/i
+        when /\Ahelp commands\z/i, %r{\A/help commands\z}i
           help_commands
-        when /\Ahelp slash\z/i
+        when /\Ahelp slash\z/i, %r{\A/help slash\z}i
           help_slash_commands
-        when /\Ahelp (.+)\z/i
+        when /\Ahelp (.+)\z/i, %r{\A/help (.+)\z}i
           help_command(Regexp.last_match(1).strip)
         when /\Aalias(?:es)?\z/i
           list_aliases

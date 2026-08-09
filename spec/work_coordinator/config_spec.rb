@@ -75,6 +75,29 @@ RSpec.describe WorkCoordinator::Config do
     end
   end
 
+  describe "#slash_commands_enabled?" do
+    it "returns true when the config file does not exist" do
+      expect(config.slash_commands_enabled?).to be(true)
+    end
+
+    it "returns true when not set in the config file" do
+      config.write_defaults!
+      expect(config.slash_commands_enabled?).to be(true)
+    end
+
+    it "returns true when explicitly set to true in the config file" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "slash_commands_enabled: true\n")
+      expect(config.slash_commands_enabled?).to be(true)
+    end
+
+    it "returns false when set to false in the config file" do
+      FileUtils.mkdir_p(File.dirname(config_path))
+      File.write(config_path, "slash_commands_enabled: false\n")
+      expect(config.slash_commands_enabled?).to be(false)
+    end
+  end
+
   describe "#instruction_context" do
     it "returns an empty string when the config file does not exist" do
       expect(config.instruction_context).to eq("")
