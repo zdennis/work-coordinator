@@ -157,7 +157,8 @@ module WorkCoordinator
     def wire_delivery!
       @deliver_to_main_session = Application::DeliverToMainSession.new(
         agent_session: @agent_session,
-        message_sender: @message_sender
+        message_sender: @message_sender,
+        aliases: Config.new.aliases
       )
     end
   end

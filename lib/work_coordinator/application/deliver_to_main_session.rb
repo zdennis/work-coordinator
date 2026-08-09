@@ -21,22 +21,25 @@ module WorkCoordinator
 
       # @param agent_session [Ports::AgentSession]
       # @param message_sender [Ports::MessageSender]
-      def initialize(agent_session:, message_sender:)
+      # @param aliases [Hash] short-name => project-name alias map (case-insensitive lookup)
+      def initialize(agent_session:, message_sender:, aliases: {})
         @agent_session  = agent_session
         @message_sender = message_sender
+        @aliases        = aliases
       end
 
-      # @param workspace_name [String] name of the tmux session to target
+      # @param workspace_name [String] name (or alias) of the tmux session to target
       # @param instructions [String] text to deliver to the pane
       # @param recipient [String, nil] address to ack; nil uses the default WC_RECIPIENT
       # @return [Result]
       def call(workspace_name:, instructions:, recipient:)
+        resolved = @aliases[workspace_name.strip.upcase] || workspace_name
         @agent_session.deliver_to_pane(
-          workspace_name: workspace_name,
+          workspace_name: resolved,
           pane_index: MAIN_PANE_INDEX,
           message: instructions
         )
-        @message_sender.send_message(to: recipient, body: "Sent to #{workspace_name}")
+        @message_sender.send_message(to: recipient, body: "Sent to #{resolved}")
         Result.new(success: true, error: nil)
       rescue StandardError => e
         @message_sender.send_message(to: recipient, body: "Error: #{e.message}")

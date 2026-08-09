@@ -9,6 +9,30 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     described_class.new(agent_session: agent_session, message_sender: message_sender)
   end
 
+  context "when aliases are configured" do
+    subject(:use_case) do
+      described_class.new(
+        agent_session: agent_session,
+        message_sender: message_sender,
+        aliases: { "WC" => "work-coordinator" }
+      )
+    end
+
+    before { agent_session.stub_pane(workspace_name: "work-coordinator", pane_index: 1) }
+
+    it "resolves the alias to the full session name before delivery" do
+      use_case.call(workspace_name: "WC", instructions: "echo hi", recipient: nil)
+      expect(agent_session.delivered_to_pane).to contain_exactly(
+        hash_including(workspace_name: "work-coordinator", pane_index: 1, message: "echo hi")
+      )
+    end
+
+    it "sends acknowledgment using the resolved session name" do
+      use_case.call(workspace_name: "WC", instructions: "echo hi", recipient: nil)
+      expect(message_sender.sent_messages.first[:body]).to eq("Sent to work-coordinator")
+    end
+  end
+
   let(:agent_session)  { WorkCoordinator::Adapters::FakeAgentSession.new }
   let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
 
