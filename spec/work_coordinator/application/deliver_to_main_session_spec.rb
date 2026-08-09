@@ -27,9 +27,9 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
       )
     end
 
-    it "sends acknowledgment using the resolved session name" do
+    it "sends acknowledgment using the resolved session name with instructions" do
       use_case.call(workspace_name: "WC", instructions: "echo hi", recipient: nil)
-      expect(message_sender.sent_messages.first[:body]).to eq("Sent to work-coordinator")
+      expect(message_sender.sent_messages.first[:body]).to eq("Sent to work-coordinator: echo hi")
     end
   end
 
@@ -47,23 +47,29 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
       expect(call).to have_attributes(success: true, error: nil)
     end
 
-    it "delivers the instructions to domain pane 1 of the workspace" do
+    it "delivers the instructions to domain pane 2 of the workspace" do
       call
       expect(agent_session.delivered_to_pane).to contain_exactly(
         hash_including(workspace_name: "my-service", pane_index: 2, message: "add validation")
       )
     end
 
-    it "sends an acknowledgment to the recipient" do
+    it "sends an acknowledgment to the recipient with instructions summary" do
       call(recipient: "+15551234567")
       expect(message_sender.sent_messages).to contain_exactly(
-        hash_including(to: "+15551234567", body: "Sent to my-service")
+        hash_including(to: "+15551234567", body: "Sent to my-service: add validation")
       )
     end
 
     it "sends acknowledgment with nil recipient when no recipient given" do
       call(recipient: nil)
-      expect(message_sender.sent_messages.first).to include(to: nil, body: "Sent to my-service")
+      expect(message_sender.sent_messages.first).to include(to: nil, body: "Sent to my-service: add validation")
+    end
+
+    it "truncates long instructions to 80 chars in the acknowledgment" do
+      long = "a" * 100
+      call(instructions: long)
+      expect(message_sender.sent_messages.first[:body]).to eq("Sent to my-service: #{"a" * 80}...")
     end
 
     it "preserves multiline instructions" do
@@ -95,8 +101,8 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     before { agent_session.stub_pane(workspace_name: "", pane_index: 2) }
 
     it "still sends to whatever workspace was given" do
-      call(workspace_name: "")
-      expect(message_sender.sent_messages.first[:body]).to eq("Sent to ")
+      call(workspace_name: "", instructions: "add validation")
+      expect(message_sender.sent_messages.first[:body]).to eq("Sent to : add validation")
     end
   end
 end

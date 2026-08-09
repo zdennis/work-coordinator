@@ -89,9 +89,11 @@ module WorkCoordinator
       # @raise [Ports::AgentSession::PaneNotFoundError] when the pane does not exist
       # @raise [RuntimeError] when tmux send-keys reports failure
       def deliver_to_pane(workspace_name:, pane_index:, message:)
-        tmux_pane_index = pane_index - 1
+        # Domain pane indices are 1-based; tmux pane indices are 0-based.
+        # Subtract 1 to convert: domain pane 1 → tmux 0, domain pane 2 → tmux 1, etc.
         # Assumes tmux window base-index of 0 (the default). Users with base-index 1
         # in ~/.tmux.conf will see PaneNotFoundError.
+        tmux_pane_index = pane_index - 1
         window_target   = "#{workspace_name}:0"
 
         out, status = run_command(["tmux", "list-panes", "-t", window_target, "-F", "\#{pane_index}"])
