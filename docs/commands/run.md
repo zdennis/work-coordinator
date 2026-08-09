@@ -220,9 +220,9 @@ ai: main my-service - investigate the memory leak
 
 1. If the instruction contains a GitHub URL (`https://github.com/OWNER/REPO/...`), the repo name is extracted and used as the keyword directly — no AI call needed
 2. Otherwise `claude -p` extracts a workspace keyword from the instruction text
-3. `workspace list` retrieves the active projects
-4. The keyword is resolved via alias lookup, then fuzzy-matched against project names
-5. If no match is found, `send-message` notifies you immediately and stops
+3. For GitHub URL inputs, `workspace list --all` retrieves all projects (active and dormant); for plain-text inputs, `workspace list` retrieves only active projects
+4. The keyword is resolved via alias lookup, then fuzzy-matched against project names — hyphens and underscores are treated as equivalent, so `experimentation-service` matches `experimentation_service`
+5. If no match is found, `send-message` notifies you immediately and stops. If the match is a dormant workspace, behavior depends on `auto_launch_workspace` (see below)
 6. `workspace run <project> '<instruction>' --split --wait --close` runs the instruction
 7. `claude -p` summarizes the output in 1–3 sentences
 8. `send-message` delivers the summary back to you
