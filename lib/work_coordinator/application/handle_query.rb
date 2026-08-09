@@ -47,6 +47,8 @@ module WorkCoordinator
           help_overview
         when /\Ahelp commands\z/i
           help_commands
+        when /\Ahelp slash\z/i
+          help_slash_commands
         when /\Ahelp (.+)\z/i
           help_command(Regexp.last_match(1).strip)
         when /\Aalias(?:es)?\z/i
@@ -76,6 +78,7 @@ module WorkCoordinator
         <<~TEXT.chomp
           ai: queries:
             help [cmd]     usage for a command
+            help slash     slash command reference
             aliases        configured aliases
             config         current settings
             status [s]     work items by state
@@ -99,6 +102,22 @@ module WorkCoordinator
           "  #{name.ljust(max_len)}  #{desc}"
         end
         "CLI commands:\n#{lines.join("\n")}"
+      end
+
+      def help_slash_commands
+        <<~TEXT.chomp
+          ai: slash commands:
+            /build    WORKSPACE [description]   "We're building a feature: ..."
+            /research WORKSPACE [topic]         "Research ..."
+            /clear    WORKSPACE                 send /clear (reset Claude context)
+            /test     WORKSPACE [scope]         "Run tests: ..." or "Run the test suite"
+            /fix      WORKSPACE [description]   "Fix: ..."
+            /review   WORKSPACE [scope]         "Review: ..." or "Review the current changes"
+            /commit   WORKSPACE [message]       "Commit: ..." or "Commit the current changes"
+            /push     WORKSPACE                 "Push the current branch"
+            /pr       WORKSPACE [description]   "Open a pull request: ..." or "Open a pull request"
+            /stop     WORKSPACE                 send Ctrl+C (C-c interrupt)
+        TEXT
       end
 
       def help_command(name)

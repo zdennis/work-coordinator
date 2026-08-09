@@ -39,6 +39,7 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
       expect(result).to include("ai: actions:")
       expect(result).to include("help [cmd]")
       expect(result).to include("status [s]")
+      expect(result).to include("help slash")
     end
 
     it "matches case-insensitively (HELP)" do
@@ -50,6 +51,37 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
   # -------------------------------------------------------------------------
   # help commands
   # -------------------------------------------------------------------------
+
+  # -------------------------------------------------------------------------
+  # help slash
+  # -------------------------------------------------------------------------
+
+  describe "help slash" do
+    it "returns the slash command reference", :aggregate_failures do
+      result = call("help slash")
+      expect(result).to include("ai: slash commands:")
+      expect(result).to include("/build")
+      expect(result).to include("/research")
+      expect(result).to include("/clear")
+      expect(result).to include("/test")
+      expect(result).to include("/fix")
+      expect(result).to include("/review")
+      expect(result).to include("/commit")
+      expect(result).to include("/push")
+      expect(result).to include("/pr")
+      expect(result).to include("/stop")
+    end
+
+    it "matches case-insensitively (HELP SLASH)" do
+      result = call("HELP SLASH")
+      expect(result).to include("ai: slash commands:")
+    end
+
+    it "does not fall through to the generic help_command unknown message" do
+      result = call("help slash")
+      expect(result).not_to include("Unknown command:")
+    end
+  end
 
   describe "help commands" do
     it "returns the list of CLI commands" do
