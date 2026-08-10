@@ -11,3 +11,5 @@ db/*.sqlite3-shm
 .DS_Store
 coverage/
 tmp/
+.worktrees
+.claude/worktrees
