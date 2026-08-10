@@ -5,7 +5,8 @@ require "work_coordinator/ports/message_receiver"
 
 module WorkCoordinator
   module Adapters
-    # Polls ~/Library/Messages/chat.db for inbound messages prefixed with 'ai: '.
+    # Polls ~/Library/Messages/chat.db for inbound messages prefixed with 'ai: '
+    # or sent as bare slash commands (e.g. /help, /build GE).
     # Requires Full Disk Access (FDA) to be granted to the running process.
     class MessagesInboxPoller
       include Ports::MessageReceiver
@@ -61,10 +62,11 @@ module WorkCoordinator
         end
       end
 
-      # Selects unseen inbound messages carrying the 'ai: ' prefix.
+      # Selects unseen inbound messages: those carrying the 'ai: ' prefix, and
+      # bare slash commands (e.g. /help, /build GE) sent without the prefix.
       INBOX_SQL = <<~SQL
         SELECT rowid, text, date, guid FROM message
-        WHERE is_from_me = 0 AND text LIKE 'ai: %' AND date > ?
+        WHERE is_from_me = 0 AND (text LIKE 'ai: %' OR text LIKE '/%') AND date > ?
         ORDER BY date ASC
       SQL
 
@@ -92,7 +94,9 @@ module WorkCoordinator
       end
 
       def parse_row(row)
-        parts = row["text"][4..].split(" ", 2)
+        text = row["text"]
+        stripped = text.start_with?("ai: ") ? text[4..] : text
+        parts = stripped.split(" ", 2)
         {
           guid: row["guid"],
           work_item_ref: parts[0],
