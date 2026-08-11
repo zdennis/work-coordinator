@@ -16,7 +16,7 @@ RSpec.describe WorkCoordinator::Adapters::MessagesInboxPoller do
 
   describe "#parse_row (via private interface)" do
     let(:poller) do
-      described_class.new(inbound_message_repo: double("repo"))
+      described_class.new(inbound_message_repo: instance_double(WorkCoordinator::Adapters::SqliteInboundMessageRepository))
     end
 
     def parse(text)
