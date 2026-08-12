@@ -32,6 +32,8 @@ module WorkCoordinator
     #   @return [Symbol] one of {WORK_ITEM_STATES}
     # @!attribute [r] phase
     #   @return [Symbol, nil] one of {WORK_ITEM_PHASES}, set only while the item is active
+    # @!attribute [r] project_id
+    #   @return [String, nil] FK to the owning project (nullable)
     # @!attribute [r] created_at
     #   @return [Time] when the work item was registered
     # @!attribute [r] updated_at
@@ -45,6 +47,7 @@ module WorkCoordinator
       :workspace_name,
       :state,
       :phase,
+      :project_id,
       :created_at,
       :updated_at
     ) do

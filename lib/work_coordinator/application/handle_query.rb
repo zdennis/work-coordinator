@@ -44,12 +44,19 @@ module WorkCoordinator
       # @param agent_session [Ports::AgentSession]
       # @param config [WorkCoordinator::Config]
       # @param message_sender [Ports::MessageSender]
-      def initialize(work_item_repo:, event_store:, agent_session:, config:, message_sender:)
-        @work_item_repo = work_item_repo
-        @event_store    = event_store
-        @agent_session  = agent_session
-        @config         = config
-        @message_sender = message_sender
+      # @param project_repo [Ports::ProjectRepository, nil]
+      # @param project_resolver [Application::ProjectResolver, nil]
+      # @param set_default_project [Application::SetDefaultProject, nil]
+      def initialize(work_item_repo:, event_store:, agent_session:, config:, message_sender:,
+                     project_repo: nil, project_resolver: nil, set_default_project: nil)
+        @work_item_repo      = work_item_repo
+        @event_store         = event_store
+        @agent_session       = agent_session
+        @config              = config
+        @message_sender      = message_sender
+        @project_repo        = project_repo
+        @project_resolver    = project_resolver
+        @set_default_project = set_default_project
       end
 
       # @param body [String] the message body to match against
@@ -68,6 +75,8 @@ module WorkCoordinator
           list_aliases
         when /\Aconfig\z/i
           show_config
+        when /\Adefault\s+(.+)\z/i
+          set_default_project(Regexp.last_match(1).strip)
         when /\Astatus\z/i
           status_all
         when /\Astatus (.+)\z/i
@@ -96,7 +105,8 @@ module WorkCoordinator
             help slash     slash command reference
             aliases        configured aliases
             config         current settings
-            status [s]     work items by state
+            status [s|p]   work items by state or project alias
+            default P      set P as the default project
             blocked/waiting/active  shortcuts
             item REF       one item detail
             recent [n]     last N events
@@ -171,28 +181,58 @@ module WorkCoordinator
       end
 
       def status_all
-        items = @work_item_repo.find_all
-        format_work_items(items)
+        if @project_repo && (default = @project_repo.default_project)
+          items  = @work_item_repo.find_all(project_id: default.id)
+          prefix = "[#{default.alias || default.name}] "
+        else
+          items  = @work_item_repo.find_all
+          prefix = ""
+        end
+        "#{prefix}#{format_work_items(items)}"
       end
 
-      def status_filtered(filter)
+      def status_filtered(filter) # rubocop:disable Metrics/MethodLength,Metrics/AbcSize,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
         matched_state = Domain::WORK_ITEM_STATES.find do |s|
           s.to_s.downcase.include?(filter.downcase)
         end
 
-        unless matched_state
+        if matched_state
+          items = @work_item_repo.find_all(state: matched_state)
+          return format_work_items(items)
+        end
+
+        # Not a state — only attempt project resolution when both collaborators are present.
+        # Without them (backward-compat path), fall through to the existing unknown-state error.
+        unless @project_repo && @project_resolver
           known = Domain::WORK_ITEM_STATES.join(", ")
           return "Unknown state: #{filter}. Known states: #{known}"
         end
 
-        items = @work_item_repo.find_all(status: matched_state)
-        format_work_items(items)
+        resolution = @project_resolver.resolve(filter)
+
+        if resolution.found?
+          items = @work_item_repo.find_all(project_id: resolution.project.id)
+          "[#{resolution.project.alias || resolution.project.name}] #{format_work_items(items)}"
+        elsif resolution.ambiguous?
+          names = resolution.candidates.map { |p| p.alias || p.name }.join(", ")
+          "Ambiguous: matched #{names}. Be more specific."
+        else
+          known = Domain::WORK_ITEM_STATES.join(", ")
+          "Unknown state or project: #{filter}. Known states: #{known}"
+        end
       end
 
       def shorthand_status(keyword)
         state = SHORTHAND_STATE_MAP.fetch(keyword, keyword.to_sym)
-        items = @work_item_repo.find_all(status: state)
+        items = @work_item_repo.find_all(state: state)
         format_work_items(items)
+      end
+
+      def set_default_project(query) # rubocop:disable Naming/AccessorMethodName
+        return "Project management not configured." unless @set_default_project
+
+        result = @set_default_project.call(query: query)
+        result.message
       end
 
       def item_detail(ref) # rubocop:disable Metrics/AbcSize

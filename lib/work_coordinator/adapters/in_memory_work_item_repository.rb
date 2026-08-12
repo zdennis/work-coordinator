@@ -28,11 +28,14 @@ module WorkCoordinator
         @store[id]
       end
 
-      # @param status [Symbol, String, nil] restrict to items in this state
+      # @param state [Symbol, String, nil] restrict to items in this state
+      # @param project_id [String, nil] restrict to items belonging to this project
       # @return [Array<Domain::WorkItem>]
-      def find_all(status: nil)
+      def find_all(state: nil, project_id: nil)
         items = @store.values
-        status ? items.select { |wi| wi.state == status } : items
+        items = items.select { |wi| wi.state == state } if state
+        items = items.select { |wi| wi.project_id == project_id } if project_id
+        items
       end
 
       # Removes the work item with the given id, if present.

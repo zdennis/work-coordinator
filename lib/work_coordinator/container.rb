@@ -33,11 +33,18 @@ module WorkCoordinator
     #   @return [Application::HandleQuery]
     # @!attribute [r] deliver_to_main_session
     #   @return [Application::DeliverToMainSession]
+    # @!attribute [r] project_repo
+    #   @return [Adapters::SqliteProjectRepository]
+    # @!attribute [r] project_resolver
+    #   @return [Application::ProjectResolver]
+    # @!attribute [r] set_default_project
+    #   @return [Application::SetDefaultProject]
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
                 :message_receiver, :inbound_message_repo, :route_message,
                 :register_work_item, :start_work_item, :notify_human,
                 :ai_command_runner, :dispatch_ai_command, :handle_query,
-                :deliver_to_main_session
+                :deliver_to_main_session, :project_repo, :project_resolver,
+                :set_default_project
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -53,6 +60,8 @@ module WorkCoordinator
       @socket_path = socket_path
       Persistence.connect!(database: db_path)
       Persistence.migrate!
+      @project_repo     = Adapters::SqliteProjectRepository.new
+      @project_resolver = Application::ProjectResolver.new(project_repo: @project_repo)
       @work_item_repo   = Adapters::SqliteWorkItemRepository.new
       @event_store      = Adapters::SqliteEventStore.new
       @agent_session    = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
@@ -127,7 +136,8 @@ module WorkCoordinator
 
     def wire!
       @register_work_item = Application::RegisterWorkItem.new(work_item_repo: @work_item_repo,
-                                                              event_store: @event_store)
+                                                              event_store: @event_store,
+                                                              project_repo: @project_repo)
       @start_work_item    = Application::StartWorkItem.new(work_item_repo: @work_item_repo,
                                                            agent_session: @agent_session, event_store: @event_store)
       @route_message      = Application::RouteMessage.new(work_item_repo: @work_item_repo,
@@ -140,6 +150,10 @@ module WorkCoordinator
     def wire_ai_commands!
       config = Config.new
       @ai_command_runner   = Adapters::ClaudeWorkspaceCommandRunner.new
+      @set_default_project = Application::SetDefaultProject.new(
+        project_repo: @project_repo,
+        project_resolver: @project_resolver
+      )
       @dispatch_ai_command = build_dispatch_ai_command(config)
       @handle_query        = build_handle_query(config)
       wire_delivery!(config)
@@ -152,7 +166,8 @@ module WorkCoordinator
         aliases: config.aliases,
         instruction_context: config.instruction_context,
         auto_launch_workspace: config.auto_launch_workspace,
-        workspace_launch_timeout_seconds: config.workspace_launch_timeout_seconds
+        workspace_launch_timeout_seconds: config.workspace_launch_timeout_seconds,
+        project_resolver: @project_resolver
       )
     end
 
@@ -162,7 +177,10 @@ module WorkCoordinator
         event_store: @event_store,
         agent_session: @agent_session,
         config: config,
-        message_sender: @message_sender
+        message_sender: @message_sender,
+        project_repo: @project_repo,
+        project_resolver: @project_resolver,
+        set_default_project: @set_default_project
       )
     end
 
@@ -171,7 +189,8 @@ module WorkCoordinator
         agent_session: @agent_session,
         message_sender: @message_sender,
         aliases: config.aliases,
-        instruction_context: config.instruction_context
+        instruction_context: config.instruction_context,
+        project_repo: @project_repo
       )
     end
   end

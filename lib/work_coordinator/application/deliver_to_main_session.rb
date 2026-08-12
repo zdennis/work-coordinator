@@ -29,11 +29,14 @@ module WorkCoordinator
       # @param message_sender [Ports::MessageSender]
       # @param aliases [Hash] short-name => project-name alias map (case-insensitive lookup)
       # @param instruction_context [String] text appended to every instruction before delivery
-      def initialize(agent_session:, message_sender:, aliases: {}, instruction_context: "")
+      # @param project_repo [Ports::ProjectRepository, nil] used for DB-backed alias resolution
+      def initialize(agent_session:, message_sender:, aliases: {}, instruction_context: "",
+                     project_repo: nil)
         @agent_session       = agent_session
         @message_sender      = message_sender
         @aliases             = aliases
         @instruction_context = instruction_context
+        @project_repo        = project_repo
       end
 
       # @param workspace_name [String] name (or alias) of the tmux session to target
@@ -41,7 +44,7 @@ module WorkCoordinator
       # @param recipient [String, nil] address to ack; nil uses the default WC_RECIPIENT
       # @return [Result]
       def call(workspace_name:, instructions:, recipient:)
-        resolved = @aliases[workspace_name.strip.upcase] || workspace_name
+        resolved = resolve_alias(workspace_name)
         full_message = build_message(instructions)
         @agent_session.deliver_to_pane(
           workspace_name: resolved,
@@ -57,6 +60,16 @@ module WorkCoordinator
       end
 
       private
+
+      def resolve_alias(workspace_name)
+        key = workspace_name.strip.upcase
+        if @project_repo
+          project = @project_repo.find_by_name_or_alias(key) ||
+                    @project_repo.find_by_name_or_alias(workspace_name.strip)
+          return project.workspace_name if project&.workspace_name
+        end
+        @aliases[key] || workspace_name
+      end
 
       def build_message(instructions)
         normalized = normalize_slash_separator(instructions)

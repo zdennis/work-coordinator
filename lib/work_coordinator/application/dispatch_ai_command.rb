@@ -7,13 +7,14 @@ module WorkCoordinator
     class DispatchAiCommand
       Result = Data.define(:dispatched, :project, :summary, :failure_reason)
 
-      def initialize(
+      def initialize( # rubocop:disable Metrics/ParameterLists
         ai_command_runner:,
         message_sender:,
         aliases: {},
         instruction_context: "",
         auto_launch_workspace: false,
         workspace_launch_timeout_seconds: 20,
+        project_resolver: nil,
         sleep_fn: method(:sleep),
         clock_fn: -> { Time.now }
       )
@@ -23,6 +24,7 @@ module WorkCoordinator
         @instruction_context              = instruction_context
         @auto_launch_workspace            = auto_launch_workspace
         @workspace_launch_timeout_seconds = workspace_launch_timeout_seconds
+        @project_resolver                 = project_resolver
         @sleep_fn                         = sleep_fn
         @clock_fn                         = clock_fn
       end
@@ -57,10 +59,20 @@ module WorkCoordinator
         url_match(owner_repo, projects_with_urls) || fuzzy_match(repo, all_projects)
       end
 
-      def ai_dispatch(body:)
+      def ai_dispatch(body:) # rubocop:disable Metrics/AbcSize
         keyword  = @ai_command_runner.extract_project(body: body)
         resolved = resolve_alias(keyword)
-        project  = resolved || fuzzy_match(keyword, @ai_command_runner.list_projects)
+
+        if resolved.is_a?(Application::ProjectResolver::Result) && resolved.ambiguous?
+          names = resolved.candidates.map { |p| p.alias || p.name }.join(", ")
+          @message_sender.send_message(
+            to: nil, body: "Ambiguous: matched #{names}. Be more specific.", conversation_id: nil
+          )
+          return Result.new(dispatched: false, project: nil, summary: nil, failure_reason: :ambiguous)
+        end
+
+        # resolved is a String (workspace_name) or nil here
+        project = resolved.is_a?(String) ? resolved : fuzzy_match(keyword, @ai_command_runner.list_projects)
         return no_workspace_result(keyword, body) if project.nil?
 
         run_and_notify(project: project, body: body)
@@ -109,7 +121,22 @@ module WorkCoordinator
       def resolve_alias(keyword)
         return nil if keyword.nil? || keyword.empty?
 
+        db_result = resolve_project_from_db(keyword)
+        if db_result.is_a?(Application::ProjectResolver::Result)
+          return db_result.project.workspace_name if db_result.found? && db_result.project.workspace_name
+          return db_result if db_result.ambiguous?
+        end
+
         @aliases[keyword.strip.upcase]
+      end
+
+      def resolve_project_from_db(keyword)
+        return nil unless @project_resolver
+
+        resolution = @project_resolver.resolve(keyword)
+        return resolution if resolution.found? || resolution.ambiguous?
+
+        nil
       end
 
       def build_instructions(body)

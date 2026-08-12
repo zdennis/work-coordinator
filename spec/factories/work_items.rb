@@ -10,6 +10,7 @@ FactoryBot.define do
     workspace_name { nil }
     state { :created }
     phase { nil }
+    project_id { nil }
     created_at { Time.now }
     updated_at { Time.now }
 

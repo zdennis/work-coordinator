@@ -38,10 +38,12 @@ module WorkCoordinator
       end
 
       # @param state [Symbol, String, nil] restrict to work items in this state
+      # @param project_id [String, nil] restrict to work items belonging to this project
       # @return [Array<Domain::WorkItem>]
-      def find_all(state: nil)
+      def find_all(state: nil, project_id: nil)
         scope = Persistence::Models::WorkItemRecord.all
         scope = scope.with_state(state) if state
+        scope = scope.where(project_id: project_id) if project_id
         scope.map { |r| to_domain(r) }
       end
 
@@ -62,6 +64,7 @@ module WorkCoordinator
           workspace_name: work_item.workspace_name,
           state: work_item.state.to_s,
           phase: work_item.phase&.to_s,
+          project_id: work_item.project_id,
           created_at: work_item.created_at,
           updated_at: work_item.updated_at
         }
@@ -77,6 +80,7 @@ module WorkCoordinator
           workspace_name: record.workspace_name,
           state: record.state.to_sym,
           phase: record.phase&.to_sym,
+          project_id: record.project_id,
           created_at: record.created_at,
           updated_at: record.updated_at
         )

@@ -61,7 +61,7 @@ RSpec.describe WorkCoordinator::Application::RegisterWorkItem do
         type: "work_item.created",
         work_item_id: work_item.id,
         source: "system",
-        data: { title: "Fix login", kind: :jira, external_reference: "ABC-123" }
+        data: { title: "Fix login", kind: :jira, external_reference: "ABC-123", project_id: nil }
       )
     end
 
