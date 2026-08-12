@@ -39,6 +39,7 @@ module WorkCoordinator
       def url_dispatch(repo:, body:)
         active_projects = @ai_command_runner.list_projects
         project         = resolve_url_project(repo: repo, body: body)
+        return ambiguous_result(project) if ambiguous_resolution?(project)
         return no_workspace_result(repo, body) if project.nil?
 
         unless active_projects.include?(project)
@@ -59,23 +60,28 @@ module WorkCoordinator
         url_match(owner_repo, projects_with_urls) || fuzzy_match(repo, all_projects)
       end
 
-      def ai_dispatch(body:) # rubocop:disable Metrics/AbcSize
+      def ai_dispatch(body:)
         keyword  = @ai_command_runner.extract_project(body: body)
         resolved = resolve_alias(keyword)
-
-        if resolved.is_a?(Application::ProjectResolver::Result) && resolved.ambiguous?
-          names = resolved.candidates.map { |p| p.alias || p.name }.join(", ")
-          @message_sender.send_message(
-            to: nil, body: "Ambiguous: matched #{names}. Be more specific.", conversation_id: nil
-          )
-          return Result.new(dispatched: false, project: nil, summary: nil, failure_reason: :ambiguous)
-        end
+        return ambiguous_result(resolved) if ambiguous_resolution?(resolved)
 
         # resolved is a String (workspace_name) or nil here
         project = resolved.is_a?(String) ? resolved : fuzzy_match(keyword, @ai_command_runner.list_projects)
         return no_workspace_result(keyword, body) if project.nil?
 
         run_and_notify(project: project, body: body)
+      end
+
+      def ambiguous_resolution?(resolved)
+        resolved.is_a?(Application::ProjectResolver::Result) && resolved.ambiguous?
+      end
+
+      def ambiguous_result(resolved)
+        names = resolved.candidates.map { |p| p.alias || p.name }.join(", ")
+        @message_sender.send_message(
+          to: nil, body: "Ambiguous: matched #{names}. Be more specific.", conversation_id: nil
+        )
+        Result.new(dispatched: false, project: nil, summary: nil, failure_reason: :ambiguous)
       end
 
       def wait_for_launch(project)

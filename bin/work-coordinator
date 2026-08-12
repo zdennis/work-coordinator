@@ -170,7 +170,7 @@ when "project"
       puts opts
       exit
     end
-  end.parse!(ARGV)
+  end.order!(ARGV)
 
   require "securerandom"
   subcommand = ARGV.shift
@@ -200,7 +200,15 @@ when "project"
       created_at: now,
       updated_at: now
     )
-    saved = container.project_repo.save(project)
+    saved = begin
+      container.project_repo.save(project)
+    rescue ActiveRecord::RecordNotUnique
+      warn "Error: a project with alias '#{project_options[:alias]}' already exists."
+      exit 1
+    rescue ActiveRecord::RecordInvalid => e
+      warn "Error: #{e.message}"
+      exit 1
+    end
     puts "Added project: #{saved.name}" + (saved.alias ? " (#{saved.alias})" : "")
 
   when "list"
