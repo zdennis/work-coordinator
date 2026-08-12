@@ -79,6 +79,22 @@ Remove an alias you no longer need:
 work-coordinator alias remove BI
 ```
 
+## Relationship to `project`
+
+The `alias` and `project` commands are two separate systems that both resolve short names to workspaces.
+
+| | `alias` | `project` |
+|---|---|---|
+| Storage | `~/.config/work-coordinator/config.yml` | SQLite database |
+| Carries workspace metadata | No — maps SHORT → project name | Yes — stores `workspace_name` and `alias` fields |
+| Supports `ai: default` / `ai: status PROJECT` | No | Yes |
+| Supports `register --project` | No | Yes |
+| Created by | `work-coordinator alias add SHORT NAME` | `work-coordinator project add NAME --alias SHORT` |
+
+When the `ai:` dispatcher resolves a keyword it checks DB projects first (`project_resolver`). If a DB project matches and has a `workspace_name`, that workspace is used. Only when no DB project matches does the dispatcher fall back to config aliases. This means a DB project with the same alias as a config alias will always win.
+
+You can use both systems at once. A common setup is to keep config aliases for quick one-off workspaces and register DB projects for anything that needs `ai: status`, `ai: default`, or `register --project` tagging.
+
 ## Gotchas
 
 **`alias add` overwrites silently.** Adding an alias with a short name that already exists replaces its target with no confirmation prompt.

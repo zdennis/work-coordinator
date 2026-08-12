@@ -22,6 +22,7 @@ The item starts in `created` state. Nothing is routed or dispatched — `registe
 | `--ref REF` | External reference the message router matches against incoming messages (e.g. `BUG-99`). Without this, no message can ever be routed to this item. |
 | `--repo REPO` | Repository name or path |
 | `--tmux TARGET` | tmux target in `SESSION:WINDOW.PANE` format (e.g. `work:1.0`). The router checks this pane is live before sending a message. Without it, message delivery silently fails. |
+| `--project ALIAS` | Tag this work item with a project by alias or name. The project must already exist (see `project add`). Without this flag, the item is created with no project association. |
 
 ## Output
 
@@ -55,6 +56,17 @@ work-coordinator register \
   --tmux work:1.0
 ```
 
+Register a work item tagged to a project:
+
+```bash
+work-coordinator register \
+  --title 'Fix login timeout' \
+  --kind bug \
+  --ref 'MS-99' \
+  --project GE \
+  --tmux my-service:1.0
+```
+
 Capture the UUID and immediately start the item:
 
 ```bash
@@ -73,6 +85,8 @@ work-coordinator start $ID
 
 Only items in `active` state with a live tmux pane receive routed messages.
 
+When `--project ALIAS` is supplied, the item is tagged with that project's ID. Tagged items appear in project-scoped `ai: status GE` queries and in `ai: status` when that project is the default. Without `--project`, the item is created with no project association regardless of whether a default project is configured.
+
 ## Gotchas
 
 **`--ref` is required for routing.** Without it, `send` has no way to match an incoming message to this item. Register without `--ref` only if you never intend to route messages to the item.
@@ -80,3 +94,7 @@ Only items in `active` state with a live tmux pane receive routed messages.
 **`--tmux` is required for delivery.** An active item without a tmux target will appear healthy but messages routed to it will be silently dropped.
 
 **`--ref` must match the router's pattern exactly.** The router matches refs using the pattern `[A-Z]+-\d+` (e.g. `BUG-99`, `FEAT-12`). A ref like `#42` will not match and the item will never receive a message.
+
+**`--project` must resolve unambiguously.** The value is matched against project aliases and names via the same fuzzy resolver used by `ai:` routing. If the query matches no project, `register` exits 1. If it matches more than one project, it also exits 1. Use the exact alias (e.g. `GE`) to avoid ambiguity.
+
+**`--project` does not inherit a default.** Even when a default project is configured, omitting `--project` leaves the item untagged. To tag the item, pass `--project` explicitly.
