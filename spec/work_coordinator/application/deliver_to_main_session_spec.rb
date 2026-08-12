@@ -121,6 +121,30 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     end
   end
 
+  context "when instructions start with a slash command" do
+    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
+
+    it "normalizes a space after the command to two newlines" do
+      use_case.call(workspace_name: "my-service", instructions: "/clear How to work:\n\n$rpi", recipient: nil)
+      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
+    end
+
+    it "normalizes a single newline after the command to two newlines" do
+      use_case.call(workspace_name: "my-service", instructions: "/clear\nHow to work:\n\n$rpi", recipient: nil)
+      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
+    end
+
+    it "leaves an already-correct double-newline separator unchanged" do
+      use_case.call(workspace_name: "my-service", instructions: "/clear\n\nHow to work:\n\n$rpi", recipient: nil)
+      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
+    end
+
+    it "leaves a bare slash command unchanged" do
+      use_case.call(workspace_name: "my-service", instructions: "/clear", recipient: nil)
+      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear")
+    end
+  end
+
   context "when instruction_context is empty" do
     before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
 

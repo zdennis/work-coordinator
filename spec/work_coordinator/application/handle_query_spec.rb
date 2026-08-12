@@ -417,4 +417,49 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
       expect(call("   ")).to be_nil
     end
   end
+
+  # -------------------------------------------------------------------------
+  # bare slash commands (no workspace)
+  # -------------------------------------------------------------------------
+
+  describe "bare slash commands" do
+    it "returns a usage hint for /build" do
+      result = call("/build")
+      expect(result).to include("Usage: /build WORKSPACE [description]")
+      expect(result).to include("ai: help slash")
+    end
+
+    it "returns a usage hint for /test" do
+      result = call("/test")
+      expect(result).to include("Usage: /test WORKSPACE [scope]")
+      expect(result).to include("ai: help slash")
+    end
+
+    it "returns a usage hint for /stop" do
+      result = call("/stop")
+      expect(result).to include("Usage: /stop WORKSPACE")
+      expect(result).to include("ai: help slash")
+    end
+
+    it "matches case-insensitively (/BUILD)" do
+      result = call("/BUILD")
+      expect(result).to include("Usage: /build WORKSPACE [description]")
+    end
+
+    it "returns an unknown slash command message for /foo" do
+      result = call("/foo")
+      expect(result).to include("Unknown slash command: /foo")
+      expect(result).to include("ai: help slash")
+    end
+
+    it "does not intercept /help (regression guard)" do
+      result = call("/help")
+      expect(result).to include("ai: queries:")
+      expect(result).not_to include("Unknown slash command")
+    end
+
+    it "returns nil for /stop GE (with workspace) so dispatch still handles it" do
+      expect(call("/stop GE")).to be_nil
+    end
+  end
 end

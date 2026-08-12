@@ -26,6 +26,19 @@ module WorkCoordinator
         "waiting" => :waiting_for_human
       }.freeze
 
+      SLASH_USAGE = {
+        "build" => "/build WORKSPACE [description]",
+        "research" => "/research WORKSPACE [topic]",
+        "clear" => "/clear WORKSPACE",
+        "test" => "/test WORKSPACE [scope]",
+        "fix" => "/fix WORKSPACE [description]",
+        "review" => "/review WORKSPACE [scope]",
+        "commit" => "/commit WORKSPACE [message]",
+        "push" => "/push WORKSPACE",
+        "pr" => "/pr WORKSPACE [description]",
+        "stop" => "/stop WORKSPACE"
+      }.freeze
+
       # @param work_item_repo [Ports::WorkItemRepository]
       # @param event_store [#recent]
       # @param agent_session [Ports::AgentSession]
@@ -69,6 +82,8 @@ module WorkCoordinator
           list_panes
         when /\Aleases\z/i
           list_leases
+        when %r{\A/(\w+)\z}i
+          slash_usage_hint(Regexp.last_match(1).downcase)
         end
       end
 
@@ -238,6 +253,15 @@ module WorkCoordinator
           "  #{lease.resource_name}: #{lease.work_item_id} (#{age})"
         end
         "Active leases:\n#{lines.join("\n")}"
+      end
+
+      def slash_usage_hint(verb)
+        usage = SLASH_USAGE[verb]
+        if usage
+          "Usage: #{usage}\nSee 'ai: help slash' for all slash commands."
+        else
+          "Unknown slash command: /#{verb}\nSee 'ai: help slash' for recognized commands."
+        end
       end
 
       def format_work_items(items) # rubocop:disable Metrics/AbcSize

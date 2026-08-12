@@ -59,9 +59,17 @@ module WorkCoordinator
       private
 
       def build_message(instructions)
-        return instructions if @instruction_context.nil? || @instruction_context.strip.empty?
+        normalized = normalize_slash_separator(instructions)
+        return normalized if @instruction_context.nil? || @instruction_context.strip.empty?
 
-        "#{instructions}\n\n#{@instruction_context}"
+        "#{normalized}\n\n#{@instruction_context}"
+      end
+
+      # When instructions begin with a slash command immediately followed by content
+      # (space/tab or single newline), normalize to \n\n so the command and any
+      # trailing context are always separated by a blank line.
+      def normalize_slash_separator(instructions)
+        instructions.sub(%r{\A(/\w+)(?:[ \t]+|\n(?!\n))}, "\\1\n\n")
       end
     end
   end
