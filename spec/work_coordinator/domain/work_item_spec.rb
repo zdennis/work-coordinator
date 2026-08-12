@@ -36,6 +36,23 @@ RSpec.describe WorkCoordinator::Domain::WorkItem do
       expect { described_class.new(id: "wi-1") }.to raise_error(ArgumentError)
     end
 
+    it "defaults project_id to nil when not passed via factory" do
+      work_item = build(:work_item_domain)
+      expect(work_item.project_id).to be_nil
+    end
+
+    it "accepts an explicit project_id" do
+      work_item = build(:work_item_domain, project_id: "proj-abc")
+      expect(work_item.project_id).to eq("proj-abc")
+    end
+
+    it "produces a new instance with updated project_id via with" do
+      original = build(:work_item_domain)
+      updated  = original.with(project_id: "proj-xyz")
+      expect(updated.project_id).to eq("proj-xyz")
+      expect(original.project_id).to be_nil
+    end
+
     it "is frozen" do
       expect(build(:work_item_domain)).to be_frozen
     end

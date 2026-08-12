@@ -495,4 +495,82 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
       end
     end
   end
+
+  # -------------------------------------------------------------------------
+  # DB-backed alias resolution via ProjectResolver
+  # -------------------------------------------------------------------------
+
+  describe "DB alias resolution" do
+    let(:project_repo) { WorkCoordinator::Adapters::InMemoryProjectRepository.new }
+    let(:resolver)     { WorkCoordinator::Application::ProjectResolver.new(project_repo: project_repo) }
+
+    def build_use_case_with_resolver(**opts)
+      runner = WorkCoordinator::Adapters::FakeAiCommandRunner.new(**opts)
+      use_case = described_class.new(
+        ai_command_runner: runner,
+        message_sender: message_sender,
+        project_resolver: resolver
+      )
+      [use_case, runner]
+    end
+
+    context "when a DB project matches the extracted keyword" do
+      before do
+        project_repo.save(build(:project_domain,
+                                name: "my-service",
+                                alias_attr: "MS",
+                                workspace_name: "my-service-ws"))
+      end
+
+      it "dispatches to the project's workspace_name" do
+        use_case, runner = build_use_case_with_resolver(
+          extract_project_result: "MS",
+          list_projects_result: %w[my-service-ws],
+          run_project_result: "done",
+          summarize_result: "Summary."
+        )
+
+        result = use_case.call(body: "add a feature")
+        expect(result.dispatched).to be(true)
+        expect(result.project).to eq("my-service-ws")
+        expect(runner.run_project_calls.last[:project]).to eq("my-service-ws")
+      end
+    end
+
+    context "when the DB returns an ambiguous match" do
+      before do
+        project_repo.save(build(:project_domain, name: "my-service-a", alias_attr: "GEA",
+                                                 workspace_name: "ws-a"))
+        project_repo.save(build(:project_domain, name: "my-service-b", alias_attr: "GEB",
+                                                 workspace_name: "ws-b"))
+      end
+
+      it "sends an ambiguity reply and returns failure_reason: :ambiguous" do
+        use_case, _runner = build_use_case_with_resolver(
+          extract_project_result: "my-service",
+          list_projects_result: []
+        )
+
+        result = use_case.call(body: "do something")
+        expect(result.dispatched).to be(false)
+        expect(result.failure_reason).to eq(:ambiguous)
+        expect(message_sender.sent_messages.last[:body]).to include("Ambiguous: matched")
+      end
+    end
+
+    context "when the DB has no match and the keyword matches a live tmux workspace" do
+      it "falls back to legacy fuzzy match against live workspaces" do
+        use_case, runner = build_use_case_with_resolver(
+          extract_project_result: "auth",
+          list_projects_result: %w[auth-service],
+          run_project_result: "done",
+          summarize_result: "OK."
+        )
+
+        result = use_case.call(body: "fix auth")
+        expect(result.dispatched).to be(true)
+        expect(runner.run_project_calls.last[:project]).to eq("auth-service")
+      end
+    end
+  end
 end

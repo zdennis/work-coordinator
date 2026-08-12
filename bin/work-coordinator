@@ -25,6 +25,7 @@ end
 COMMANDS = {
   "init" => "Create the default config file (~/.config/work-coordinator/config.yml)",
   "alias" => "List, add, or remove workspace project aliases",
+  "project" => "Manage projects (add, list, set-default)",
   "register" => "Register a new work item",
   "start" => "Transition a work item to active state",
   "status" => "List all work items with their current state and phase",
@@ -150,6 +151,92 @@ when "alias"
     exit 1
   end
 
+when "project"
+  OptionParser.new do |opts|
+    opts.banner = "Usage: work-coordinator project <subcommand> [options]"
+    opts.separator ""
+    opts.separator "Manage projects that group work items and map to tmux workspace sessions."
+    opts.separator ""
+    opts.separator "Subcommands:"
+    opts.separator "    add NAME [--alias ALIAS] [--workspace NAME]   Add a new project"
+    opts.separator "    list                                          List all projects"
+    opts.separator "    set-default NAME_OR_ALIAS                     Set the default project"
+    opts.separator ""
+    opts.separator "Examples:"
+    opts.separator "  work-coordinator project add my-service --alias GE --workspace my-service"
+    opts.separator "  work-coordinator project list"
+    opts.separator "  work-coordinator project set-default GE"
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
+  end.parse!(ARGV)
+
+  require "securerandom"
+  subcommand = ARGV.shift
+  container  = WorkCoordinator::Container.new
+
+  case subcommand
+  when "add"
+    project_options = {}
+    OptionParser.new do |opts|
+      opts.on("--alias ALIAS", "Short alias for routing (e.g. GE)") { |v| project_options[:alias] = v }
+      opts.on("--workspace NAME", "Tmux session name for this project") { |v| project_options[:workspace] = v }
+    end.parse!(ARGV)
+
+    name = ARGV.shift
+    unless name && !name.strip.empty?
+      warn "Usage: work-coordinator project add NAME [--alias ALIAS] [--workspace NAME]"
+      exit 1
+    end
+
+    now     = Time.now
+    project = WorkCoordinator::Domain::Project.new(
+      id: SecureRandom.uuid,
+      name: name.strip,
+      alias: project_options[:alias]&.strip,
+      workspace_name: project_options[:workspace]&.strip,
+      is_default: false,
+      created_at: now,
+      updated_at: now
+    )
+    saved = container.project_repo.save(project)
+    puts "Added project: #{saved.name}" + (saved.alias ? " (#{saved.alias})" : "")
+
+  when "list"
+    projects = container.project_repo.find_all
+    if projects.empty?
+      puts "No projects."
+    else
+      fmt = "%-10s  %-20s  %-20s  %s"
+      puts format(fmt, "ALIAS", "NAME", "WORKSPACE", "")
+      puts "-" * 60
+      projects.each do |p|
+        default_marker = p.is_default ? "[default]" : "" # rubocop:disable Metrics/BlockNesting
+        puts format(fmt, p.alias.to_s, p.name, p.workspace_name.to_s, default_marker)
+      end
+    end
+
+  when "set-default"
+    name_or_alias = ARGV.shift
+    unless name_or_alias && !name_or_alias.strip.empty?
+      warn "Usage: work-coordinator project set-default NAME_OR_ALIAS"
+      exit 1
+    end
+    result = container.set_default_project.call(query: name_or_alias)
+    if result.success
+      puts result.message
+    else
+      warn result.message
+      exit 1
+    end
+
+  else
+    warn "Unknown project subcommand: #{subcommand}"
+    warn "Usage: work-coordinator project <add|list|set-default>"
+    exit 1
+  end
+
 when "register"
   options = {}
   OptionParser.new do |opts|
@@ -181,6 +268,9 @@ when "register"
     opts.on("--tmux TARGET", "Tmux target in SESSION:WINDOW.PANE format to associate with this item") do |v|
       options[:tmux] = v
     end
+    opts.on("--project ALIAS", "Tag work item with this project alias (defaults to default project)") do |v|
+      options[:project] = v
+    end
     opts.on("-h", "--help", "Print help for this command") do
       puts opts
       exit
@@ -195,12 +285,24 @@ when "register"
   end
 
   container = WorkCoordinator::Container.new
+
+  project_id = if options[:project]
+                 result = container.project_resolver.resolve(options[:project])
+                 if result.found?
+                   result.project.id
+                 else
+                   warn "Unknown project: #{options[:project]}"
+                   exit 1
+                 end
+               end
+
   work_item = container.register_work_item.call(
     title: options[:title],
     kind: options[:kind],
     external_reference: options[:ref],
     repository: options[:repo],
-    workspace_name: options[:tmux]
+    workspace_name: options[:tmux],
+    project_id: project_id
   )
   puts "id:    #{work_item.id}"
   puts "state: #{work_item.state}"

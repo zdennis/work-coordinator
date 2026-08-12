@@ -65,6 +65,35 @@ RSpec.describe WorkCoordinator::Application::RegisterWorkItem do
       )
     end
 
+    context "when project_id is involved" do
+      subject(:register_with_project) do
+        described_class.new(work_item_repo: repo, event_store: event_store, project_repo: project_repo)
+      end
+
+      let(:project_repo) { WorkCoordinator::Adapters::InMemoryProjectRepository.new }
+      let(:default_project) do
+        build(:project_domain, name: "my-service", alias_attr: "MS", is_default: true).tap do |p|
+          project_repo.set_default(p)
+        end
+      end
+
+      it "uses an explicitly passed project_id" do
+        work_item = register_with_project.call(title: "Task", kind: :chore, project_id: "explicit-id")
+        expect(work_item.project_id).to eq("explicit-id")
+      end
+
+      it "auto-assigns the default project when no project_id is given" do
+        default_project # create it
+        work_item = register_with_project.call(title: "Task", kind: :chore)
+        expect(work_item.project_id).to eq(default_project.id)
+      end
+
+      it "leaves project_id nil when no project_id given and no default set" do
+        work_item = register_with_project.call(title: "Task", kind: :chore)
+        expect(work_item.project_id).to be_nil
+      end
+    end
+
     it "appends exactly one event per registration" do
       register.call(title: "One", kind: :chore)
       register.call(title: "Two", kind: :chore)

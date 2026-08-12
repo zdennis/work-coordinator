@@ -462,4 +462,156 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
       expect(call("/stop GE")).to be_nil
     end
   end
+
+  # -------------------------------------------------------------------------
+  # Project-aware helpers
+  # -------------------------------------------------------------------------
+
+  def build_project_use_case(project_repo:)
+    resolver         = WorkCoordinator::Application::ProjectResolver.new(project_repo: project_repo)
+    set_default_proj = WorkCoordinator::Application::SetDefaultProject.new(
+      project_repo: project_repo,
+      project_resolver: resolver
+    )
+    described_class.new(
+      work_item_repo: repo,
+      event_store: event_store,
+      agent_session: agent_session,
+      config: config,
+      message_sender: message_sender,
+      project_repo: project_repo,
+      project_resolver: resolver,
+      set_default_project: set_default_proj
+    )
+  end
+
+  # -------------------------------------------------------------------------
+  # ai: default PROJECT
+  # -------------------------------------------------------------------------
+
+  describe "default PROJECT" do
+    let(:project_repo) { WorkCoordinator::Adapters::InMemoryProjectRepository.new }
+    let(:uc)           { build_project_use_case(project_repo: project_repo) }
+
+    context "when the project is found" do
+      before do
+        project_repo.save(build(:project_domain, name: "my-service", alias_attr: "MS"))
+      end
+
+      it "returns the success message" do
+        result = uc.call(body: "default GE")
+        expect(result).to include("Default project set to")
+      end
+    end
+
+    context "when the project is not found" do
+      it "returns a not-found message" do
+        result = uc.call(body: "default nonexistent")
+        expect(result).to include("No project found matching: nonexistent")
+      end
+    end
+
+    context "when project management is not configured (no set_default_project)" do
+      it "returns the not-configured message" do
+        result = call("default GE")
+        expect(result).to include("Project management not configured.")
+      end
+    end
+  end
+
+  # -------------------------------------------------------------------------
+  # status scoped to default project
+  # -------------------------------------------------------------------------
+
+  describe "status with default project" do # rubocop:disable RSpec/MultipleMemoizedHelpers
+    let(:project_repo) { WorkCoordinator::Adapters::InMemoryProjectRepository.new }
+    let(:uc)           { build_project_use_case(project_repo: project_repo) }
+    let(:project)      { build(:project_domain, name: "my-service", alias_attr: "MS") }
+    let(:other_proj)   { build(:project_domain, name: "billing") }
+
+    before do
+      project_repo.save(project)
+      project_repo.save(other_proj)
+      project_repo.set_default(project)
+
+      repo.save(build(:work_item_domain, external_reference: "MS-1", title: "GE task",
+                                         project_id: project.id))
+      repo.save(build(:work_item_domain, external_reference: "BI-1", title: "Billing task",
+                                         project_id: other_proj.id))
+    end
+
+    it "scopes status to the default project and shows its name" do
+      result = uc.call(body: "status")
+      expect(result).to include("[GE]")
+      expect(result).to include("MS-1")
+      expect(result).not_to include("BI-1")
+    end
+  end
+
+  describe "status with no default project" do
+    let(:project_repo) { WorkCoordinator::Adapters::InMemoryProjectRepository.new }
+    let(:uc)           { build_project_use_case(project_repo: project_repo) }
+
+    before do
+      repo.save(build(:work_item_domain, external_reference: "MS-1", title: "GE task"))
+      repo.save(build(:work_item_domain, external_reference: "BI-1", title: "Billing task"))
+    end
+
+    it "returns all work items when no default project is set" do
+      result = uc.call(body: "status")
+      expect(result).to include("MS-1")
+      expect(result).to include("BI-1")
+    end
+  end
+
+  # -------------------------------------------------------------------------
+  # status filtered by project alias
+  # -------------------------------------------------------------------------
+
+  describe "status <project_alias>" do
+    let(:project_repo) { WorkCoordinator::Adapters::InMemoryProjectRepository.new }
+    let(:uc)           { build_project_use_case(project_repo: project_repo) }
+    let(:project)      { build(:project_domain, name: "my-service", alias_attr: "MS") }
+
+    before do
+      project_repo.save(project)
+      repo.save(build(:work_item_domain, external_reference: "MS-1", title: "GE task",
+                                         project_id: project.id))
+      repo.save(build(:work_item_domain, external_reference: "BI-1", title: "Other task",
+                                         project_id: nil))
+    end
+
+    it "filters work items by project alias" do
+      result = uc.call(body: "status GE")
+      expect(result).to include("MS-1")
+      expect(result).not_to include("BI-1")
+    end
+
+    it "still treats state filters as states, not projects" do
+      result = uc.call(body: "status active")
+      expect(result).not_to include("[GE]")
+    end
+
+    context "when the filter fuzzy-matches multiple projects (ambiguous)" do
+      # "engine-" normalizes to "engine_", which is a substring of "growth_engine_a"
+      # and "growth_engine_b" but NOT of "growth_engine" (the outer project), so
+      # these two are the only candidates and the result is ambiguous.
+      before do
+        project_repo.save(build(:project_domain, name: "my-service-a", alias_attr: "GEA"))
+        project_repo.save(build(:project_domain, name: "my-service-b", alias_attr: "GEB"))
+      end
+
+      it "returns an ambiguity message" do
+        result = uc.call(body: "status engine-")
+        expect(result).to include("Ambiguous: matched")
+      end
+    end
+
+    context "when the filter matches neither a state nor a project" do
+      it "returns an unknown-state-or-project message" do
+        result = uc.call(body: "status zzzunknown")
+        expect(result).to include("Unknown state or project: zzzunknown")
+      end
+    end
+  end
 end
