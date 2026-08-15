@@ -36,7 +36,9 @@ module WorkCoordinator
         "commit" => "/commit WORKSPACE [message]",
         "push" => "/push WORKSPACE",
         "pr" => "/pr WORKSPACE [description]",
-        "stop" => "/stop WORKSPACE"
+        "stop" => "/stop WORKSPACE",
+        "restart" => "/restart — restart the coordinator itself",
+        "update" => "/update — pull the latest coordinator code, then restart"
       }.freeze
 
       # @param work_item_repo [Ports::WorkItemRepository]
@@ -143,6 +145,8 @@ module WorkCoordinator
             /push     WORKSPACE                 "Push the current branch"
             /pr       WORKSPACE [description]   "Open a pull request: ..." or "Open a pull request"
             /stop     WORKSPACE                 send Ctrl+C (C-c interrupt)
+            /restart                            restart the coordinator (no WORKSPACE)
+            /update                             pull latest code, then restart (no WORKSPACE)
           Examples:
             ai: /build GE add OAuth support
             ai: /test GE
@@ -151,6 +155,9 @@ module WorkCoordinator
       end
 
       def help_command(name)
+        slash = SLASH_USAGE[name.downcase.delete_prefix("/")]
+        return slash_usage_hint(name.downcase.delete_prefix("/")) if slash
+
         match = COMMAND_DESCRIPTIONS.keys.find do |k|
           k.downcase.include?(name.downcase)
         end

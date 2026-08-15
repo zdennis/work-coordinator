@@ -236,6 +236,58 @@ ai: add input validation to the registration form
 The daemon extracts a workspace keyword, matches it to an active workspace, runs the instruction
 there, and texts you a summary when it finishes.
 
+#### Coordinator commands
+
+Two slash commands act on the coordinator process itself rather than on a workspace. They take no
+arguments, and they also accept the bare verb (`ai: restart` is the same as `ai: /restart`).
+
+##### `/restart`
+
+Replaces the running coordinator process with a fresh one via `exec`, so code changes already on
+disk take effect. You get an ack before the hand-off and a confirmation after the new process
+boots:
+
+```
+ai: /restart
+→ Restarting...
+→ Restarted successfully.
+```
+
+If `exec` itself fails, the coordinator retries up to three times, five seconds apart, reporting
+each attempt. When the retries run out it sends `Retries exhausted. Manual intervention required.`
+and exits with status 1.
+
+##### `/update`
+
+Pulls the coordinator's own checkout, reports what changed, then restarts:
+
+```
+ai: /update
+→ Updated: 3 commits, now at abc1234 (tag: v1.0.0)
+→ Restarting...
+→ Restarted successfully.
+```
+
+When there is nothing to pull the report reads `Already up to date at <sha>` and the restart still
+happens — you asked for one.
+
+**Dirty-tree caveat.** If the checkout has uncommitted changes, `/update` refuses outright:
+
+```
+ai: /update
+→ Cannot update: working tree has local changes.
+```
+
+Nothing is pulled and nothing is restarted. Commit or stash the changes and try again. A failed
+pull short-circuits the same way, reporting `Update failed: <git stderr>`.
+
+**Exec success is not boot success.** `exec` only raises when the program cannot be started at all
+(`ENOENT`, `EACCES`). If the new process starts and *then* dies during boot — the likely failure
+after an `/update` that changes the `Gemfile`, giving `Bundler::GemNotFound` — `exec` already
+reported success, no retry fires, and nobody is notified. The daemon is simply gone. The retry loop
+guards the unlikely failure, not the likely one; catching the latter needs external supervision
+(launchd, a tmux respawn hook) and is out of scope for the coordinator itself.
+
 ## Auto-launch configuration
 
 When a GitHub URL is dispatched and the matched workspace is not currently running, the coordinator can launch it automatically before routing the instruction.

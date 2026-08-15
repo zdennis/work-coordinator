@@ -10,10 +10,13 @@ module WorkCoordinator
     class AiCommandReceiver
       include Ports::MessageReceiver
 
-      def initialize(inner:, ai_command_handler:, deliver_to_main_session:, slash_commands_enabled: true)
+      def initialize(inner:, ai_command_handler:, deliver_to_main_session:, restart_coordinator:,
+                     update_and_restart:, slash_commands_enabled: true)
         @inner                   = inner
         @ai_command_handler      = ai_command_handler
         @deliver_to_main_session = deliver_to_main_session
+        @restart_coordinator     = restart_coordinator
+        @update_and_restart      = update_and_restart
         @slash_commands_enabled  = slash_commands_enabled
       end
 
@@ -43,19 +46,35 @@ module WorkCoordinator
       end
 
       def dispatch_ai_message(msg, body)
-        if @slash_commands_enabled
-          slash = Domain::SlashCommand.new(body)
-          if slash.recognized?
-            deliver_to_main(workspace_name: slash.workspace, instructions: slash.instructions)
-            return
-          end
-        end
+        return if @slash_commands_enabled && slash_command_dispatched?(body)
 
         command = Domain::AiCommand.new(body)
         if command.send_to_main_session?
           deliver_to_main(workspace_name: command.workspace, instructions: command.instructions)
         else
           @ai_command_handler.call(msg)
+        end
+      end
+
+      # Returns true when the body was handled as a slash command.
+      def slash_command_dispatched?(body)
+        slash = Domain::SlashCommand.new(body)
+
+        if slash.coordinator_command?
+          dispatch_coordinator_command(slash)
+        elsif slash.recognized?
+          deliver_to_main(workspace_name: slash.workspace, instructions: slash.instructions)
+        else
+          return false
+        end
+
+        true
+      end
+
+      def dispatch_coordinator_command(slash)
+        case slash.verb
+        when "restart" then @restart_coordinator.call
+        when "update"  then @update_and_restart.call
         end
       end
 

@@ -10,6 +10,10 @@ require "optparse"
 require "term/ansicolor"
 require_relative "../lib/work_coordinator"
 
+# Captured before OptionParser and ARGV.shift destroy it; a restart re-execs
+# with exactly the arguments this process was launched with.
+ORIGINAL_ARGV = ARGV.dup.freeze
+
 include Term::ANSIColor # rubocop:disable Style/MixinUsage
 
 def colorize_state(state)
@@ -473,7 +477,12 @@ when "run"
     exit 1
   end
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
-  container = WorkCoordinator::Container.new(modes: modes)
+  container = WorkCoordinator::Container.new(
+    modes: modes,
+    argv: [$PROGRAM_NAME, *ORIGINAL_ARGV],
+    env: ENV.to_h
+  )
+  container.restart_coordinator.announce_boot!
   modes.each do |m|
     case m
     when :local    then puts "work-coordinator running on #{socket_path} (local socket)"

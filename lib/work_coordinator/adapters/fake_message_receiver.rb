@@ -41,6 +41,25 @@ module WorkCoordinator
       def on_message(&)
         # no-op stub
       end
+
+      # Drains the queue through the block, standing in for a long-running
+      # receiver so adapters that wrap one can be driven in tests.
+      #
+      # @yieldparam message [Hash{Symbol=>String, Time}]
+      # @return [void]
+      def start(&)
+        @queue.each(&)
+      end
+
+      # Marks the receiver stopped; there is nothing to tear down.
+      #
+      # @return [void]
+      def stop
+        @stopped = true
+      end
+
+      # @return [Boolean]
+      def stopped? = @stopped == true
     end
   end
 end

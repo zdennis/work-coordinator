@@ -62,4 +62,21 @@ RSpec.describe WorkCoordinator::Container do
   it "raises on an unknown mode" do
     expect { described_class.new(modes: [:carrier_pigeon]) }.to raise_error(ArgumentError, /carrier_pigeon/)
   end
+
+  it "wires the restart collaborators" do
+    container = described_class.new
+
+    expect(container.restart_state_repo).to be_a(WorkCoordinator::Adapters::SqliteRestartStateRepository)
+    expect(container.git_runner).to be_a(WorkCoordinator::Adapters::ShellGitRunner)
+    expect(container.restart_coordinator).to be_a(WorkCoordinator::Application::RestartCoordinator)
+    expect(container.update_and_restart).to be_a(WorkCoordinator::Application::UpdateAndRestart)
+  end
+
+  it "passes argv and env through to the restart coordinator" do
+    container = described_class.new(argv: ["bin/work-coordinator", "run"], env: { "WC_TEST" => "1" })
+    coordinator = container.restart_coordinator
+
+    expect(coordinator.instance_variable_get(:@argv)).to eq(["bin/work-coordinator", "run"])
+    expect(coordinator.instance_variable_get(:@env)).to eq({ "WC_TEST" => "1" })
+  end
 end

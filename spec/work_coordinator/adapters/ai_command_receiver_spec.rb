@@ -7,7 +7,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
     described_class.new(
       inner: inner,
       ai_command_handler: ai_handler,
-      deliver_to_main_session: ->(**) {}
+      deliver_to_main_session: ->(**) {},
+      restart_coordinator: coordinator.restart,
+      update_and_restart: coordinator.update
     )
   end
 
@@ -37,6 +39,21 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
 
   let(:ai_handler_calls) { [] }
   let(:ai_handler) { ->(msg) { ai_handler_calls << msg } }
+
+  # Records calls to both coordinator use cases in one memoized helper.
+  let(:coordinator) do
+    Class.new do
+      attr_reader :restart_calls, :update_calls
+
+      def initialize
+        @restart_calls = []
+        @update_calls  = []
+      end
+
+      def restart = -> { @restart_calls << :called }
+      def update = -> { @update_calls << :called }
+    end.new
+  end
 
   context "when the message has a work item ref prefix (e.g. MS-123)" do
     let(:msg) { { work_item_ref: "MS-123", body: "do it", received_at: Time.now } }
@@ -93,7 +110,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       described_class.new(
         inner: inner,
         ai_command_handler: ai_handler,
-        deliver_to_main_session: deliver_to_main
+        deliver_to_main_session: deliver_to_main,
+        restart_coordinator: coordinator.restart,
+        update_and_restart: coordinator.update
       )
     end
 
@@ -197,7 +216,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       described_class.new(
         inner: inner,
         ai_command_handler: ai_handler,
-        deliver_to_main_session: deliver_to_main
+        deliver_to_main_session: deliver_to_main,
+        restart_coordinator: coordinator.restart,
+        update_and_restart: coordinator.update
       )
     end
 
@@ -294,6 +315,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
         inner: inner,
         ai_command_handler: ai_handler,
         deliver_to_main_session: deliver_to_main,
+        restart_coordinator: coordinator.restart,
+        update_and_restart: coordinator.update,
         slash_commands_enabled: false
       )
     end
@@ -315,6 +338,149 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
         receiver.start { |m| m }
         expect(ai_handler_calls).to eq([msg])
         expect(deliveries).to be_empty
+      end
+    end
+
+    context "with a coordinator verb" do
+      let(:msg) { { work_item_ref: "restart", body: nil, received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "falls through to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+        expect(coordinator.restart_calls).to be_empty
+      end
+    end
+  end
+
+  describe "coordinator command routing" do
+    subject(:receiver) do
+      described_class.new(
+        inner: inner,
+        ai_command_handler: ai_handler,
+        deliver_to_main_session: deliver_to_main,
+        restart_coordinator: coordinator.restart,
+        update_and_restart: coordinator.update
+      )
+    end
+
+    let(:deliveries) { [] }
+    let(:deliver_to_main) do
+      lambda do |workspace_name:, instructions:, recipient:|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      end
+    end
+
+    # "ai: /restart" splits as work_item_ref: "/restart", body: nil
+    context "with /restart" do
+      let(:messages) { [{ work_item_ref: "/restart", body: nil, received_at: Time.now }] }
+
+      it "invokes the restart coordinator explicitly and never delivers to main" do
+        receiver.start { |m| m }
+        expect(coordinator.restart_calls).to eq([:called])
+        expect(deliveries).to be_empty
+        expect(ai_handler_calls).to be_empty
+      end
+    end
+
+    # "ai: restart" splits as work_item_ref: "restart", body: nil
+    context "with a bare 'restart' (ai: restart)" do
+      let(:messages) { [{ work_item_ref: "restart", body: nil, received_at: Time.now }] }
+
+      it "invokes the restart coordinator explicitly and never delivers to main" do
+        receiver.start { |m| m }
+        expect(coordinator.restart_calls).to eq([:called])
+        expect(deliveries).to be_empty
+      end
+    end
+
+    context "with /update" do
+      let(:messages) { [{ work_item_ref: "/update", body: nil, received_at: Time.now }] }
+
+      it "invokes update_and_restart" do
+        receiver.start { |m| m }
+        expect(coordinator.update_calls).to eq([:called])
+        expect(deliveries).to be_empty
+      end
+    end
+
+    context "with a bare 'update' (ai: update)" do
+      let(:messages) { [{ work_item_ref: "update", body: nil, received_at: Time.now }] }
+
+      it "invokes update_and_restart" do
+        receiver.start { |m| m }
+        expect(coordinator.update_calls).to eq([:called])
+      end
+    end
+
+    context "with 'update the readme'" do
+      let(:msg) { { work_item_ref: "update", body: "the readme", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "is not a coordinator command and falls through to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(coordinator.update_calls).to be_empty
+        expect(coordinator.restart_calls).to be_empty
+        expect(ai_handler_calls).to eq([msg])
+      end
+    end
+
+    context "with '/update the readme'" do
+      let(:msg) { { work_item_ref: "/update", body: "the readme", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "is not a coordinator command and falls through to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(coordinator.update_calls).to be_empty
+        expect(deliveries).to be_empty
+        expect(ai_handler_calls).to eq([msg])
+      end
+    end
+
+    context "with '/restart GE'" do
+      let(:msg) { { work_item_ref: "/restart", body: "MS", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "is not a coordinator command and falls through to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(coordinator.restart_calls).to be_empty
+        expect(deliveries).to be_empty
+        expect(ai_handler_calls).to eq([msg])
+      end
+    end
+
+    context "with 'restart the build'" do
+      let(:msg) { { work_item_ref: "restart", body: "the build", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "is not a coordinator command and falls through to ai_command_handler" do
+        receiver.start { |m| m }
+        expect(coordinator.restart_calls).to be_empty
+        expect(ai_handler_calls).to eq([msg])
+      end
+    end
+
+    context "with a routable message (ABC-1 ...)" do
+      let(:msg) { { work_item_ref: "ABC-1", body: "restart", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "is yielded to the block untouched" do
+        yielded = []
+        receiver.start { |m| yielded << m }
+        expect(yielded).to eq([msg])
+        expect(coordinator.restart_calls).to be_empty
+      end
+    end
+
+    context "with a reply: message" do
+      let(:msg) { { work_item_ref: "reply:", body: "update", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "is yielded to the block untouched" do
+        yielded = []
+        receiver.start { |m| yielded << m }
+        expect(yielded).to eq([msg])
+        expect(coordinator.update_calls).to be_empty
       end
     end
   end

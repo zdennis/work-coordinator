@@ -7,7 +7,7 @@ module WorkCoordinator
     class DispatchAiCommand
       Result = Data.define(:dispatched, :project, :summary, :failure_reason)
 
-      def initialize( # rubocop:disable Metrics/ParameterLists
+      def initialize(
         ai_command_runner:,
         message_sender:,
         aliases: {},

@@ -34,9 +34,18 @@ RSpec.describe WorkCoordinator::Domain::SlashCommand do
   # --- recognized? ---
 
   describe "#recognized?" do
-    WorkCoordinator::Domain::SlashCommand::KNOWN_VERBS.each do |verb|
-      it "is true for /#{verb}" do
+    pane_verbs = WorkCoordinator::Domain::SlashCommand::KNOWN_VERBS -
+                 WorkCoordinator::Domain::SlashCommand::COORDINATOR_VERBS
+
+    pane_verbs.each do |verb|
+      it "is true for /#{verb} GE" do
         expect(described_class.new("/#{verb} GE").recognized?).to be true
+      end
+    end
+
+    WorkCoordinator::Domain::SlashCommand::COORDINATOR_VERBS.each do |verb|
+      it "is true for a bare /#{verb}" do
+        expect(described_class.new("/#{verb}").recognized?).to be true
       end
     end
 
@@ -158,6 +167,99 @@ RSpec.describe WorkCoordinator::Domain::SlashCommand do
     it { expect(command.verb).to be_nil }
     it { expect(command.workspace).to be_nil }
     it { is_expected.not_to be_recognized }
+  end
+
+  # --- coordinator verbs (no workspace) ---
+
+  describe "coordinator verbs" do
+    it "recognizes /restart" do
+      expect(described_class.new("/restart")).to be_recognized
+    end
+
+    it "treats /restart as a coordinator command" do
+      expect(described_class.new("/restart")).to be_coordinator_command
+    end
+
+    it "has no pane instructions" do
+      expect { described_class.new("/restart").instructions }
+        .to raise_error(/No pane instructions for coordinator command: restart/)
+    end
+
+    it "recognizes a bare 'restart' with no leading slash" do
+      expect(described_class.new("restart")).to be_coordinator_command
+    end
+
+    it "recognizes a bare 'update' with no leading slash" do
+      expect(described_class.new("update")).to be_coordinator_command
+    end
+
+    it "is not recognized when a coordinator verb carries a workspace" do
+      expect(described_class.new("/restart GE")).not_to be_recognized
+    end
+
+    it "is not recognized when a coordinator verb carries args" do
+      expect(described_class.new("/update the readme")).not_to be_recognized
+    end
+
+    it "recognizes /update" do
+      expect(described_class.new("/update")).to be_recognized
+    end
+
+    it "treats /update as a coordinator command" do
+      expect(described_class.new("/update")).to be_coordinator_command
+    end
+
+    it "has no pane instructions for update either" do
+      expect { described_class.new("/update").instructions }
+        .to raise_error(/No pane instructions for coordinator command: update/)
+    end
+
+    it "parses no workspace or args" do
+      command = described_class.new("/restart")
+      expect([command.workspace, command.args]).to eq([nil, nil])
+    end
+
+    it "is case-insensitive" do
+      command = described_class.new("/RESTART")
+      expect(command.verb).to eq("restart")
+    end
+
+    it "recognizes an uppercase verb" do
+      expect(described_class.new("/RESTART")).to be_recognized
+    end
+
+    it "tolerates trailing whitespace" do
+      expect(described_class.new("/restart  ")).to be_recognized
+    end
+
+    it "tolerates leading whitespace" do
+      expect(described_class.new("  /update")).to be_recognized
+    end
+
+    it "is not a coordinator command for a workspace verb" do
+      expect(described_class.new("/build GE")).not_to be_coordinator_command
+    end
+
+    it "is not a coordinator command for an unparsed body" do
+      expect(described_class.new("")).not_to be_coordinator_command
+    end
+  end
+
+  # --- regression guard: workspace verbs still require a workspace ---
+
+  describe "workspace verbs without a workspace" do
+    workspace_verbs = WorkCoordinator::Domain::SlashCommand::KNOWN_VERBS -
+                      WorkCoordinator::Domain::SlashCommand::COORDINATOR_VERBS
+
+    workspace_verbs.each do |verb|
+      it "does not recognize a bare /#{verb}" do
+        expect(described_class.new("/#{verb}")).not_to be_recognized
+      end
+    end
+
+    it "leaves the verb unparsed so nothing routes to a nil workspace" do
+      expect(described_class.new("/build").verb).to be_nil
+    end
   end
 
   # --- case-insensitive verb ---

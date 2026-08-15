@@ -81,6 +81,26 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
       expect(result).to include("/push")
       expect(result).to include("/pr")
       expect(result).to include("/stop")
+      expect(result).to include("/restart")
+      expect(result).to include("/update")
+    end
+
+    it "notes that restart and update take no workspace argument", :aggregate_failures do
+      result = call("help slash")
+      expect(result).to match(%r{/restart\s+restart the coordinator \(no WORKSPACE\)})
+      expect(result).to match(%r{/update\s+pull latest code, then restart \(no WORKSPACE\)})
+    end
+
+    it "returns a usage line for 'help restart'", :aggregate_failures do
+      result = call("help restart")
+      expect(result).to include("Usage: /restart")
+      expect(result).not_to include("Unknown command:")
+    end
+
+    it "returns a usage line for 'help update'", :aggregate_failures do
+      result = call("help update")
+      expect(result).to include("Usage: /update")
+      expect(result).not_to include("Unknown command:")
     end
 
     it "also matches /help slash syntax" do

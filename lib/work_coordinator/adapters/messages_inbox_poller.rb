@@ -86,8 +86,10 @@ module WorkCoordinator
             message = parse_row(row)
             next if @inbound_message_repo.seen?(message[:guid])
 
-            yield message
+            # Record before dispatch: a message is handled the moment it is
+            # handed off. The block may never return (exec) or may raise.
             @inbound_message_repo.record(message[:guid])
+            yield message
           end
           @last_date = rows.map { _1["date"] }.max if rows.any?
         end
