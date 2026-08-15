@@ -14,3 +14,4 @@ tmp/
 .worktrees
 .claude/worktrees
 .ruby-lsp/
+TODOS.md
