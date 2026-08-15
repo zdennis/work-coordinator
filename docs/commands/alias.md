@@ -1,6 +1,6 @@
 # alias
 
-Manages short aliases for workspace project names, so you can type `GE` instead of `my-service`. Aliases are stored in `~/.config/work-coordinator/config.yml` under the `aliases` key; `init` seeds a default `WC -> work-coordinator` alias when it creates a fresh config file.
+Manages short aliases for workspace project names, so you can type `MS` instead of `my-service`. Aliases are stored in `~/.config/work-coordinator/config.yml` under the `aliases` key; `init` seeds a default `WC -> work-coordinator` alias when it creates a fresh config file.
 
 ```
 work-coordinator alias
@@ -9,13 +9,13 @@ work-coordinator alias add SHORT PROJECT
 work-coordinator alias remove SHORT
 ```
 
-With no subcommand (or `list`), prints every configured alias. `add` creates or overwrites an alias. `remove` deletes one. `SHORT` is trimmed and upcased before being stored or looked up, so `ge` and `GE` refer to the same alias.
+With no subcommand (or `list`), prints every configured alias. `add` creates or overwrites an alias. `remove` deletes one. `SHORT` is trimmed and upcased before being stored or looked up, so `ge` and `MS` refer to the same alias.
 
 ## Arguments
 
 | Argument | Description |
 |----------|-------------|
-| `SHORT` | Short name for the alias, e.g. `GE`. Normalized to uppercase. |
+| `SHORT` | Short name for the alias, e.g. `MS`. Normalized to uppercase. |
 | `PROJECT` | Workspace project name the alias points to, e.g. `my-service`. |
 
 ## Output
@@ -25,7 +25,7 @@ Listing aliases:
 ```
 SHORT       PROJECT
 WC          work-coordinator
-GE          my-service
+MS          my-service
 ```
 
 When no aliases are configured:
@@ -37,19 +37,19 @@ No aliases configured.
 Adding an alias:
 
 ```
-Added alias: GE -> my-service
+Added alias: MS -> my-service
 ```
 
 Removing an alias:
 
 ```
-Removed alias: GE
+Removed alias: MS
 ```
 
 Removing an alias that does not exist exits 1:
 
 ```
-No such alias: GE
+No such alias: MS
 ```
 
 ## Environment
@@ -69,7 +69,7 @@ work-coordinator alias
 Add an alias for each of your workspace projects:
 
 ```bash
-work-coordinator alias add GE my-service
+work-coordinator alias add MS my-service
 work-coordinator alias add BI billing
 ```
 
@@ -105,4 +105,4 @@ You can use both systems at once. A common setup is to keep config aliases for q
 
 **Comments in `config.yml` are not preserved.** `add`/`remove` rewrite the file from parsed YAML, so any comments you hand-add below the header line will be lost the next time you run `alias add` or `alias remove`.
 
-**Aliases are resolved when dispatching AI commands.** When `work-coordinator run` dispatches an inbound message, the extracted keyword is first checked against configured aliases (case-insensitive) before falling back to fuzzy-matching against `workspace list`. This means `GE` in an instruction routes directly to `my-service` without needing an exact or fuzzy project name match.
+**Aliases are resolved when dispatching AI commands.** When `work-coordinator run` dispatches an inbound message, the extracted keyword is first checked against configured aliases (case-insensitive) before falling back to fuzzy-matching against `workspace list`. This means `MS` in an instruction routes directly to `my-service` without needing an exact or fuzzy project name match.

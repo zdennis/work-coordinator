@@ -63,7 +63,7 @@ work-coordinator register \
   --title 'Fix login timeout' \
   --kind bug \
   --ref 'MS-99' \
-  --project GE \
+  --project MS \
   --tmux my-service:1.0
 ```
 
@@ -85,7 +85,7 @@ work-coordinator start $ID
 
 Only items in `active` state with a live tmux pane receive routed messages.
 
-When `--project ALIAS` is supplied, the item is tagged with that project's ID. Tagged items appear in project-scoped `ai: status GE` queries and in `ai: status` when that project is the default. Without `--project`, the item is created with no project association regardless of whether a default project is configured.
+When `--project ALIAS` is supplied, the item is tagged with that project's ID. Tagged items appear in project-scoped `ai: status MS` queries and in `ai: status` when that project is the default. Without `--project`, the item is created with no project association regardless of whether a default project is configured.
 
 ## Gotchas
 
@@ -95,6 +95,6 @@ When `--project ALIAS` is supplied, the item is tagged with that project's ID. T
 
 **`--ref` must match the router's pattern exactly.** The router matches refs using the pattern `[A-Z]+-\d+` (e.g. `BUG-99`, `FEAT-12`). A ref like `#42` will not match and the item will never receive a message.
 
-**`--project` must resolve unambiguously.** The value is matched against project aliases and names via the same fuzzy resolver used by `ai:` routing. If the query matches no project, `register` exits 1. If it matches more than one project, it also exits 1. Use the exact alias (e.g. `GE`) to avoid ambiguity.
+**`--project` must resolve unambiguously.** The value is matched against project aliases and names via the same fuzzy resolver used by `ai:` routing. If the query matches no project, `register` exits 1. If it matches more than one project, it also exits 1. Use the exact alias (e.g. `MS`) to avoid ambiguity.
 
 **`--project` does not inherit a default.** Even when a default project is configured, omitting `--project` leaves the item untagged. To tag the item, pass `--project` explicitly.

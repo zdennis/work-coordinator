@@ -37,7 +37,7 @@ RSpec.describe WorkCoordinator::Application::ProjectResolver do
       end
 
       it "is case-insensitive" do
-        expect(resolver.resolve("GROWTH-ENGINE")).to be_found
+        expect(resolver.resolve("MY-SERVICE")).to be_found
       end
     end
 
@@ -51,7 +51,7 @@ RSpec.describe WorkCoordinator::Application::ProjectResolver do
       end
 
       it "is case-insensitive for the alias" do
-        expect(resolver.resolve("ge")).to be_found
+        expect(resolver.resolve("ms")).to be_found
       end
     end
 
@@ -59,7 +59,7 @@ RSpec.describe WorkCoordinator::Application::ProjectResolver do
       let!(:project) { save_project(name: "my-service") }
 
       it "returns :found when the needle is a substring of the name" do
-        result = resolver.resolve("growth")
+        result = resolver.resolve("my")
         expect(result).to be_found
         expect(result.project.id).to eq(project.id)
       end

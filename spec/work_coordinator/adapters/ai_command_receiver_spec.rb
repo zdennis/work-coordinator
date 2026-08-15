@@ -123,10 +123,10 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: claude GE - add validation" is split by MessagesInboxPoller as:
-    #   work_item_ref: "claude", body: "GE - add validation"
-    context "with verb 'claude' (e.g. ai: claude GE - add validation)" do
-      let(:messages) { [{ work_item_ref: "claude", body: "GE - add validation", received_at: Time.now }] }
+    # "ai: claude MS - add validation" is split by MessagesInboxPoller as:
+    #   work_item_ref: "claude", body: "MS - add validation"
+    context "with verb 'claude' (e.g. ai: claude MS - add validation)" do
+      let(:messages) { [{ work_item_ref: "claude", body: "MS - add validation", received_at: Time.now }] }
 
       it "routes to deliver_to_main_session with correct args" do
         receiver.start { |m| m }
@@ -147,8 +147,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    context "with verb 'main' (e.g. ai: main GE - refactor)" do
-      let(:messages) { [{ work_item_ref: "main", body: "GE - refactor", received_at: Time.now }] }
+    context "with verb 'main' (e.g. ai: main MS - refactor)" do
+      let(:messages) { [{ work_item_ref: "main", body: "MS - refactor", received_at: Time.now }] }
 
       it "routes to deliver_to_main_session" do
         receiver.start { |m| m }
@@ -163,8 +163,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    context "with verb 'new' (e.g. ai: new GE - split pane)" do
-      let(:msg) { { work_item_ref: "new", body: "GE - split pane", received_at: Time.now } }
+    context "with verb 'new' (e.g. ai: new MS - split pane)" do
+      let(:msg) { { work_item_ref: "new", body: "MS - split pane", received_at: Time.now } }
       let(:messages) { [msg] }
 
       it "routes to ai_command_handler, not deliver_to_main_session" do
@@ -174,8 +174,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    context "with verb 'bash' (e.g. ai: bash GE - run tests)" do
-      let(:msg) { { work_item_ref: "bash", body: "GE - run tests", received_at: Time.now } }
+    context "with verb 'bash' (e.g. ai: bash MS - run tests)" do
+      let(:msg) { { work_item_ref: "bash", body: "MS - run tests", received_at: Time.now } }
       let(:messages) { [msg] }
 
       it "routes to ai_command_handler, not deliver_to_main_session" do
@@ -185,9 +185,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: GE - do something" splits as work_item_ref: "MS", body: "- do something"
-    # Reassembled: "GE - do something" → AiCommand has no verb, send_to_main_session? = false
-    context "without a verb (e.g. ai: GE - do something)" do
+    # "ai: MS - do something" splits as work_item_ref: "MS", body: "- do something"
+    # Reassembled: "MS - do something" → AiCommand has no verb, send_to_main_session? = false
+    context "without a verb (e.g. ai: MS - do something)" do
       let(:msg) { { work_item_ref: "MS", body: "- do something", received_at: Time.now } }
       let(:messages) { [msg] }
 
@@ -229,10 +229,10 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: /build GE add OAuth support" splits as:
-    #   work_item_ref: "/build", body: "GE add OAuth support"
-    context "with /build GE add OAuth support" do
-      let(:messages) { [{ work_item_ref: "/build", body: "GE add OAuth support", received_at: Time.now }] }
+    # "ai: /build MS add OAuth support" splits as:
+    #   work_item_ref: "/build", body: "MS add OAuth support"
+    context "with /build MS add OAuth support" do
+      let(:messages) { [{ work_item_ref: "/build", body: "MS add OAuth support", received_at: Time.now }] }
 
       it "routes to deliver_to_main_session with correct workspace and instructions" do
         receiver.start { |m| m }
@@ -247,8 +247,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: /clear GE" splits as: work_item_ref: "/clear", body: "MS"
-    context "with /clear GE" do
+    # "ai: /clear MS" splits as: work_item_ref: "/clear", body: "MS"
+    context "with /clear MS" do
       let(:messages) { [{ work_item_ref: "/clear", body: "MS", received_at: Time.now }] }
 
       it "routes to deliver_to_main_session with instructions '/clear'" do
@@ -259,8 +259,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: /stop GE" splits as: work_item_ref: "/stop", body: "MS"
-    context "with /stop GE" do
+    # "ai: /stop MS" splits as: work_item_ref: "/stop", body: "MS"
+    context "with /stop MS" do
       let(:messages) { [{ work_item_ref: "/stop", body: "MS", received_at: Time.now }] }
 
       it "routes to deliver_to_main_session with instructions 'C-c'" do
@@ -271,8 +271,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: /test GE" splits as: work_item_ref: "/test", body: "MS"
-    context "with /test GE (no args)" do
+    # "ai: /test MS" splits as: work_item_ref: "/test", body: "MS"
+    context "with /test MS (no args)" do
       let(:messages) { [{ work_item_ref: "/test", body: "MS", received_at: Time.now }] }
 
       it "routes with 'Run the test suite'" do
@@ -283,9 +283,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: /test GE user model" splits as: work_item_ref: "/test", body: "GE user model"
-    context "with /test GE user model" do
-      let(:messages) { [{ work_item_ref: "/test", body: "GE user model", received_at: Time.now }] }
+    # "ai: /test MS user model" splits as: work_item_ref: "/test", body: "MS user model"
+    context "with /test MS user model" do
+      let(:messages) { [{ work_item_ref: "/test", body: "MS user model", received_at: Time.now }] }
 
       it "routes with 'Run tests: user model'" do
         receiver.start { |m| m }
@@ -295,10 +295,10 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: /unknown GE foo" splits as: work_item_ref: "/unknown", body: "GE foo"
+    # "ai: /unknown MS foo" splits as: work_item_ref: "/unknown", body: "MS foo"
     # Unrecognized slash verb falls through to ai_command_handler.
-    context "with /unknown GE foo (unrecognized slash verb)" do
-      let(:msg) { { work_item_ref: "/unknown", body: "GE foo", received_at: Time.now } }
+    context "with /unknown MS foo (unrecognized slash verb)" do
+      let(:msg) { { work_item_ref: "/unknown", body: "MS foo", received_at: Time.now } }
       let(:messages) { [msg] }
 
       it "falls through to ai_command_handler" do
@@ -328,10 +328,10 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    # "ai: /build GE add OAuth" would normally be routed to deliver_to_main.
+    # "ai: /build MS add OAuth" would normally be routed to deliver_to_main.
     # With slash_commands_enabled: false it should fall through to ai_command_handler.
-    context "with a recognized slash command /build GE" do
-      let(:msg) { { work_item_ref: "/build", body: "GE add OAuth", received_at: Time.now } }
+    context "with a recognized slash command /build MS" do
+      let(:msg) { { work_item_ref: "/build", body: "MS add OAuth", received_at: Time.now } }
       let(:messages) { [msg] }
 
       it "bypasses slash command routing and calls ai_command_handler instead" do
@@ -437,7 +437,7 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
 
-    context "with '/restart GE'" do
+    context "with '/restart MS'" do
       let(:msg) { { work_item_ref: "/restart", body: "MS", received_at: Time.now } }
       let(:messages) { [msg] }
 

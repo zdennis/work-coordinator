@@ -30,7 +30,7 @@ Unlike the `alias` command, which stores short-name mappings in `~/.config/work-
 
 | Flag | Description |
 |------|-------------|
-| `--alias ALIAS` | Short alias for routing, e.g. `GE`. Used in `ai:` iMessages and `--project` on `register`. |
+| `--alias ALIAS` | Short alias for routing, e.g. `MS`. Used in `ai:` iMessages and `--project` on `register`. |
 | `--workspace NAME` | tmux session name this project routes to. Without it, the project is created but `ai:` dispatch cannot deliver messages to any workspace. |
 
 ## Output
@@ -38,7 +38,7 @@ Unlike the `alias` command, which stores short-name mappings in `~/.config/work-
 Adding a project with an alias:
 
 ```
-Added project: my-service (GE)
+Added project: my-service (MS)
 ```
 
 Adding a project without an alias:
@@ -52,7 +52,7 @@ Listing projects:
 ```
 ALIAS       NAME                  WORKSPACE             
 ------------------------------------------------------------
-GE          my-service         my-service         [default]
+MS          my-service         my-service         [default]
 BI          billing               billing               
 ```
 
@@ -65,7 +65,7 @@ No projects.
 Setting the default project:
 
 ```
-Default project set to GE (my-service)
+Default project set to MS (my-service)
 ```
 
 When the query matches nothing:
@@ -77,7 +77,7 @@ No project found matching: XYZ
 When the query is ambiguous (multiple fuzzy matches):
 
 ```
-Ambiguous: matched GE, GE2. Be more specific.
+Ambiguous: matched MS, MS2. Be more specific.
 ```
 
 ## Environment
@@ -91,7 +91,7 @@ Ambiguous: matched GE, GE2. Be more specific.
 Add a project with a short alias and workspace:
 
 ```bash
-work-coordinator project add my-service --alias GE --workspace my-service
+work-coordinator project add my-service --alias MS --workspace my-service
 ```
 
 Add a project without an alias (routable only by full name):
@@ -109,7 +109,7 @@ work-coordinator project list
 Set the default project (used by `ai: status` with no filter and by `ai: default`):
 
 ```bash
-work-coordinator project set-default GE
+work-coordinator project set-default MS
 ```
 
 Restore a previous default:

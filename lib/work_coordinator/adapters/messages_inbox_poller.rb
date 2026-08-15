@@ -6,7 +6,7 @@ require "work_coordinator/ports/message_receiver"
 module WorkCoordinator
   module Adapters
     # Polls ~/Library/Messages/chat.db for inbound messages prefixed with 'ai: '
-    # or sent as bare slash commands (e.g. /help, /build GE).
+    # or sent as bare slash commands (e.g. /help, /build MS).
     # Requires Full Disk Access (FDA) to be granted to the running process.
     class MessagesInboxPoller
       include Ports::MessageReceiver
@@ -63,7 +63,7 @@ module WorkCoordinator
       end
 
       # Selects unseen inbound messages: those carrying the 'ai: ' prefix, and
-      # bare slash commands (e.g. /help, /build GE) sent without the prefix.
+      # bare slash commands (e.g. /help, /build MS) sent without the prefix.
       INBOX_SQL = <<~SQL
         SELECT rowid, text, date, guid FROM message
         WHERE is_from_me = 0 AND (text LIKE 'ai: %' OR text LIKE '/%') AND date > ?

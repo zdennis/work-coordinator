@@ -51,8 +51,8 @@ RSpec.describe WorkCoordinator::Adapters::InMemoryProjectRepository do
     end
 
     it "is case-insensitive" do
-      expect(repo.find_by_name_or_alias("GROWTH-ENGINE")).not_to be_nil
-      expect(repo.find_by_name_or_alias("ge")).not_to be_nil
+      expect(repo.find_by_name_or_alias("MY-SERVICE")).not_to be_nil
+      expect(repo.find_by_name_or_alias("ms")).not_to be_nil
     end
 
     it "returns nil when nothing matches" do

@@ -119,23 +119,23 @@ RSpec.describe WorkCoordinator::Application::DispatchAiCommand do
         summarize_result: "Growth engine ran."
       )
 
-      result = use_case.call(body: "run the GE build")
+      result = use_case.call(body: "run the MS build")
 
       expect(result.dispatched).to be(true)
       expect(result.project).to eq("my-service")
-      expect(runner.run_project_calls).to eq([{ project: "my-service", instructions: "run the GE build" }])
+      expect(runner.run_project_calls).to eq([{ project: "my-service", instructions: "run the MS build" }])
     end
 
     it "matches alias case-insensitively (normalizes keyword to upcase)" do
       use_case, _runner = build_use_case(
         aliases: { "MS" => "my-service" },
-        extract_project_result: "ge",
+        extract_project_result: "ms",
         list_projects_result: [],
         run_project_result: "done",
         summarize_result: "Done."
       )
 
-      result = use_case.call(body: "run ge")
+      result = use_case.call(body: "run ms")
 
       expect(result.dispatched).to be(true)
       expect(result.project).to eq("my-service")

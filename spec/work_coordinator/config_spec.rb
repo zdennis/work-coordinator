@@ -127,7 +127,7 @@ RSpec.describe WorkCoordinator::Config do
 
     it "returns aliases defined in the config file" do
       FileUtils.mkdir_p(File.dirname(config_path))
-      File.write(config_path, "aliases:\n  GE: my-service\n")
+      File.write(config_path, "aliases:\n  MS: my-service\n")
       expect(config.aliases).to eq("MS" => "my-service")
     end
   end
@@ -174,7 +174,7 @@ RSpec.describe WorkCoordinator::Config do
 
     it "matches case-insensitively (normalizes to upcase)" do
       config.set_alias("MS", "my-service")
-      expect(config.resolve_alias("ge")).to eq("my-service")
+      expect(config.resolve_alias("ms")).to eq("my-service")
     end
 
     it "returns nil for an unknown alias" do

@@ -73,19 +73,19 @@ RSpec.describe WorkCoordinator::Adapters::MessagesInboxPoller do
       poller.send(:parse_row, row)
     end
 
-    context "with an ai: prefix message (e.g. 'ai: /build GE add OAuth')" do
+    context "with an ai: prefix message (e.g. 'ai: /build MS add OAuth')" do
       it "strips the ai: prefix before splitting" do
-        result = parse("ai: /build GE add OAuth")
+        result = parse("ai: /build MS add OAuth")
         expect(result[:work_item_ref]).to eq("/build")
-        expect(result[:body]).to eq("GE add OAuth")
+        expect(result[:body]).to eq("MS add OAuth")
       end
     end
 
-    context "with a bare slash command (e.g. '/build GE add OAuth')" do
+    context "with a bare slash command (e.g. '/build MS add OAuth')" do
       it "leaves the slash intact as work_item_ref" do
-        result = parse("/build GE add OAuth")
+        result = parse("/build MS add OAuth")
         expect(result[:work_item_ref]).to eq("/build")
-        expect(result[:body]).to eq("GE add OAuth")
+        expect(result[:body]).to eq("MS add OAuth")
       end
     end
 

@@ -10,9 +10,9 @@ module WorkCoordinator
     # so they take no workspace:  /restart
     #
     # @example
-    #   SlashCommand.new("/build GE add OAuth support").recognized?  # => true
-    #   SlashCommand.new("/clear GE").instructions                   # => "/clear"
-    #   SlashCommand.new("/stop GE").instructions                    # => "C-c"
+    #   SlashCommand.new("/build MS add OAuth support").recognized?  # => true
+    #   SlashCommand.new("/clear MS").instructions                   # => "/clear"
+    #   SlashCommand.new("/stop MS").instructions                    # => "C-c"
     #   SlashCommand.new("/restart").coordinator_command?            # => true
     class SlashCommand
       COORDINATOR_VERBS = %w[restart update].freeze

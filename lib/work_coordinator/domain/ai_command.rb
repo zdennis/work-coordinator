@@ -8,8 +8,8 @@ module WorkCoordinator
     # VERB is optional; when absent the whole body falls through to DispatchAiCommand.
     #
     # @example
-    #   AiCommand.new("claude GE - add validation").send_to_main_session?  # => true
-    #   AiCommand.new("GE - add validation").send_to_main_session?          # => false
+    #   AiCommand.new("claude MS - add validation").send_to_main_session?  # => true
+    #   AiCommand.new("MS - add validation").send_to_main_session?          # => false
     #   AiCommand.new("add validation to the form").send_to_main_session?   # => false
     class AiCommand
       KNOWN_VERBS = %w[claude new bash main].freeze

@@ -7,8 +7,8 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
 
   # --- attribute parsing ---
 
-  context "with 'claude GE - add validation'" do
-    let(:body) { "claude GE - add validation" }
+  context "with 'claude MS - add validation'" do
+    let(:body) { "claude MS - add validation" }
 
     it { expect(command.verb).to eq("claude") }
     it { expect(command.workspace).to eq("MS") }
@@ -23,23 +23,23 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
     it { expect(command.instructions).to eq("refactor auth") }
   end
 
-  context "with 'new GE - open a bash pane'" do
-    let(:body) { "new GE - open a bash pane" }
+  context "with 'new MS - open a bash pane'" do
+    let(:body) { "new MS - open a bash pane" }
 
     it { expect(command.verb).to eq("new") }
     it { expect(command.workspace).to eq("MS") }
   end
 
-  context "with 'bash GE - run tests'" do
-    let(:body) { "bash GE - run tests" }
+  context "with 'bash MS - run tests'" do
+    let(:body) { "bash MS - run tests" }
 
     it { expect(command.verb).to eq("bash") }
     it { expect(command.workspace).to eq("MS") }
     it { expect(command.instructions).to eq("run tests") }
   end
 
-  context "without a verb: 'GE - add validation'" do
-    let(:body) { "GE - add validation" }
+  context "without a verb: 'MS - add validation'" do
+    let(:body) { "MS - add validation" }
 
     it { expect(command.verb).to be_nil }
     it { expect(command.workspace).to eq("MS") }
@@ -55,19 +55,19 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
   end
 
   context "with multiline instructions" do
-    let(:body) { "claude GE - step one\nstep two" }
+    let(:body) { "claude MS - step one\nstep two" }
 
     it { expect(command.instructions).to eq("step one\nstep two") }
   end
 
   # --- malformed inputs ---
 
-  context "with 'claude GE' (verb present, no separator)" do
-    let(:body) { "claude GE" }
+  context "with 'claude MS' (verb present, no separator)" do
+    let(:body) { "claude MS" }
 
     it { expect(command.verb).to be_nil }
     it { expect(command.workspace).to be_nil }
-    it { expect(command.instructions).to eq("claude GE") }
+    it { expect(command.instructions).to eq("claude MS") }
     it { is_expected.not_to be_send_to_main_session }
   end
 
@@ -99,8 +99,8 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
     it { is_expected.not_to be_send_to_main_session }
   end
 
-  context "with 'GE - instructions' (no verb, workspace and instructions present)" do
-    let(:body) { "GE - instructions" }
+  context "with 'MS - instructions' (no verb, workspace and instructions present)" do
+    let(:body) { "MS - instructions" }
 
     it { expect(command.verb).to be_nil }
     it { expect(command.workspace).to eq("MS") }
@@ -108,8 +108,8 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
     it { is_expected.not_to be_send_to_main_session }
   end
 
-  context "with mixed case verb: 'CLAUDE GE - foo'" do
-    let(:body) { "CLAUDE GE - foo" }
+  context "with mixed case verb: 'CLAUDE MS - foo'" do
+    let(:body) { "CLAUDE MS - foo" }
 
     it "normalizes verb to lowercase" do
       expect(command.verb).to eq("claude")
@@ -122,23 +122,23 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
 
   describe "#send_to_main_session?" do
     it "is true for verb 'claude'" do
-      expect(described_class.new("claude GE - foo").send_to_main_session?).to be true
+      expect(described_class.new("claude MS - foo").send_to_main_session?).to be true
     end
 
     it "is true for verb 'main'" do
-      expect(described_class.new("main GE - foo").send_to_main_session?).to be true
+      expect(described_class.new("main MS - foo").send_to_main_session?).to be true
     end
 
     it "is false for verb 'new'" do
-      expect(described_class.new("new GE - foo").send_to_main_session?).to be false
+      expect(described_class.new("new MS - foo").send_to_main_session?).to be false
     end
 
     it "is false for verb 'bash'" do
-      expect(described_class.new("bash GE - foo").send_to_main_session?).to be false
+      expect(described_class.new("bash MS - foo").send_to_main_session?).to be false
     end
 
     it "is false when no verb is present" do
-      expect(described_class.new("GE - foo").send_to_main_session?).to be false
+      expect(described_class.new("MS - foo").send_to_main_session?).to be false
     end
 
     it "is false when body has no separator" do
@@ -150,7 +150,7 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
 
   describe "#new_session?" do
     it "is true for verb 'new'" do
-      expect(described_class.new("new GE - foo").new_session?).to be true
+      expect(described_class.new("new MS - foo").new_session?).to be true
     end
 
     it "is true when body has no verb or separator (free-form dispatch)" do
@@ -158,7 +158,7 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
     end
 
     it "is false for verb 'claude'" do
-      expect(described_class.new("claude GE - foo").new_session?).to be false
+      expect(described_class.new("claude MS - foo").new_session?).to be false
     end
   end
 
@@ -166,15 +166,15 @@ RSpec.describe WorkCoordinator::Domain::AiCommand do
 
   describe "#bash_session?" do
     it "is true for verb 'bash'" do
-      expect(described_class.new("bash GE - foo").bash_session?).to be true
+      expect(described_class.new("bash MS - foo").bash_session?).to be true
     end
 
     it "is false for any other verb" do
-      expect(described_class.new("claude GE - foo").bash_session?).to be false
+      expect(described_class.new("claude MS - foo").bash_session?).to be false
     end
 
     it "is false when no verb present" do
-      expect(described_class.new("GE - foo").bash_session?).to be false
+      expect(described_class.new("MS - foo").bash_session?).to be false
     end
   end
 end

@@ -202,7 +202,7 @@ ai: /verb WORKSPACE [args]
 | `bash` | _(not yet implemented)_ Intended to spawn a new bash pane via `workspace run`. Falls through to the LLM extraction pipeline today. |
 | _(omitted)_ | No verb: use the LLM extraction pipeline. |
 
-**Slash shorthand** delivers to the main session using a compact format — no dash or `instructions` keyword needed. `ai: /help slash` lists all verbs. Examples: `ai: /build GE add OAuth`, `ai: /test GE`, `ai: /stop GE`. Slash routing can be disabled globally by setting `slash_commands_enabled: false` in `~/.config/work-coordinator/config.yml`.
+**Slash shorthand** delivers to the main session using a compact format — no dash or `instructions` keyword needed. `ai: /help slash` lists all verbs. Examples: `ai: /build MS add OAuth`, `ai: /test MS`, `ai: /stop MS`. Slash routing can be disabled globally by setting `slash_commands_enabled: false` in `~/.config/work-coordinator/config.yml`.
 
 **`claude` and `main` bypass the LLM.** No `workspace run` is invoked. The instruction text is
 sent as-is to the first pane (pane 1 in domain terms, tmux pane index 0) of window 0 in the named
@@ -212,7 +212,7 @@ delivered to tmux.
 Examples:
 
 ```
-ai: claude GE - add input validation to the registration form
+ai: claude MS - add input validation to the registration form
 ai: main my-service - investigate the memory leak
 ```
 

@@ -148,9 +148,9 @@ module WorkCoordinator
             /restart                            restart the coordinator (no WORKSPACE)
             /update                             pull latest code, then restart (no WORKSPACE)
           Examples:
-            ai: /build GE add OAuth support
-            ai: /test GE
-            ai: /stop GE
+            ai: /build MS add OAuth support
+            ai: /test MS
+            ai: /stop MS
         TEXT
       end
 
