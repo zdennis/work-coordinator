@@ -13,3 +13,4 @@ coverage/
 tmp/
 .worktrees
 .claude/worktrees
+.ruby-lsp/
