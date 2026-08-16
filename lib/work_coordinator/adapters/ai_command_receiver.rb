@@ -66,17 +66,19 @@ module WorkCoordinator
 
         # ai:home:WC instructions — workspace embedded in the role token routes
         # directly to the workspace's main session without further parsing.
-        if workspace
-          @logger.debug "Workspace in role token: #{workspace.inspect}"
-          deliver_to_main(workspace_name: workspace, instructions: body)
-          return
-        end
+        return route_workspace_message(workspace, body) if workspace
 
         msg = restripped(msg, role, body) if role
 
         return if @slash_commands_enabled && slash_command_dispatched?(body)
 
         dispatch_command(msg, Domain::AiCommand.new(body))
+      end
+
+      def route_workspace_message(workspace, body)
+        @logger.debug "Workspace in role token: #{workspace.inspect}"
+        ref = @register_command_work_item&.call(title: body, workspace_name: workspace)&.external_reference
+        deliver_to_main(workspace_name: workspace, instructions: body, work_item_ref: ref)
       end
 
       # With no config wired the receiver answers to everything.

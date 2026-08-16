@@ -288,6 +288,54 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
         expect(ai_handler_calls).to eq([msg])
       end
     end
+
+    # "ai:home:WC fix the bug" — workspace embedded in the role token routes directly
+    # to the named workspace. A work item is registered and its ref forwarded.
+    context "with 'ai:home:WC fix the bug' (workspace embedded in role token)" do
+      subject(:receiver) do
+        described_class.new(
+          inner: inner,
+          ai_command_handler: ai_handler,
+          deliver_to_main_session: deliver_to_main,
+          register_command_work_item: register_command_work_item,
+          restart_coordinator: coordinator.restart,
+          update_and_restart: coordinator.update
+        )
+      end
+
+      let(:messages) { [{ work_item_ref: "home:WC", body: "fix the bug", received_at: Time.now }] }
+
+      let(:work_item_repo) { WorkCoordinator::Adapters::InMemoryWorkItemRepository.new }
+      let(:event_store)    { WorkCoordinator::Application::InMemoryEventStore.new }
+      let(:register_command_work_item) do
+        WorkCoordinator::Application::RegisterCommandWorkItem.new(
+          register_work_item: WorkCoordinator::Application::RegisterWorkItem.new(
+            work_item_repo: work_item_repo, event_store: event_store
+          ),
+          work_item_repo: work_item_repo
+        )
+      end
+
+      it "routes to deliver_to_main_session with the workspace and instructions" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          hash_including(workspace_name: "WC", instructions: "fix the bug")
+        )
+      end
+
+      it "registers a work item and includes its ref in the delivery" do
+        receiver.start { |m| m }
+        expect(deliveries.first[:work_item_ref]).to eq("WC-1")
+      end
+
+      it "persists the work item with the correct workspace" do
+        receiver.start { |m| m }
+        expect(work_item_repo.find_all.first).to have_attributes(
+          workspace_name: "WC",
+          external_reference: "WC-1"
+        )
+      end
+    end
   end
 
   describe "role gate" do

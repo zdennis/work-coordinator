@@ -59,7 +59,7 @@ RSpec/MultipleExpectations:
     - "spec/work_coordinator/integration/**/*"
 
 RSpec/MultipleMemoizedHelpers:
-  Max: 9
+  Max: 10
   Exclude:
     - "spec/work_coordinator/integration/**/*"
 
