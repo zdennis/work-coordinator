@@ -32,6 +32,12 @@ module WorkCoordinator
 
       # @return [Array<Hash{Symbol=>Object}>] `{workspace_name:, socket_path:, pipeline:, epoch:}`
       def all = raise NotImplementedError
+
+      # Drops every registration. Registrations only mean something for the life
+      # of the coordinator process that accepted them, so a new one starts empty.
+      #
+      # @return [void]
+      def clear = raise NotImplementedError
     end
   end
 end

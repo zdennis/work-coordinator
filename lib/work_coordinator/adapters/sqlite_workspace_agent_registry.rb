@@ -52,6 +52,11 @@ module WorkCoordinator
         end
       end
 
+      # @return [void]
+      def clear
+        model.delete_all
+      end
+
       private
 
       def model = Persistence::Models::WorkspaceAgentRegistrationRecord

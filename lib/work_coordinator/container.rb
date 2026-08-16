@@ -123,7 +123,10 @@ module WorkCoordinator
     def build_receiver(mode)
       case mode
       when :local
-        Adapters::SocketMessageReceiver.new(socket_path: @socket_path)
+        Adapters::SocketMessageReceiver.new(
+          socket_path: @socket_path,
+          workspace_agent_registry: @workspace_agent_registry
+        )
       when :messages
         build_messages_receiver
       else

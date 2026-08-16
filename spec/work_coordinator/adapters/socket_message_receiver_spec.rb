@@ -2,6 +2,7 @@
 
 require "socket"
 require "tmpdir"
+require "work_coordinator/adapters/fake_workspace_agent_registry"
 require "work_coordinator/adapters/socket_message_receiver"
 
 RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
@@ -56,6 +57,66 @@ RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
       message = Timeout.timeout(2) { delivered.pop }
       expect(message).to include(work_item_ref: "WC-42", body: "some body")
       expect(message[:received_at]).to be_a(Time)
+    end
+
+    context "with a workspace agent registry" do
+      subject(:receiver) do
+        described_class.new(socket_path: socket_path, workspace_agent_registry: registry)
+      end
+
+      let(:registry) { WorkCoordinator::Adapters::FakeWorkspaceAgentRegistry.new }
+
+      def request(line)
+        UNIXSocket.open(socket_path) do |client|
+          client.puts(line)
+          JSON.parse(Timeout.timeout(2) { client.gets })
+        end
+      end
+
+      def register_line(name: "myapp", epoch: "wa-1")
+        JSON.generate("type" => "register", "name" => name, "socket" => "/tmp/workspace-#{name}.sock",
+                      "pipeline" => true, "epoch" => epoch)
+      end
+
+      it "replies with the coordinator epoch and records the registration" do
+        start_listener
+
+        expect(request(register_line)).to eq("ok" => true, "epoch" => receiver.epoch)
+        expect(registry.find("myapp")).to eq(socket_path: "/tmp/workspace-myapp.sock",
+                                             pipeline: true, epoch: "wa-1")
+      end
+
+      it "refuses a workspace already claimed by another process" do
+        start_listener
+        request(register_line)
+
+        expect(request(register_line(epoch: "wa-2"))).to eq("ok" => false, "error" => "already_registered")
+      end
+
+      it "replies ok to deregister and drops the registration" do
+        start_listener
+        request(register_line)
+
+        expect(request('{"type":"deregister","name":"myapp"}')).to eq("ok" => true)
+        expect(registry.registered?("myapp")).to be(false)
+      end
+
+      it "does not yield registration messages upstream" do
+        start_listener
+
+        request(register_line)
+        send_line("WC-7 after register")
+
+        expect(Timeout.timeout(2) { delivered.pop }).to include(work_item_ref: "WC-7")
+      end
+
+      it "drops registrations left behind by a previous coordinator process" do
+        registry.register(workspace_name: "myapp", socket_path: "/tmp/stale.sock",
+                          pipeline: true, epoch: "wa-old")
+        start_listener
+
+        expect(registry.registered?("myapp")).to be(false)
+      end
     end
 
     it "yields a structured message for a JSON line" do

@@ -42,6 +42,11 @@ module WorkCoordinator
       def all
         @entries.map { |name, entry| { workspace_name: name }.merge(entry) }
       end
+
+      # @return [void]
+      def clear
+        @entries.clear
+      end
     end
   end
 end
