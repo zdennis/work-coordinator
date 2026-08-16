@@ -66,6 +66,32 @@ The agent replies with `{"ok":true}` on acceptance, or `{"ok":false,"error":"<re
 coordinator treats any `ok: false` as a refused steer: the human is notified, and the work item
 stays waiting, because the words never arrived.
 
+## Coordinator lifecycle messages
+
+### `coordinator_restart`
+
+Advance warning that the coordinator is about to replace itself. It is written to the agent's own
+socket immediately before the coordinator `exec`s a replacement process.
+
+```json
+{"type":"coordinator_restart","dispatch_id":"d-3f9a1c2e"}
+```
+
+| Field | Description |
+|-------|-------------|
+| `type` | `"coordinator_restart"` |
+| `dispatch_id` | Unique identifier for this notification |
+
+No reply is read. The coordinator writes the line and moves on to `exec`, so an agent that blocks
+waiting to send a reply only delays itself.
+
+The point of the message is to let agents buffer status reports across the restart gap instead of
+meeting connection refusals as unexpected failures. The gap is typically under one second, though it
+can be longer if the `exec` fails and is retried.
+
+See [workspace agent restart guide](workspace-agent-restart-guide.md) for the recommended agent-side
+handling.
+
 ## Agent to coordinator
 
 ### Registration — on the message socket
