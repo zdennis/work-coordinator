@@ -11,9 +11,15 @@ RSpec.describe WorkCoordinator::Domain::WorkItem do
     it "enumerates every kind" do
       expect(WorkCoordinator::Domain::WORK_ITEM_KINDS).to eq(%i[jira chore investigation adhoc])
     end
+  end
 
-    it "enumerates every phase" do
-      expect(WorkCoordinator::Domain::WORK_ITEM_PHASES).to eq(%i[investigating implementing verifying reviewing])
+  describe "phase" do
+    it "accepts any free-form string" do
+      expect(build(:work_item_domain, phase: "spelunking the auth layer").phase).to eq("spelunking the auth layer")
+    end
+
+    it "accepts nil" do
+      expect(build(:work_item_domain, phase: nil).phase).to be_nil
     end
   end
 
@@ -148,6 +154,76 @@ RSpec.describe WorkCoordinator::Domain::WorkItem do
 
     it "does not treat a blocked item as in progress" do
       expect(build(:work_item_domain, state: :blocked)).not_to be_in_progress
+    end
+  end
+
+  describe "#terminal?" do
+    %i[completed abandoned].each do |state|
+      it "is true in the #{state} state" do
+        expect(build(:work_item_domain, state: state)).to be_terminal
+      end
+    end
+
+    %i[created ready active waiting_for_human waiting_for_resource blocked].each do |state|
+      it "is false in the #{state} state" do
+        expect(build(:work_item_domain, state: state)).not_to be_terminal
+      end
+    end
+  end
+
+  describe "#transition_to" do
+    {
+      created: %i[ready active abandoned],
+      ready: %i[active abandoned],
+      active: %i[waiting_for_human waiting_for_resource blocked completed abandoned],
+      waiting_for_human: %i[active abandoned],
+      waiting_for_resource: %i[active abandoned],
+      blocked: %i[active abandoned]
+    }.each do |from, targets|
+      targets.each do |to|
+        it "moves from #{from} to #{to}" do
+          work_item = build(:work_item_domain, state: from)
+
+          transitioned = work_item.transition_to(to)
+
+          expect(transitioned.state).to eq(to)
+          expect(transitioned.id).to eq(work_item.id)
+        end
+      end
+    end
+
+    it "leaves the receiver untouched" do
+      work_item = build(:work_item_domain, state: :created)
+
+      work_item.transition_to(:active)
+
+      expect(work_item.state).to eq(:created)
+    end
+
+    it "rejects a move out of a terminal state" do
+      work_item = build(:work_item_domain, state: :completed)
+
+      expect { work_item.transition_to(:active) }
+        .to raise_error(described_class::InvalidTransition, /completed.*active/)
+    end
+
+    it "rejects a move that skips the graph" do
+      work_item = build(:work_item_domain, state: :created)
+
+      expect { work_item.transition_to(:completed) }
+        .to raise_error(described_class::InvalidTransition, /created.*completed/)
+    end
+
+    it "rejects an unknown target state" do
+      work_item = build(:work_item_domain, state: :active)
+
+      expect { work_item.transition_to(:nonsense) }.to raise_error(described_class::InvalidTransition)
+    end
+
+    it "rejects a self-transition" do
+      work_item = build(:work_item_domain, state: :active)
+
+      expect { work_item.transition_to(:active) }.to raise_error(described_class::InvalidTransition)
     end
   end
 end

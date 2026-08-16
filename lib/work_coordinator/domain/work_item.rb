@@ -9,9 +9,6 @@ module WorkCoordinator
     # Categories of work the coordinator tracks.
     # @return [Array<Symbol>]
     WORK_ITEM_KINDS = %i[jira chore investigation adhoc].freeze
-    # Stages an active work item moves through.
-    # @return [Array<Symbol>]
-    WORK_ITEM_PHASES = %i[investigating implementing verifying reviewing].freeze
 
     # A single unit of tracked work, immutable — transitions produce a new value
     # via `with`.
@@ -31,7 +28,7 @@ module WorkCoordinator
     # @!attribute [r] state
     #   @return [Symbol] one of {WORK_ITEM_STATES}
     # @!attribute [r] phase
-    #   @return [Symbol, nil] one of {WORK_ITEM_PHASES}, set only while the item is active
+    #   @return [String, nil] free-form string set by workspace agents, set only while the item is active
     # @!attribute [r] project_id
     #   @return [String, nil] FK to the owning project (nullable)
     # @!attribute [r] created_at
@@ -50,7 +47,27 @@ module WorkCoordinator
       :project_id,
       :created_at,
       :updated_at
-    ) do
+    )
+
+    # Reopened rather than defined in a `Data.define` block so that constants
+    # declared here belong to WorkItem instead of the enclosing Domain module.
+    class WorkItem
+      # Raised when a caller asks for a state change the lifecycle graph forbids.
+      class InvalidTransition < StandardError; end
+
+      # The legal moves out of each state. Terminal states map to an empty set.
+      TRANSITIONS = {
+        created: %i[ready active abandoned].freeze,
+        ready: %i[active abandoned].freeze,
+        active: %i[waiting_for_human waiting_for_resource blocked completed abandoned].freeze,
+        waiting_for_human: %i[active abandoned].freeze,
+        waiting_for_resource: %i[active abandoned].freeze,
+        blocked: %i[active abandoned].freeze,
+        completed: [].freeze,
+        abandoned: [].freeze
+      }.freeze
+      private_constant :TRANSITIONS
+
       # Returns true when the work item's current state matches the given symbol.
       # @param check_state [Symbol] state to test against
       # @return [Boolean]
@@ -87,6 +104,22 @@ module WorkCoordinator
       # Returns true when the item was cancelled before completion.
       # @return [Boolean]
       def abandoned?            = state?(:abandoned)
+
+      # Returns true when the item has reached an end state it cannot leave.
+      # @return [Boolean]
+      def terminal? = completed? || abandoned?
+
+      # Moves the item into a new state, honouring the lifecycle graph.
+      # @param new_state [Symbol] state to move into
+      # @return [WorkItem] a new value in the requested state
+      # @raise [InvalidTransition] when the graph does not allow the move
+      def transition_to(new_state)
+        unless TRANSITIONS.fetch(state, []).include?(new_state)
+          raise InvalidTransition, "cannot transition work item from #{state} to #{new_state}"
+        end
+
+        with(state: new_state)
+      end
 
       # Alias for {#created?} — registered but not yet started.
       # @return [Boolean]
