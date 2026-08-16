@@ -13,14 +13,15 @@ module WorkCoordinator
       include Ports::MessageReceiver
 
       def initialize(inner:, ai_command_handler:, deliver_to_main_session:, restart_coordinator:,
-                     update_and_restart:, register_command_work_item: nil, slash_commands_enabled: true,
-                     config: nil, logger: Logger.new(IO::NULL))
+                     update_and_restart:, register_command_work_item: nil, work_items_status_fn: nil,
+                     slash_commands_enabled: true, config: nil, logger: Logger.new(IO::NULL))
         @inner                      = inner
         @ai_command_handler         = ai_command_handler
         @deliver_to_main_session    = deliver_to_main_session
         @register_command_work_item = register_command_work_item
         @restart_coordinator        = restart_coordinator
         @update_and_restart         = update_and_restart
+        @work_items_status_fn       = work_items_status_fn
         @slash_commands_enabled     = slash_commands_enabled
         @config                     = config
         @logger                     = logger
@@ -70,7 +71,7 @@ module WorkCoordinator
 
         msg = restripped(msg, role, body) if role
 
-        return if @slash_commands_enabled && slash_command_dispatched?(body)
+        return if @slash_commands_enabled && slash_command_dispatched?(body, msg)
 
         dispatch_command(msg, Domain::AiCommand.new(body))
       end
@@ -108,11 +109,11 @@ module WorkCoordinator
       end
 
       # Returns true when the body was handled as a slash command.
-      def slash_command_dispatched?(body)
+      def slash_command_dispatched?(body, msg = nil)
         slash = Domain::SlashCommand.new(body)
 
         if slash.coordinator_command?
-          dispatch_coordinator_command(slash)
+          dispatch_coordinator_command(slash, msg)
         elsif slash.recognized?
           deliver_to_main(
             workspace_name: slash.workspace,
@@ -126,10 +127,19 @@ module WorkCoordinator
         true
       end
 
-      def dispatch_coordinator_command(slash)
+      def dispatch_coordinator_command(slash, msg = nil)
         case slash.verb
         when "restart" then @restart_coordinator.call
         when "update"  then @update_and_restart.call
+        when "work-items" then dispatch_work_items_command(slash, msg)
+        end
+      end
+
+      # The subcommand rides in the workspace slot; a bare "/work-items" defaults
+      # to status, the only subcommand there is.
+      def dispatch_work_items_command(slash, msg)
+        case slash.workspace
+        when "status", nil then @work_items_status_fn&.call(msg: msg)
         end
       end
 

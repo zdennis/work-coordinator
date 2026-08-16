@@ -245,6 +245,40 @@ RSpec.describe WorkCoordinator::Domain::SlashCommand do
     end
   end
 
+  # --- coordinator subcommand verbs ---
+
+  describe "coordinator subcommand verbs" do
+    it "treats 'work-items status' as a coordinator command" do
+      expect(described_class.new("work-items status")).to be_coordinator_command
+    end
+
+    it "parses the verb" do
+      expect(described_class.new("work-items status").verb).to eq("work-items")
+    end
+
+    it "puts the subcommand in the workspace slot" do
+      expect(described_class.new("work-items status").workspace).to eq("status")
+    end
+
+    it "treats a bare 'work-items' as a coordinator command" do
+      expect(described_class.new("work-items")).to be_coordinator_command
+    end
+
+    it "leaves the workspace slot empty for a bare 'work-items'" do
+      expect(described_class.new("work-items").workspace).to be_nil
+    end
+
+    it "accepts the slash form" do
+      command = described_class.new("/work-items status")
+      expect([command.verb, command.workspace]).to eq(%w[work-items status])
+    end
+
+    it "has no pane instructions" do
+      expect { described_class.new("work-items status").instructions }
+        .to raise_error(/No pane instructions for coordinator command: work-items/)
+    end
+  end
+
   # --- regression guard: workspace verbs still require a workspace ---
 
   describe "workspace verbs without a workspace" do

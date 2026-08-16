@@ -15,9 +15,12 @@ module WorkCoordinator
     #   SlashCommand.new("/stop MS").instructions                    # => "C-c"
     #   SlashCommand.new("/restart").coordinator_command?            # => true
     class SlashCommand
-      COORDINATOR_VERBS = %w[restart update].freeze
+      # Coordinator verbs that take a subcommand rather than a workspace; the
+      # subcommand lands in the workspace slot (e.g. "/work-items status").
+      COORDINATOR_SUBCOMMAND_VERBS = %w[work-items].freeze
+      COORDINATOR_VERBS = (%w[restart update] + COORDINATOR_SUBCOMMAND_VERBS).freeze
       KNOWN_VERBS = (%w[build research clear test fix review commit push pr stop] + COORDINATOR_VERBS).freeze
-      PATTERN = %r{\A/(?<verb>\w+)(?:\s+(?<workspace>\S+))?(?:\s+(?<args>.+))?\z}i
+      PATTERN = %r{\A/(?<verb>[\w-]+)(?:\s+(?<workspace>\S+))?(?:\s+(?<args>.+))?\z}i
 
       attr_reader :verb, :workspace, :args
 
@@ -69,14 +72,20 @@ module WorkCoordinator
       # must stay free-form text.
       def normalize(body)
         stripped = body.to_s.strip
-        COORDINATOR_VERBS.include?(stripped.downcase) ? "/#{stripped.downcase}" : stripped
+        downcased = stripped.downcase
+        return "/#{downcased}" if COORDINATOR_VERBS.include?(downcased)
+        return "/#{stripped}" if COORDINATOR_SUBCOMMAND_VERBS.any? { |v| downcased.start_with?("#{v} ") }
+
+        stripped
       end
 
       # Every verb but a coordinator verb addresses a workspace; without one the
       # command is malformed rather than a command with a nil target. Coordinator
       # verbs are the inverse: any trailing token means this was free-form text.
       def malformed?(verb, match)
-        if COORDINATOR_VERBS.include?(verb)
+        if COORDINATOR_SUBCOMMAND_VERBS.include?(verb)
+          false
+        elsif COORDINATOR_VERBS.include?(verb)
           !match[:workspace].nil?
         else
           match[:workspace].nil?

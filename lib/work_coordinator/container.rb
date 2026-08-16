@@ -70,7 +70,7 @@ module WorkCoordinator
                 :set_default_project, :restart_state_repo, :git_runner,
                 :restart_coordinator, :update_and_restart, :register_command_work_item,
                 :workspace_agent_registry, :complete_work_item, :workspace_status_receiver,
-                :inform_human,
+                :inform_human, :work_items_status,
                 :logger, :config
 
     # A receiver is built per mode and run concurrently; the sender is chosen
@@ -167,6 +167,7 @@ module WorkCoordinator
         register_command_work_item: @register_command_work_item,
         restart_coordinator: @restart_coordinator,
         update_and_restart: @update_and_restart,
+        work_items_status_fn: ->(msg:) { @work_items_status.call(msg: msg) },
         slash_commands_enabled: @config.slash_commands_enabled?,
         config: @config,
         logger: @logger
@@ -240,6 +241,7 @@ module WorkCoordinator
     def wire_ai_commands!
       config = @config
       @ai_command_runner   = Adapters::ClaudeWorkspaceCommandRunner.new
+      @work_items_status   = build_work_items_status(config)
       @set_default_project = Application::SetDefaultProject.new(
         project_repo: @project_repo,
         project_resolver: @project_resolver
@@ -252,6 +254,15 @@ module WorkCoordinator
         message_sender: @message_sender
       )
       wire_delivery!(config)
+    end
+
+    def build_work_items_status(config)
+      Application::WorkItemsStatus.new(
+        work_item_repo: @work_item_repo,
+        message_sender: @message_sender,
+        config: config,
+        socket_path: @socket_path
+      )
     end
 
     def build_dispatch_ai_command(config)

@@ -691,4 +691,62 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       end
     end
   end
+
+  describe "work-items status" do
+    subject(:receiver) do
+      described_class.new(
+        inner: inner,
+        ai_command_handler: ai_handler,
+        deliver_to_main_session: ->(**) {},
+        restart_coordinator: coordinator.restart,
+        update_and_restart: coordinator.update,
+        work_items_status_fn: ->(msg:) { status_calls << msg }
+      )
+    end
+
+    let(:status_calls) { [] }
+
+    # "ai: work-items status" splits as work_item_ref: "work-items", body: "status"
+    context "with a bare 'work-items status'" do
+      let(:msg) { { work_item_ref: "work-items", body: "status", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "invokes the status function with the inbound message" do
+        receiver.start { |m| m }
+        expect(status_calls).to eq([msg])
+        expect(ai_handler_calls).to be_empty
+      end
+    end
+
+    context "with '/work-items status'" do
+      let(:msg) { { work_item_ref: "/work-items", body: "status", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "invokes the status function" do
+        receiver.start { |m| m }
+        expect(status_calls).to eq([msg])
+      end
+    end
+
+    context "with a bare 'work-items'" do
+      let(:msg) { { work_item_ref: "work-items", body: nil, received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "defaults to status" do
+        receiver.start { |m| m }
+        expect(status_calls).to eq([msg])
+      end
+    end
+
+    context "with an unknown subcommand" do
+      let(:msg) { { work_item_ref: "work-items", body: "explode", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "does nothing rather than guessing" do
+        receiver.start { |m| m }
+        expect(status_calls).to be_empty
+        expect(ai_handler_calls).to be_empty
+      end
+    end
+  end
 end
