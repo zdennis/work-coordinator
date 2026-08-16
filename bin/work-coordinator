@@ -26,6 +26,16 @@ def colorize_state(state)
   end
 end
 
+def resolve_project_id(container, name)
+  return nil unless name
+
+  result = container.project_resolver.resolve(name)
+  return result.project.id if result.found?
+
+  warn "Unknown project: #{name}"
+  exit 1
+end
+
 COMMANDS = {
   "init" => "Create the default config file (~/.config/work-coordinator/config.yml)",
   "alias" => "List, add, or remove workspace project aliases",
@@ -34,6 +44,7 @@ COMMANDS = {
   "register" => "Register a new work item",
   "start" => "Transition a work item to active state",
   "status" => "List all work items with their current state and phase",
+  "work-items" => "Manage and inspect work items (subcommands: status)",
   "send" => "Send a message to the running coordinator via socket",
   "run" => "Start the coordinator daemon (local socket or Messages mode)",
   "notify" => "Send a human notification for a work item",
@@ -467,6 +478,104 @@ when "status"
     items.each do |wi|
       puts format(fmt, wi.id, wi.external_reference.to_s, colorize_state(wi.state), wi.phase.to_s, wi.title)
     end
+  end
+
+when "work-items"
+  WORK_ITEMS_USAGE = [
+    "Usage: work-coordinator work-items <subcommand> [options]",
+    "",
+    "Subcommands:",
+    "  status    Show status of work items",
+    "",
+    "Run 'work-coordinator work-items <subcommand> --help' for subcommand options."
+  ].freeze
+
+  OptionParser.new do |opts|
+    opts.banner = WORK_ITEMS_USAGE.first
+    opts.separator ""
+    opts.separator "Inspect and manage work items tracked by the coordinator."
+    opts.separator ""
+    opts.separator "Subcommands:"
+    opts.separator "    status    Show status of work items"
+    opts.separator ""
+    opts.separator "Examples:"
+    opts.separator "  work-coordinator work-items status"
+    opts.separator "  work-coordinator work-items status --state active"
+    opts.separator "  work-coordinator work-items status --project my-service"
+    opts.separator ""
+    opts.separator "Run 'work-coordinator work-items <subcommand> --help' for subcommand options."
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
+  end.order!(ARGV)
+
+  subcommand = ARGV.shift
+
+  case subcommand
+  when "status"
+    work_items_options = {}
+    OptionParser.new do |opts|
+      opts.banner = "Usage: work-coordinator work-items status [options]"
+      opts.separator ""
+      opts.separator "Show a table of work items with their state, phase, and title, preceded"
+      opts.separator "by a header line naming this coordinator's role and whether it is running."
+      opts.separator ""
+      opts.separator "Examples:"
+      opts.separator "  work-coordinator work-items status"
+      opts.separator "  work-coordinator work-items status --state waiting_for_human"
+      opts.separator "  work-coordinator work-items status --project my-service"
+      opts.separator ""
+      opts.separator "Options:"
+      opts.on("--state STATE", "Only show work items in this state") { |v| work_items_options[:state] = v }
+      opts.on("--project NAME", "Only show work items in this project") { |v| work_items_options[:project] = v }
+      opts.on("-h", "--help", "Print help for this command") do
+        puts opts
+        exit
+      end
+    end.parse!(ARGV)
+
+    state_filter = work_items_options[:state]&.strip&.to_sym
+    if state_filter && !WorkCoordinator::Domain::WORK_ITEM_STATES.include?(state_filter)
+      warn "Unknown state: #{state_filter}"
+      warn "Valid states: #{WorkCoordinator::Domain::WORK_ITEM_STATES.join(', ')}"
+      exit 1
+    end
+
+    container = WorkCoordinator::Container.new
+
+    project_id_filter = resolve_project_id(container, work_items_options[:project])
+
+    role = container.config.role || "unknown"
+    running = File.exist?(ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")) ? "running" : "not running"
+    separator = "─" * 84
+
+    puts "Coordinator  role: #{role}  |  status: #{running}"
+    puts separator
+    puts ""
+
+    items = container.work_item_repo.find_all(state: state_filter, project_id: project_id_filter)
+    items = items.sort_by(&:created_at)
+
+    header_fmt = "%-14s%-22s%-25s%s"
+    row_fmt    = "%-14s%s%-25s%s"
+    puts format(header_fmt, "REF", "STATE", "PHASE", "TITLE")
+    puts separator
+    if items.empty?
+      puts "No work items found."
+    else
+      items.each do |wi|
+        state_cell = colorize_state(wi.state) + (" " * [22 - wi.state.to_s.length, 1].max)
+        title = wi.title.to_s
+        title = "#{title[0, 49]}…" if title.length > 50
+        puts format(row_fmt, wi.external_reference.to_s, state_cell, wi.phase.to_s, title)
+      end
+    end
+
+  else
+    warn "Unknown work-items subcommand: #{subcommand}" if subcommand
+    WORK_ITEMS_USAGE.each { |line| warn line }
+    exit 1
   end
 
 when "send"
