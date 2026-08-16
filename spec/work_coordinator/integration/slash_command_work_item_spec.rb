@@ -21,14 +21,7 @@ RSpec.describe "slash command work item registration" do
   let(:event_store) { WorkCoordinator::Application::InMemoryEventStore.new }
   let(:message_sender) { WorkCoordinator::Adapters::FakeMessageSender.new }
 
-  let(:agent_session) do
-    WorkCoordinator::Adapters::FakeAgentSession.new.tap do |session|
-      session.stub_pane(
-        workspace_name: "myapp",
-        pane_index: WorkCoordinator::Application::DeliverToMainSession::MAIN_PANE_INDEX
-      )
-    end
-  end
+  let(:agent_session) { WorkCoordinator::Adapters::FakeAgentSession.new }
 
   let(:register_command_work_item) do
     WorkCoordinator::Application::RegisterCommandWorkItem.new(
@@ -76,9 +69,9 @@ RSpec.describe "slash command work item registration" do
     )
   end
 
-  it "creates the work item before the command reaches the pane" do
+  it "creates the work item before the command reaches the agent" do
     items_at_delivery = nil
-    allow(agent_session).to receive(:deliver_to_pane).and_wrap_original do |original, **kwargs|
+    allow(agent_session).to receive(:deliver).and_wrap_original do |original, **kwargs|
       items_at_delivery = work_item_repo.find_all.size
       original.call(**kwargs)
     end

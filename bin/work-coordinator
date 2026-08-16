@@ -36,7 +36,8 @@ COMMANDS = {
   "status" => "List all work items with their current state and phase",
   "send" => "Send a message to the running coordinator via socket",
   "run" => "Start the coordinator daemon (local socket or Messages mode)",
-  "notify" => "Send a human notification for a work item"
+  "notify" => "Send a human notification for a work item",
+  "report" => "Send a status report to the running coordinator's status socket"
 }.freeze
 
 global = OptionParser.new do |opts|
@@ -663,6 +664,116 @@ when "notify"
   container = WorkCoordinator::Container.new(modes: [mode])
   container.notify_human.call(work_item_id: id, body: body)
   puts "Notification sent."
+
+when "report"
+  require "json"
+  require "socket"
+
+  REPORT_TYPES = %w[status_update phase_change pipeline_advanced task_complete error].freeze
+  REPORT_REQUIRED_FIELDS = {
+    "status_update" => [:message],
+    "phase_change" => [:phase],
+    "pipeline_advanced" => %i[from_pane to_pane],
+    "task_complete" => [:summary],
+    "error" => [:message]
+  }.freeze
+
+  options = {}
+  begin
+    OptionParser.new do |opts|
+      opts.banner = "Usage: work-coordinator report --ref <ref> --type <type> [options]"
+      opts.separator ""
+      opts.separator "Send a single status report to the coordinator's status socket and exit."
+      opts.separator "Intended to be run by an AI agent from inside a workspace pane."
+      opts.separator ""
+      opts.separator "Types and their required flags:"
+      opts.separator "    status_update      --message"
+      opts.separator "    phase_change       --phase"
+      opts.separator "    pipeline_advanced  --from-pane and --to-pane"
+      opts.separator "    task_complete      --summary"
+      opts.separator "    error              --message"
+      opts.separator ""
+      opts.separator "Examples:"
+      opts.separator '  work-coordinator report --ref WC-42 --type status_update --message "installing deps"'
+      opts.separator "  work-coordinator report --ref WC-42 --type phase_change --phase implementing"
+      opts.separator '  work-coordinator report --ref WC-42 --type error --message "bundle install failed"'
+      opts.separator ""
+      opts.separator "Options:"
+      opts.on("--ref REF", "Work item ref (e.g. WC-42)") { |v| options[:ref] = v }
+      opts.on("--type TYPE", REPORT_TYPES, "Report type: #{REPORT_TYPES.join(', ')}") { |v| options[:type] = v }
+      opts.on("--workspace NAME", "Workspace name (default: $WC_WORKSPACE)") { |v| options[:workspace] = v }
+      opts.on("--message TEXT", "Message body") { |v| options[:message] = v }
+      opts.on("--phase TEXT", "New phase name") { |v| options[:phase] = v }
+      opts.on("--summary TEXT", "One-line completion summary") { |v| options[:summary] = v }
+      opts.on("--from-pane N", "Pane the pipeline moved from") { |v| options[:from_pane] = Integer(v) }
+      opts.on("--to-pane N", "Pane the pipeline moved to") { |v| options[:to_pane] = Integer(v) }
+      opts.on("--socket PATH", "Status socket path") { |v| options[:socket] = v }
+      opts.on("-h", "--help", "Print help for this command") do
+        puts opts
+        exit
+      end
+    end.parse!(ARGV)
+  rescue ArgumentError => e
+    warn "work-coordinator report: #{e.message}"
+    exit 1
+  end
+
+  unless options[:ref] && !options[:ref].strip.empty?
+    warn "Usage: work-coordinator report --ref <ref> --type <type> ..."
+    exit 1
+  end
+  unless options[:type]
+    warn "Usage: work-coordinator report --ref <ref> --type <type> ..."
+    exit 1
+  end
+
+  REPORT_REQUIRED_FIELDS.fetch(options[:type]).each do |field|
+    unless options[field]
+      warn "--type #{options[:type]} requires --#{field.to_s.tr('_', '-')}"
+      exit 1
+    end
+  end
+
+  payload = { type: options[:type], work_item_ref: options[:ref] }
+  workspace = options[:workspace] || ENV.fetch("WC_WORKSPACE", nil)
+  payload[:workspace] = workspace if workspace
+  REPORT_REQUIRED_FIELDS.fetch(options[:type]).each { |f| payload[f] = options[f] }
+
+  socket_path = options[:socket] || ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock")
+  report_read_timeout = 5
+
+  sock = begin
+    UNIXSocket.new(socket_path)
+  rescue Errno::ENOENT, Errno::ECONNREFUSED => e
+    warn "work-coordinator report: cannot reach coordinator at #{socket_path} (#{e.class})"
+    exit 1
+  end
+
+  line = begin
+    sock.write("#{JSON.generate(payload)}\n")
+    sock.wait_readable(report_read_timeout) && sock.gets
+  ensure
+    sock.close
+  end
+
+  unless line
+    warn "work-coordinator report: no reply from coordinator within #{report_read_timeout}s"
+    exit 1
+  end
+
+  reply = begin
+    JSON.parse(line)
+  rescue JSON::ParserError
+    warn "work-coordinator report: malformed reply: #{line.strip}"
+    exit 1
+  end
+
+  if reply["ok"]
+    exit 0
+  else
+    warn "work-coordinator report: #{reply['error']} (action: #{reply['action']})"
+    exit({ "give_up" => 2, "abort_pipeline" => 3, "drop" => 4 }.fetch(reply["action"], 1))
+  end
 
 else
   puts global

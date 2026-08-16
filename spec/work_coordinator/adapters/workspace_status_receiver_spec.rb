@@ -6,6 +6,7 @@ require "tmpdir"
 require "work_coordinator/adapters/workspace_status_receiver"
 require "support/fake_complete_work_item"
 require "support/fake_notify_human"
+require "support/fake_inform_human"
 
 RSpec.describe WorkCoordinator::Adapters::WorkspaceStatusReceiver do
   subject(:receiver) do
@@ -14,7 +15,8 @@ RSpec.describe WorkCoordinator::Adapters::WorkspaceStatusReceiver do
       work_item_repo: work_item_repo,
       event_store: event_store,
       complete_work_item: complete_work_item,
-      notify_human: notify_human
+      notify_human: notify_human,
+      inform_human: inform_human
     )
   end
 
@@ -24,6 +26,7 @@ RSpec.describe WorkCoordinator::Adapters::WorkspaceStatusReceiver do
   let(:event_store) { WorkCoordinator::Application::InMemoryEventStore.new }
   let(:complete_work_item) { FakeCompleteWorkItem.new }
   let(:notify_human) { FakeNotifyHuman.new }
+  let(:inform_human) { FakeInformHuman.new }
   let(:listeners) { [] }
 
   let(:work_item) do
@@ -112,11 +115,14 @@ RSpec.describe WorkCoordinator::Adapters::WorkspaceStatusReceiver do
   end
 
   describe "error" do
-    it "notifies the human" do
+    it "informs the human without changing state" do
       reply = send_status(base("error", message_id: "m1", message: "build failed"))
 
       expect(reply).to include("ok" => true)
-      expect(notify_human.calls).to eq([{ work_item_id: "wi-1", body: "build failed" }])
+      expect(notify_human.calls).to be_empty
+      expect(inform_human.calls.map { |c| c.slice(:work_item_id, :body) })
+        .to eq([{ work_item_id: "wi-1", body: "build failed" }])
+      expect(work_item_repo.find(work_item.id).state).to eq(:active)
     end
   end
 

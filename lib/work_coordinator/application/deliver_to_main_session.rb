@@ -22,10 +22,6 @@ module WorkCoordinator
       # @!attribute [r] error [String, nil]
       Result = Data.define(:success, :error)
 
-      # Domain pane index 2 = tmux pane index 1 (the main agent pane).
-      # Pane 0 (domain 1) is reserved for the banner/status program.
-      MAIN_PANE_INDEX = 2
-
       # @param agent_session [Ports::AgentSession]
       # @param message_sender [Ports::MessageSender]
       # @param aliases [Hash] short-name => project-name alias map (case-insensitive lookup)
@@ -42,19 +38,19 @@ module WorkCoordinator
       end
 
       # @param workspace_name [String] name (or alias) of the tmux session to target
-      # @param instructions [String] text to deliver to the pane
+      # @param instructions [String] text to deliver to the agent
       # @param recipient [String, nil] address to ack; nil uses the default WC_RECIPIENT
       # @param work_item_ref [String, nil] reference to name in the ack, e.g. "WC-1"
       # @return [Result]
       def call(workspace_name:, instructions:, recipient:, work_item_ref: nil)
         resolved = resolve_alias(workspace_name)
         @logger.debug "DeliverToMainSession: workspace_name=#{workspace_name.inspect} " \
-                      "resolved=#{resolved.inspect} pane=#{MAIN_PANE_INDEX}"
+                      "resolved=#{resolved.inspect}"
         full_message = build_message(instructions)
-        @agent_session.deliver_to_pane(
-          workspace_name: resolved,
-          pane_index: MAIN_PANE_INDEX,
-          message: full_message
+        @agent_session.deliver(
+          session_id: resolved,
+          message: full_message,
+          work_item_ref: work_item_ref
         )
         summary = instructions.length > 80 ? "#{instructions[0, 80]}..." : instructions
         ack(recipient, work_item_ref, "Sent to #{resolved}: #{summary}")

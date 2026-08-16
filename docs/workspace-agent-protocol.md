@@ -33,7 +33,7 @@ A new unit of work. Fire-and-forget — the agent acknowledges by accepting the 
 coordinator reads no reply.
 
 ```json
-{"type":"command","workspace":"my-service","work_item_ref":"WC-42","dispatch_id":"d-3f9a1c2e5b7d8a06","body":"add OAuth support"}
+{"type":"command","workspace":"my-service","work_item_ref":"WC-42","dispatch_id":"d-3f9a1c2e5b7d8a06","body":"add OAuth support","reporting_instructions":"To report status back to the coordinator, run:\n  work-coordinator report --ref WC-42 --type status_update --message \"<message>\"\n  work-coordinator report --ref WC-42 --type task_complete --summary \"<one-line summary>\"\n  work-coordinator report --ref WC-42 --type error --message \"<error detail>\"\nThe status socket is at /tmp/work-coordinator-status.sock (WC_STATUS_SOCKET)."}
 ```
 
 | Field | Description |
@@ -43,6 +43,7 @@ coordinator reads no reply.
 | `work_item_ref` | Work item this command belongs to |
 | `dispatch_id` | `d-` plus 16 hex characters, unique per delivery |
 | `body` | The instruction text |
+| `reporting_instructions` | Optional. Rendered string the agent appends to `body` before passing it to the Claude pane. Absent when the coordinator has no template configured. |
 
 A delivery with no `work_item_ref`, or to a workspace with no registration, never reaches this
 path — it is typed into the tmux pane instead.
@@ -191,8 +192,217 @@ Errors the coordinator surfaces from an `inject`:
 
 Anything other than `ok: true` leaves the work item waiting and notifies the human.
 
+## Status Reporting Instructions
+
+### Overview
+
+When work-coordinator delivers a `command` to a workspace agent, it can include a
+`reporting_instructions` field: a ready-to-use block of text telling Claude (in the tmux pane) how
+to send progress reports back. The workspace agent appends this text to the `body` before typing it
+into the pane. Claude reads the appended instructions and runs `work-coordinator report` at
+appropriate points.
+
+This design keeps the reporting contract in one place (work-coordinator's config), requires no
+new configuration on the workspace agent side, and degrades gracefully when the field is absent.
+
+### `reporting_instructions` field
+
+`reporting_instructions` is an optional string field on the `command` payload. When present, the
+workspace agent appends it to the body with a double newline separator before sending to the tmux
+pane:
+
+```
+<original body>
+
+<reporting_instructions>
+```
+
+When absent (older coordinator, or template not configured), the agent sends the body unchanged.
+No agent-side feature flag or version check is needed.
+
+### How work-coordinator generates the field
+
+work-coordinator renders `reporting_instructions` from a template defined in `config.yml`. The
+template key is `status_reporting_template`. When the key is absent or empty, the field is omitted
+from the `command` payload entirely.
+
+Substitution variables (Ruby `%{name}` format):
+
+| Variable | Value |
+|----------|-------|
+| `%{work_item_ref}` | The work item ref for this command (e.g. `WC-42`) |
+| `%{status_socket}` | Path to the status socket (default `/tmp/work-coordinator-status.sock`) |
+| `%{cli_command}` | The base CLI invocation (default `work-coordinator`) |
+
+Default template (used when `status_reporting_template` is not set in config):
+
+```
+none
+```
+
+The field is opt-in: it is only sent when `status_reporting_template` is explicitly set. This
+avoids appending unsolicited text to every command for users who have not opted into status
+reporting.
+
+Example config:
+
+```yaml
+status_reporting_template: |
+  To report your progress on %{work_item_ref} back to the coordinator, run:
+    %{cli_command} report --ref %{work_item_ref} --type status_update --message "<brief note>"
+    %{cli_command} report --ref %{work_item_ref} --type task_complete --summary "<one-line summary>"
+    %{cli_command} report --ref %{work_item_ref} --type error --message "<error detail>"
+  The status socket is %{status_socket} (override with WC_STATUS_SOCKET).
+  Report status_update at meaningful milestones. Report task_complete when the work is done.
+  Report error only when you cannot proceed.
+```
+
+### `work-coordinator report` command
+
+Claude (in the tmux pane) invokes this command to send a status message to the coordinator's status
+socket. It writes a single JSON message and exits.
+
+**Synopsis:**
+
+```
+work-coordinator report --ref <ref> --type <type> [type-specific flags] [--workspace <name>] [--socket <path>]
+```
+
+**Common flags:**
+
+| Flag | Required | Default | Description |
+|------|----------|---------|-------------|
+| `--ref` | yes | — | Work item ref (e.g. `WC-42`) |
+| `--type` | yes | — | Message type (see table below) |
+| `--workspace` | no | `$WC_WORKSPACE`, then error | Workspace name |
+| `--socket` | no | `$WC_STATUS_SOCKET`, then `/tmp/work-coordinator-status.sock` | Status socket path |
+
+**Type-specific flags:**
+
+| `--type` | Additional required flags |
+|----------|--------------------------|
+| `status_update` | `--message <text>` |
+| `phase_change` | `--phase <name>` |
+| `pipeline_advanced` | `--from-pane <n>` and `--to-pane <n>` |
+| `task_complete` | `--summary <text>` |
+| `error` | `--message <text>` |
+
+**Examples:**
+
+```sh
+work-coordinator report --ref WC-42 --type status_update --message "cloned repo, installing deps"
+work-coordinator report --ref WC-42 --type phase_change --phase implementing
+work-coordinator report --ref WC-42 --type pipeline_advanced --from-pane 1 --to-pane 2
+work-coordinator report --ref WC-42 --type task_complete --summary "OAuth added, 12 specs green"
+work-coordinator report --ref WC-42 --type error --message "bundle install failed: Gemfile.lock conflict"
+```
+
+**JSON sent to the status socket:**
+
+The command constructs the common envelope plus the type-specific fields and writes it as a single
+JSON line. `workspace` is filled from `--workspace` or `$WC_WORKSPACE`. `message_id` is a fresh
+random identifier. `sequence` is omitted (the coordinator accepts messages without it).
+
+```json
+{"type":"status_update","workspace":"my-service","work_item_ref":"WC-42","message_id":"m-9a3f1c","message":"cloned repo, installing deps"}
+```
+
+**Exit codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Coordinator replied `{"ok":true}` |
+| 1 | Socket missing, connection refused, coordinator replied `ok:false`, or malformed reply |
+
+On failure the command writes the error to stderr and exits 1. On `terminal_state` (the item is
+already complete or abandoned) it prints the coordinator's `action` field so Claude knows to stop
+the pipeline.
+
+### Workspace agent: where the append happens
+
+In `handle_command` (agent.rb:264), the body is sent to the first pipeline stage's pane or to
+pane 1. The append happens immediately before `@tmux.send_keys`, by assembling the final text:
+
+```ruby
+text = message["body"]
+if message["reporting_instructions"] && !message["reporting_instructions"].empty?
+  text = "#{text}\n\n#{message["reporting_instructions"]}"
+end
+@tmux.send_keys(@current_name, pane_target(stage[:pane_index]), text)
+```
+
+Both branches in `handle_command` (pipeline and default-pane) apply the same append. The field is
+read from the parsed message hash and needs no new parsing: `handle_command` already has
+`message["body"]`, so `message["reporting_instructions"]` follows the same pattern.
+
+## Human notifications from status reports
+
+The coordinator notifies the human when it receives certain status types. Notifications are
+one-way informational messages — they do not park the work item waiting for a reply, and Claude
+does not need to do anything in response.
+
+| Type | Human notified? | State change | Message format |
+|------|-----------------|--------------|----------------|
+| `status_update` | yes | none | `[WC-42] <message>` |
+| `phase_change` | yes | phase field updated | `[WC-42] phase: <phase>` |
+| `pipeline_advanced` | no | none | (internal; too noisy) |
+| `task_complete` | yes (via `CompleteWorkItem`) | → `completed` | `[WC-42] Done — <summary>` |
+| `error` | yes (via `NotifyHuman`) | → `waiting_for_human` | `[WC-42] <message>\nReply: WC-42 <your response>` |
+
+**`status_update` and `phase_change`** send a notification without touching the work item's state.
+The agent is still running; the human gets a progress ping but is not expected to reply.
+
+**`error`** uses the existing `NotifyHuman` path, which parks the work item as
+`waiting_for_human`. The human must reply before the work item can receive another inject or be
+completed.
+
+**`task_complete`** is fully handled by `CompleteWorkItem`, which already sends `[ref] Done —
+<summary>` and transitions the item to `completed`. No changes needed.
+
+**`pipeline_advanced`** does not notify — it records an internal event that the pipeline moved
+between panes. Surfacing this as a human notification would be noisy with no actionable content.
+
+### New use case: `InformHuman`
+
+`status_update` and `phase_change` cannot use `NotifyHuman` because that use case parks the work
+item as `waiting_for_human`. Instead, they use a new `InformHuman` use case:
+
+```ruby
+# lib/work_coordinator/application/inform_human.rb
+InformHuman.new(message_sender:, event_store:).call(work_item_id:, body:)
+```
+
+`InformHuman#call`:
+1. Looks up the work item to get its external reference.
+2. Sends `"[#{ref}] #{body}"` via `message_sender` (no reply hint, no state transition).
+3. Appends a `system.informed` event with `{ ref:, body: }`.
+4. Returns the work item unchanged.
+
+`WorkspaceStatusReceiver` is wired with both `notify_human:` and `inform_human:`. The `error`
+handler keeps using `notify_human`; `status_update` and `phase_change` call `inform_human`.
+
+### `WorkspaceStatusReceiver` handler changes
+
+```ruby
+# handle_status_update: append event AND inform human
+def handle_status_update(message, work_item)
+  append(work_item, "agent.status_update", message, message: message["message"])
+  @inform_human.call(work_item_id: work_item.id, body: message["message"])
+end
+
+# handle_phase_change: update phase AND inform human
+def handle_phase_change(message, work_item)
+  @work_item_repo.save(work_item.with(phase: message["phase"], updated_at: Time.now))
+  append(work_item, "agent.phase_changed", message, phase: message["phase"])
+  @inform_human.call(work_item_id: work_item.id, body: "phase: #{message["phase"]}")
+end
+```
+
+`handle_pipeline_advanced` and the `task_complete` / `error` handlers are unchanged.
+
 ## See also
 
 - [run](commands/run.md) — starting the coordinator and its two sockets
 - [send](commands/send.md) — the `reply:` path that produces an `inject`
 - [register](commands/register.md) — manual work items versus coordinator-issued `WC-N` refs
+- [report](commands/report.md) — sending status from a tmux pane back to the coordinator

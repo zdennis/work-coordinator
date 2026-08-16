@@ -21,12 +21,10 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
       )
     end
 
-    before { agent_session.stub_pane(workspace_name: "work-coordinator", pane_index: 2) }
-
     it "resolves the alias to the full session name before delivery" do
       use_case.call(workspace_name: "WC", instructions: "echo hi", recipient: nil)
-      expect(agent_session.delivered_to_pane).to contain_exactly(
-        hash_including(workspace_name: "work-coordinator", pane_index: 2, message: "echo hi")
+      expect(agent_session.delivered_messages).to contain_exactly(
+        hash_including(session_id: "work-coordinator", message: "echo hi")
       )
     end
 
@@ -40,17 +38,15 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
     use_case.call(workspace_name: workspace_name, instructions: instructions, recipient: recipient)
   end
 
-  context "when the pane exists" do
-    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
-
+  context "when delivery succeeds" do
     it "returns a successful Result" do
       expect(call).to have_attributes(success: true, error: nil)
     end
 
-    it "delivers the instructions to domain pane 2 of the workspace" do
+    it "delivers the instructions to the workspace via the agent session" do
       call
-      expect(agent_session.delivered_to_pane).to contain_exactly(
-        hash_including(workspace_name: "my-service", pane_index: 2, message: "add validation")
+      expect(agent_session.delivered_messages).to contain_exactly(
+        hash_including(session_id: "my-service", message: "add validation")
       )
     end
 
@@ -74,15 +70,25 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
 
     it "preserves multiline instructions" do
       call(instructions: "step one\nstep two")
-      expect(agent_session.delivered_to_pane.first[:message]).to eq("step one\nstep two")
+      expect(agent_session.delivered_messages.first[:message]).to eq("step one\nstep two")
     end
   end
 
-  context "when the pane does not exist" do
+  context "when the agent session raises" do
+    let(:agent_session) do
+      Class.new do
+        def deliver(**) = raise StandardError, "agent unavailable"
+
+        def method_missing(*) = nil
+
+        def respond_to_missing?(*) = true
+      end.new
+    end
+
     it "returns a failed Result" do
       result = call
       expect(result).to have_attributes(success: false)
-      expect(result.error).to include("pane 2 not stubbed")
+      expect(result.error).to eq("agent unavailable")
     end
 
     it "sends the error message to the recipient" do
@@ -106,11 +112,9 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
       )
     end
 
-    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
-
     it "appends the context to the instructions with a blank line separator" do
       use_case.call(workspace_name: "my-service", instructions: "research foo", recipient: nil)
-      expect(agent_session.delivered_to_pane.first[:message]).to eq(
+      expect(agent_session.delivered_messages.first[:message]).to eq(
         "research foo\n\nHow to work:\n\n$rpi"
       )
     end
@@ -122,41 +126,35 @@ RSpec.describe WorkCoordinator::Application::DeliverToMainSession do
   end
 
   context "when instructions start with a slash command" do
-    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
-
     it "normalizes a space after the command to two newlines" do
       use_case.call(workspace_name: "my-service", instructions: "/clear How to work:\n\n$rpi", recipient: nil)
-      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
+      expect(agent_session.delivered_messages.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
     end
 
     it "normalizes a single newline after the command to two newlines" do
       use_case.call(workspace_name: "my-service", instructions: "/clear\nHow to work:\n\n$rpi", recipient: nil)
-      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
+      expect(agent_session.delivered_messages.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
     end
 
     it "leaves an already-correct double-newline separator unchanged" do
       use_case.call(workspace_name: "my-service", instructions: "/clear\n\nHow to work:\n\n$rpi", recipient: nil)
-      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
+      expect(agent_session.delivered_messages.first[:message]).to eq("/clear\n\nHow to work:\n\n$rpi")
     end
 
     it "leaves a bare slash command unchanged" do
       use_case.call(workspace_name: "my-service", instructions: "/clear", recipient: nil)
-      expect(agent_session.delivered_to_pane.first[:message]).to eq("/clear")
+      expect(agent_session.delivered_messages.first[:message]).to eq("/clear")
     end
   end
 
   context "when instruction_context is empty" do
-    before { agent_session.stub_pane(workspace_name: "my-service", pane_index: 2) }
-
     it "delivers instructions unchanged" do
       use_case.call(workspace_name: "my-service", instructions: "research foo", recipient: nil)
-      expect(agent_session.delivered_to_pane.first[:message]).to eq("research foo")
+      expect(agent_session.delivered_messages.first[:message]).to eq("research foo")
     end
   end
 
   context "when workspace_name is empty" do
-    before { agent_session.stub_pane(workspace_name: "", pane_index: 2) }
-
     it "still sends to whatever workspace was given" do
       call(workspace_name: "", instructions: "add validation")
       expect(message_sender.sent_messages.first[:body]).to eq("Sent to : add validation")

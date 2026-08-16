@@ -55,6 +55,10 @@ module WorkCoordinator
     #   @return [Adapters::SqliteWorkspaceAgentRegistry]
     # @!attribute [r] complete_work_item
     #   @return [Application::CompleteWorkItem]
+    # @!attribute [r] notify_human
+    #   @return [Application::NotifyHuman]
+    # @!attribute [r] inform_human
+    #   @return [Application::InformHuman]
     # @!attribute [r] workspace_status_receiver
     #   @return [Adapters::WorkspaceStatusReceiver] runs on its own socket and thread, not part of
     #     the composite receiver
@@ -66,6 +70,7 @@ module WorkCoordinator
                 :set_default_project, :restart_state_repo, :git_runner,
                 :restart_coordinator, :update_and_restart, :register_command_work_item,
                 :workspace_agent_registry, :complete_work_item, :workspace_status_receiver,
+                :inform_human,
                 :logger, :config
 
     # A receiver is built per mode and run concurrently; the sender is chosen
@@ -91,6 +96,7 @@ module WorkCoordinator
       modes = Array(modes).map(&:to_sym).uniq
       @config = role ? config.with_role(role) : config
       @socket_path = socket_path
+      @status_socket_path = status_socket_path
       @argv = argv
       @env = env
       @logger = debug ? Logger.new($stderr) : Logger.new(IO::NULL)
@@ -115,7 +121,9 @@ module WorkCoordinator
       tmux = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo, logger: @logger)
       @agent_session  = Adapters::WorkspaceAgentSession.new(tmux: tmux, registry: @workspace_agent_registry,
                                                             logger: @logger,
-                                                            tmux_fallback_enabled: @config.tmux_fallback_enabled?)
+                                                            tmux_fallback_enabled: @config.tmux_fallback_enabled?,
+                                                            status_socket_path: @status_socket_path,
+                                                            config: @config)
       @message_sender = build_sender(modes)
     end
 
@@ -126,6 +134,7 @@ module WorkCoordinator
         event_store: @event_store,
         complete_work_item: @complete_work_item,
         notify_human: @notify_human,
+        inform_human: @inform_human,
         logger: @logger
       )
     end
@@ -184,6 +193,7 @@ module WorkCoordinator
       human_deps = { message_sender: @message_sender, work_item_repo: @work_item_repo, event_store: @event_store }
       @notify_human       = Application::NotifyHuman.new(**human_deps)
       @complete_work_item = Application::CompleteWorkItem.new(**human_deps)
+      @inform_human       = Application::InformHuman.new(message_sender: @message_sender, event_store: @event_store)
       wire_routing!
       wire_ai_commands!
       wire_restart!

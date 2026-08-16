@@ -52,7 +52,7 @@ module WorkCoordinator
       end
 
       def dispatch_ai_message(msg, raw)
-        role, body = Domain::RoleToken.split(raw)
+        role, workspace, body = Domain::RoleToken.split(raw)
 
         # Several coordinators can share one inbox, so each only acts on the
         # messages addressed to it. A message for someone else is dropped
@@ -62,10 +62,17 @@ module WorkCoordinator
           return
         end
 
-        if role
-          @logger.debug "Role token: #{role.inspect}"
-          msg = restripped(msg, role, body)
+        @logger.debug "Role token: #{role.inspect}" if role
+
+        # ai:home:WC instructions — workspace embedded in the role token routes
+        # directly to the workspace's main session without further parsing.
+        if workspace
+          @logger.debug "Workspace in role token: #{workspace.inspect}"
+          deliver_to_main(workspace_name: workspace, instructions: body)
+          return
         end
+
+        msg = restripped(msg, role, body) if role
 
         return if @slash_commands_enabled && slash_command_dispatched?(body)
 

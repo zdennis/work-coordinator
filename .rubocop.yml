@@ -11,6 +11,10 @@ AllCops:
 Style/Documentation:
   Enabled: false
 
+Style/FormatStringToken:
+  Exclude:
+    - "lib/work_coordinator/config.rb"
+
 Style/MixinUsage:
   Exclude:
     - "script/**/*"
@@ -55,7 +59,7 @@ RSpec/MultipleExpectations:
     - "spec/work_coordinator/integration/**/*"
 
 RSpec/MultipleMemoizedHelpers:
-  Max: 8
+  Max: 9
   Exclude:
     - "spec/work_coordinator/integration/**/*"
 

@@ -31,12 +31,16 @@ module WorkCoordinator
       # @param sleeper [#call] waits the given number of seconds between retries
       # @param logger [Logger]
       def initialize(tmux:, registry:, sleeper: ->(seconds) { sleep(seconds) },
-                     logger: Logger.new(IO::NULL), tmux_fallback_enabled: true)
+                     logger: Logger.new(IO::NULL), tmux_fallback_enabled: true,
+                     status_socket_path: "/tmp/work-coordinator-status.sock",
+                     config: nil)
         @tmux = tmux
         @registry = registry
         @sleeper = sleeper
         @logger = logger
         @tmux_fallback_enabled = tmux_fallback_enabled
+        @status_socket_path = status_socket_path
+        @config = config
       end
 
       # Sends a message to the workspace's agent, or to its tmux pane.
@@ -48,7 +52,7 @@ module WorkCoordinator
       # @return [void]
       # @raise [DeliveryTimeout] when a registered agent stops answering
       def deliver(session_id:, message:, work_item_ref: nil)
-        entry = work_item_ref && @registry.find(session_id)
+        entry = @registry.find(session_id)
         @logger.debug "WorkspaceAgentSession#deliver: workspace=#{session_id.inspect} " \
                       "has_registry=#{entry ? true : false}"
         return @tmux.deliver(session_id: session_id, message: message) unless entry
@@ -57,7 +61,8 @@ module WorkCoordinator
           socket_path: entry[:socket_path],
           workspace: session_id,
           work_item_ref: work_item_ref,
-          body: message
+          body: message,
+          pipeline: entry[:pipeline]
         )
       rescue Errno::ENOENT
         handle_missing_socket(session_id: session_id, message: message)
@@ -115,11 +120,51 @@ module WorkCoordinator
         @tmux.deliver(session_id: session_id, message: message)
       end
 
-      def deliver_to_agent(socket_path:, workspace:, work_item_ref:, body:)
-        write_payload(
-          connect(socket_path, workspace),
-          payload(type: "command", workspace: workspace, work_item_ref: work_item_ref, body: body)
+      def deliver_to_agent(socket_path:, workspace:, work_item_ref:, body:, pipeline: nil)
+        data = payload(type: "command", workspace: workspace, work_item_ref: work_item_ref, body: body)
+        if work_item_ref
+          instructions = render_reporting_instructions(
+            work_item_ref: work_item_ref,
+            workspace: workspace,
+            has_pipeline: !pipeline.to_s.strip.empty?
+          )
+          data = data.merge(reporting_instructions: instructions) if instructions
+        end
+        write_payload(connect(socket_path, workspace), data)
+      end
+
+      # Renders the operator's status-reporting template for one delivery.
+      #
+      # Returns nil — and the caller omits the field — when no template is
+      # configured or the template refers to a variable we do not supply.
+      def render_reporting_instructions(work_item_ref:, workspace:, has_pipeline:)
+        template = @config&.status_reporting_template
+        return nil if template.nil? || template.strip.empty?
+
+        rendered = format(
+          template,
+          work_item_ref: work_item_ref,
+          workspace: workspace,
+          status_socket: @status_socket_path,
+          cli_command: @config.status_reporting_cli,
+          task_complete_line: task_complete_line(work_item_ref, workspace, has_pipeline)
         )
+        rendered.strip.empty? ? nil : rendered
+      rescue KeyError, ArgumentError => e
+        @logger.warn "WorkspaceAgentSession: status_reporting_template failed to render: #{e.message}"
+        nil
+      end
+
+      # A pipeline workspace signals completion with its own sentinel. If Claude
+      # also reports task_complete the item completes early, and the agent's real
+      # sentinel then fails with terminal_state/abort_pipeline, tearing down a live
+      # pipeline. So the line is only offered where Claude's report is the only
+      # completion signal the coordinator will ever get.
+      def task_complete_line(work_item_ref, workspace, has_pipeline)
+        return "" if has_pipeline
+
+        "  #{@config.status_reporting_cli} report --ref #{work_item_ref} " \
+          "--workspace #{workspace} --type task_complete --summary \"<one-line summary>\"\n"
       end
 
       def payload(type:, workspace:, work_item_ref:, body:)

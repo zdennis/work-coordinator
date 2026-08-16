@@ -22,8 +22,9 @@ module WorkCoordinator
       # @param event_store [#append]
       # @param complete_work_item [#call] `call(work_item_id:, summary:)`
       # @param notify_human [#call] `call(work_item_id:, body:)`
+      # @param inform_human [#call] `call(work_item_id:, body:, work_item:)`
       # @param logger [Logger]
-      def initialize(work_item_repo:, event_store:, complete_work_item:, notify_human:,
+      def initialize(work_item_repo:, event_store:, complete_work_item:, notify_human:, inform_human:,
                      socket_path: "/tmp/work-coordinator-status.sock",
                      logger: Logger.new(IO::NULL))
         @socket_path = socket_path
@@ -31,6 +32,7 @@ module WorkCoordinator
         @event_store = event_store
         @complete_work_item = complete_work_item
         @notify_human = notify_human
+        @inform_human = inform_human
         @logger = logger
         @epoch = "wc-#{SecureRandom.hex(8)}"
         @processed_message_ids = Set.new
@@ -155,18 +157,20 @@ module WorkCoordinator
         when "task_complete"
           @logger.debug "WorkspaceStatusReceiver: task_complete for #{ref.inspect} — completing work item"
           @complete_work_item.call(work_item_id: work_item.id, summary: message["summary"])
-        when "error" then @notify_human.call(work_item_id: work_item.id, body: message["message"])
+        when "error" then @inform_human.call(work_item_id: work_item.id, body: message["message"], work_item: work_item)
         else warn "[WorkspaceStatusReceiver] dropping message with unknown type: #{type.inspect}"
         end
       end
 
       def handle_status_update(message, work_item)
         append(work_item, "agent.status_update", message, message: message["message"])
+        @inform_human.call(work_item_id: work_item.id, body: message["message"], work_item: work_item)
       end
 
       def handle_phase_change(message, work_item)
         @work_item_repo.save(work_item.with(phase: message["phase"], updated_at: Time.now))
         append(work_item, "agent.phase_changed", message, phase: message["phase"])
+        @inform_human.call(work_item_id: work_item.id, body: "phase: #{message['phase']}", work_item: work_item)
       end
 
       def handle_pipeline_advanced(message, work_item)

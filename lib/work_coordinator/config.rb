@@ -75,6 +75,20 @@ module WorkCoordinator
       data.fetch("instruction_context", "")
     end
 
+    DEFAULT_STATUS_REPORTING_CLI = "work-coordinator"
+
+    # Template rendered into the `reporting_instructions` field of a `command`
+    # payload. Nil when unset — the field is then omitted entirely.
+    def status_reporting_template
+      data.fetch("status_reporting_template", nil)
+    end
+
+    # Base CLI invocation substituted as %{cli_command}. Configurable because a
+    # checkout runs `bin/work-coordinator`, not the installed binary.
+    def status_reporting_cli
+      data.fetch("status_reporting_cli", DEFAULT_STATUS_REPORTING_CLI)
+    end
+
     def slash_commands_enabled?
       data.fetch("slash_commands_enabled", true)
     end
@@ -160,6 +174,15 @@ module WorkCoordinator
         # default_message_role: default  # Role assumed for messages with no role token
         # auto_launch_workspace: false  # Automatically launch dormant workspaces when routing AI commands via URL
         # workspace_launch_timeout_seconds: 20  # Max seconds to wait for a launched workspace to become active
+        # status_reporting_cli: work-coordinator  # Base CLI invocation used in status reporting instructions
+        # status_reporting_template: |
+        #   --- Status reporting ---
+        #   You are working on %{work_item_ref} in workspace %{workspace}. Report progress by running:
+        #     %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type status_update --message "<brief note>"
+        #     %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type error --message "<error detail>"
+        #   The status socket is %{status_socket}.
+        #   Report status_update at meaningful milestones. Report error only when you cannot proceed.
+        #   %{task_complete_line}
         aliases:
           WC: work-coordinator
       YAML
