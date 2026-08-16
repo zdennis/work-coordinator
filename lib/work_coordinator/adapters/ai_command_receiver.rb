@@ -50,10 +50,19 @@ module WorkCoordinator
           Application::RouteMessage::REPLY_PATTERN.match?(raw)
       end
 
-      def dispatch_ai_message(msg, body)
+      def dispatch_ai_message(msg, raw)
+        role, body = Domain::RoleToken.split(raw)
+        if role
+          @logger.debug "Role token: #{role.inspect}"
+          msg = restripped(msg, role, body)
+        end
+
         return if @slash_commands_enabled && slash_command_dispatched?(body)
 
-        command = Domain::AiCommand.new(body)
+        dispatch_command(msg, Domain::AiCommand.new(body))
+      end
+
+      def dispatch_command(msg, command)
         @logger.debug "AiCommand parsed: verb=#{command.verb.inspect} " \
                       "workspace=#{command.workspace.inspect} " \
                       "instructions=#{command.instructions.inspect}"
@@ -63,6 +72,15 @@ module WorkCoordinator
         else
           @ai_command_handler.call(msg)
         end
+      end
+
+      # Rebuilds the inbound message around the role-stripped body so downstream
+      # handlers never see the role token in the instructions they act on. Only
+      # called when a role was present, so role-free messages pass through
+      # untouched.
+      def restripped(msg, role, body)
+        ref, rest = body.split(" ", 2)
+        msg.merge(role: role, work_item_ref: ref, body: rest.to_s.strip)
       end
 
       # Returns true when the body was handled as a slash command.

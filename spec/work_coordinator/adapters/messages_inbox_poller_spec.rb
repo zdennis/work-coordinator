@@ -54,8 +54,10 @@ RSpec.describe WorkCoordinator::Adapters::MessagesInboxPoller do
   end
 
   describe "INBOX_SQL" do
-    it "matches messages with the ai: prefix" do
-      expect(described_class::INBOX_SQL).to include("text LIKE 'ai: %'")
+    # No space in the pattern: a role token attaches straight to the prefix,
+    # as in "ai:home: MS - go".
+    it "matches messages with the ai: prefix, with or without a following space" do
+      expect(described_class::INBOX_SQL).to include("text LIKE 'ai:%'")
     end
 
     it "also matches bare slash commands without the ai: prefix" do
@@ -94,6 +96,14 @@ RSpec.describe WorkCoordinator::Adapters::MessagesInboxPoller do
         result = parse("/help")
         expect(result[:work_item_ref]).to eq("/help")
         expect(result[:body]).to eq("")
+      end
+    end
+
+    context "with a role token attached to the prefix (e.g. 'ai:home: claude MS - go')" do
+      it "strips only the ai: prefix, leaving the role token at the head of the message" do
+        result = parse("ai:home: claude MS - go")
+        expect(result[:work_item_ref]).to eq("home:")
+        expect(result[:body]).to eq("claude MS - go")
       end
     end
 

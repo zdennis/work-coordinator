@@ -62,11 +62,17 @@ module WorkCoordinator
         end
       end
 
-      # Selects unseen inbound messages: those carrying the 'ai: ' prefix, and
-      # bare slash commands (e.g. /help, /build MS) sent without the prefix.
+      # Selects unseen inbound messages: those carrying the 'ai:' prefix — with
+      # or without a following space, since a role token attaches directly to it
+      # ('ai:home: ...') — and bare slash commands (e.g. /help, /build MS) sent
+      # without the prefix.
+      # Strips the 'ai:' prefix and any space after it, leaving an optional role
+      # token ('home: ...') at the head of the body for the parser to find.
+      PREFIX_PATTERN = /\Aai:[ \t]*/
+
       INBOX_SQL = <<~SQL
         SELECT rowid, text, date, guid FROM message
-        WHERE is_from_me = 0 AND (text LIKE 'ai: %' OR text LIKE '/%') AND date > ?
+        WHERE is_from_me = 0 AND (text LIKE 'ai:%' OR text LIKE '/%') AND date > ?
         ORDER BY date ASC
       SQL
 
@@ -97,7 +103,7 @@ module WorkCoordinator
 
       def parse_row(row)
         text = row["text"]
-        stripped = text.start_with?("ai: ") ? text[4..] : text
+        stripped = text.sub(PREFIX_PATTERN, "")
         parts = stripped.split(" ", 2)
         {
           guid: row["guid"],

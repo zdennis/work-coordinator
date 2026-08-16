@@ -212,6 +212,83 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
     end
   end
 
+  describe "role token parsing" do
+    subject(:receiver) do
+      described_class.new(
+        inner: inner,
+        ai_command_handler: ai_handler,
+        deliver_to_main_session: deliver_to_main,
+        restart_coordinator: coordinator.restart,
+        update_and_restart: coordinator.update
+      )
+    end
+
+    let(:deliveries) { [] }
+    let(:deliver_to_main) do
+      lambda do |workspace_name:, instructions:, recipient:, work_item_ref: nil|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient,
+                        work_item_ref: work_item_ref }
+      end
+    end
+
+    # "ai:home: claude MS - add validation" is stripped by MessagesInboxPoller to
+    # "home: claude MS - add validation", then split as:
+    #   work_item_ref: "home:", body: "claude MS - add validation"
+    context "with 'ai:home: claude MS - add validation'" do
+      let(:messages) { [{ work_item_ref: "home:", body: "claude MS - add validation", received_at: Time.now }] }
+
+      it "strips the role and still routes the verb to deliver_to_main_session" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "add validation", recipient: nil, work_item_ref: nil }
+        )
+      end
+    end
+
+    # "ai:h: MS - add validation" → work_item_ref: "h:", body: "MS - add validation"
+    context "with 'ai:h: MS - add validation'" do
+      let(:messages) { [{ work_item_ref: "h:", body: "MS - add validation", received_at: Time.now }] }
+
+      it "hands the handler the role and a body with the token removed" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls.first).to include(role: "h", work_item_ref: "MS", body: "- add validation")
+        expect(deliveries).to be_empty
+      end
+    end
+
+    # "ai:work: new MS - add validation" → work_item_ref: "work:", body: "new MS - add validation"
+    context "with 'ai:work: new MS - add validation'" do
+      let(:messages) { [{ work_item_ref: "work:", body: "new MS - add validation", received_at: Time.now }] }
+
+      it "keeps the 'new' verb on the handler path with the role recorded" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls.first).to include(role: "work", work_item_ref: "new", body: "MS - add validation")
+        expect(deliveries).to be_empty
+      end
+    end
+
+    context "with a role in front of a slash command ('ai:home: /clear MS')" do
+      let(:messages) { [{ work_item_ref: "home:", body: "/clear MS", received_at: Time.now }] }
+
+      it "dispatches the slash command with the role stripped" do
+        receiver.start { |m| m }
+        expect(deliveries).to contain_exactly(
+          { workspace_name: "MS", instructions: "/clear", recipient: nil, work_item_ref: nil }
+        )
+      end
+    end
+
+    context "without a role ('ai: MS - add validation')" do
+      let(:msg) { { work_item_ref: "MS", body: "- add validation", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "passes the message through untouched, with no role key added" do
+        receiver.start { |m| m }
+        expect(ai_handler_calls).to eq([msg])
+      end
+    end
+  end
+
   describe "slash command routing" do
     subject(:receiver) do
       described_class.new(
