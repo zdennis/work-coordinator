@@ -25,6 +25,8 @@ module WorkCoordinator
     #   @return [Application::StartWorkItem]
     # @!attribute [r] notify_human
     #   @return [Application::NotifyHuman]
+    # @!attribute [r] complete_work_item
+    #   @return [Application::CompleteWorkItem]
     # @!attribute [r] ai_command_runner
     #   @return [Adapters::ClaudeWorkspaceCommandRunner]
     # @!attribute [r] dispatch_ai_command
@@ -56,7 +58,7 @@ module WorkCoordinator
                 :deliver_to_main_session, :project_repo, :project_resolver,
                 :set_default_project, :restart_state_repo, :git_runner,
                 :restart_coordinator, :update_and_restart, :register_command_work_item,
-                :workspace_agent_registry
+                :workspace_agent_registry, :complete_work_item
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -144,8 +146,9 @@ module WorkCoordinator
                                                            agent_session: @agent_session, event_store: @event_store)
       @route_message      = Application::RouteMessage.new(work_item_repo: @work_item_repo,
                                                           agent_session: @agent_session, event_store: @event_store)
-      @notify_human       = Application::NotifyHuman.new(message_sender: @message_sender,
-                                                         work_item_repo: @work_item_repo, event_store: @event_store)
+      human_deps = { message_sender: @message_sender, work_item_repo: @work_item_repo, event_store: @event_store }
+      @notify_human       = Application::NotifyHuman.new(**human_deps)
+      @complete_work_item = Application::CompleteWorkItem.new(**human_deps)
       wire_ai_commands!
       wire_restart!
     end
