@@ -1,16 +1,21 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "json"
 require "socket"
 require "work_coordinator/ports/message_receiver"
 
 module WorkCoordinator
   module Adapters
     # Listens on a Unix domain socket, treating each line as one message of the
-    # form `<ref> <body>`. Push-style only: {#receive_messages} and
-    # {#on_message} are not supported.
+    # form `<ref> <body>`, or — when the line starts with `{` — as one JSON
+    # message. Push-style only: {#receive_messages} and {#on_message} are not
+    # supported.
     class SocketMessageReceiver
       include Ports::MessageReceiver
+
+      # JSON `type` values this receiver knows how to hand upstream.
+      JSON_MESSAGE_TYPES = %w[register deregister].freeze
 
       # @param socket_path [String]
       def initialize(socket_path: "/tmp/work-coordinator.sock")
@@ -22,7 +27,8 @@ module WorkCoordinator
       # Replaces any stale socket file, then accepts connections until {#stop},
       # yielding one parsed message per connection.
       #
-      # @yieldparam message [Hash] `{ work_item_ref:, body:, received_at: }`
+      # @yieldparam message [Hash] `{ work_item_ref:, body:, received_at: }` for
+      #   plain lines, `{ type:, raw:, received_at: }` for JSON lines
       # @return [void]
       def start(&)
         FileUtils.rm_f(@socket_path)
@@ -64,7 +70,10 @@ module WorkCoordinator
         line = conn.gets&.chomp
         return if line.nil? || line.empty?
 
-        block.call(parse_line(line))
+        message = parse_line(line)
+        return if message.nil?
+
+        block.call(message)
       rescue StandardError => e
         warn "[SocketMessageReceiver] dropping message: #{e.class}: #{e.message}"
       ensure
@@ -72,6 +81,8 @@ module WorkCoordinator
       end
 
       def parse_line(line)
+        return parse_json_line(line) if line.start_with?("{")
+
         if line.include?(" ")
           ref, body = line.split(" ", 2)
           { work_item_ref: ref, body: body, received_at: Time.now }
@@ -79,6 +90,22 @@ module WorkCoordinator
           warn "[SocketMessageReceiver] no ref found in line; treating entire line as body"
           { work_item_ref: nil, body: line, received_at: Time.now }
         end
+      end
+
+      # @return [Hash, nil] `{ type:, raw:, received_at: }`, or nil if the line
+      #   is not usable JSON or carries a type we do not handle.
+      def parse_json_line(line)
+        raw = JSON.parse(line)
+        type = raw["type"]
+        unless JSON_MESSAGE_TYPES.include?(type)
+          warn "[SocketMessageReceiver] dropping JSON message with unknown type: #{type.inspect}"
+          return nil
+        end
+
+        { type: type, raw: raw, received_at: Time.now }
+      rescue JSON::ParserError => e
+        warn "[SocketMessageReceiver] dropping malformed JSON message: #{e.message}"
+        nil
       end
     end
   end
