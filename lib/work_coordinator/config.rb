@@ -28,7 +28,7 @@ module WorkCoordinator
       Cannot proceed due to an error or hard blocker:
         %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type error --message "<reason>"
 
-      Work fully complete, ready for new work:
+      Work fully complete — REQUIRED, run this even for trivial tasks:
       %{task_complete_line}
       </reporting_commands>
 
@@ -51,10 +51,10 @@ module WorkCoordinator
       </artifacts>
 
       <rules>
+      - Your last action when work is done must be running the task_complete command. This is mandatory — no exceptions, no matter how trivial the task.
       - Report at every meaningful transition. Do not go silent for long stretches.
       - First line of every message is a one-line summary. Additional lines may carry artifact links.
       - Do not report task_complete more than once.
-      - No matter how trivial the work, always report task_complete when done.
       </rules>
       </work_coordinator>
     TEMPLATE
