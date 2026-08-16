@@ -6,7 +6,7 @@ Read or write a single property in the work-coordinator configuration file.
 work-coordinator config <key> [value]
 ```
 
-With one argument, the command prints the current value of `key` (falling back to its compiled-in default when the key is absent from the file). With two arguments, it writes `value` to the config file and prints the value that was stored. Boolean strings (`true`/`false`) and plain integers are coerced to their native types; everything else is stored as a string.
+With no arguments, the command prints the path to the config file followed by its full contents. With one argument, it prints the current value of `key` (falling back to its compiled-in default when the key is absent from the file). With two arguments, it writes `value` to the config file and prints the value that was stored. Boolean strings (`true`/`false`) and plain integers are coerced to their native types; everything else is stored as a string.
 
 ## Arguments
 
@@ -46,6 +46,12 @@ home
 Exit code 1 on an unknown key or missing argument.
 
 ## Examples
+
+Print the config file path and contents:
+
+```bash
+work-coordinator config
+```
 
 Read the current role:
 

@@ -191,8 +191,10 @@ when "config"
   value = ARGV.shift
 
   if key.nil? || key.empty?
-    warn "Usage: work-coordinator config <key> [value]"
-    exit 1
+    config = WorkCoordinator::Config.new
+    puts config.path
+    puts File.read(config.path) if config.exist?
+    exit
   end
 
   unless SUPPORTED_CONFIG_KEYS.include?(key)
