@@ -30,7 +30,14 @@ RSpec.describe WorkCoordinator::Application::RestartCoordinator do
         :execed
       },
       sleep_fn: ->(secs) { calls[:sleep] << secs },
-      before_exec: -> { calls[:before_exec] << :called },
+      before_exec: lambda {
+        calls[:before_exec] << :called
+        calls[:order] << :before_exec
+      },
+      notify_restart_fn: lambda {
+        calls[:notify_restart] << :called
+        calls[:order] << :notify
+      },
       exit_fn: ->(code) { calls[:exit] << code }
     )
   end
@@ -68,6 +75,18 @@ RSpec.describe WorkCoordinator::Application::RestartCoordinator do
       coordinator.call
 
       expect(calls[:before_exec].size).to eq(1)
+    end
+
+    it "runs notify_restart_fn exactly once" do
+      coordinator.call
+
+      expect(calls[:notify_restart].size).to eq(1)
+    end
+
+    it "notifies the workspace agents before tearing down the database connection" do
+      coordinator.call
+
+      expect(calls[:order]).to eq(%i[notify before_exec])
     end
 
     it "does not sleep or exit" do

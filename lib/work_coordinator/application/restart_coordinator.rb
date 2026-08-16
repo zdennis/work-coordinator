@@ -18,12 +18,14 @@ module WorkCoordinator
       # @param exec_fn [#call] receives `(env, *argv)`; never returns on success
       # @param sleep_fn [#call] receives the delay in seconds
       # @param before_exec [#call] teardown run once before the first exec
+      # @param notify_restart_fn [#call] runs before the teardown, while the DB is still readable
       # @param exit_fn [#call] receives the exit status
       # @return [void]
       def initialize(message_sender:, restart_state_repo:, argv:, env:, before_exec:,
                      max_attempts: 3,
                      exec_fn: ->(env, *cmd) { Kernel.exec(env, *cmd) },
                      sleep_fn: ->(secs) { sleep(secs) },
+                     notify_restart_fn: -> {},
                      exit_fn: ->(code) { Kernel.exit(code) })
         @message_sender = message_sender
         @restart_state_repo = restart_state_repo
@@ -33,6 +35,7 @@ module WorkCoordinator
         @exec_fn = exec_fn
         @sleep_fn = sleep_fn
         @before_exec = before_exec
+        @notify_restart_fn = notify_restart_fn
         @exit_fn = exit_fn
       end
 
@@ -46,6 +49,7 @@ module WorkCoordinator
         @restart_state_repo.save(attempt: attempt)
         notify("Restarting...")
 
+        @notify_restart_fn.call
         @before_exec.call
         reason = attempt_exec
         return unless reason
