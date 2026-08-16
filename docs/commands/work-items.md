@@ -37,9 +37,11 @@ Coordinator  role: home  |  status: running
 
 REF           STATE                 PHASE                    TITLE
 ────────────────────────────────────────────────────────────────────────────────────
-WC-22         active                planning                 research, plan, implement…
-WC-23         active                research+planning        then: make sure this is…
+HOME-22       active                planning                 research, plan, implement…
+HOME-23       active                research+planning        then: make sure this is…
 ```
+
+The REF prefix reflects the coordinator's configured role (`HOME-` at role `home`, `WORK-` at role `work`). Items registered before this feature was introduced retain their original `WC-` prefix.
 
 States are color-coded in terminals that support ANSI color: `active` (green), `waiting_for_human` (yellow), `blocked` (red), `completed` (cyan). Titles longer than 50 characters are truncated with `…`.
 
