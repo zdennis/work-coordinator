@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "tmpdir"
 
 RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
   subject(:receiver) do
@@ -285,6 +286,82 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "passes the message through untouched, with no role key added" do
         receiver.start { |m| m }
         expect(ai_handler_calls).to eq([msg])
+      end
+    end
+  end
+
+  describe "role gate" do
+    subject(:receiver) do
+      described_class.new(
+        inner: inner,
+        ai_command_handler: ai_handler,
+        deliver_to_main_session: ->(**) {},
+        restart_coordinator: coordinator.restart,
+        update_and_restart: coordinator.update,
+        config: config
+      )
+    end
+
+    let(:tmpdir) { Dir.mktmpdir }
+    let(:config_path) { File.join(tmpdir, "config.yml") }
+    let(:config) { WorkCoordinator::Config.new(config_path) }
+
+    after { FileUtils.remove_entry(tmpdir) }
+
+    context "with role: home and role_aliases: [h]" do
+      before { File.write(config_path, "role: home\nrole_aliases:\n  - h\n") }
+
+      it "drops a message with no role token" do
+        messages << { work_item_ref: "MS", body: "- add validation", received_at: Time.now }
+        yielded = []
+        receiver.start { |m| yielded << m }
+
+        expect(ai_handler_calls).to be_empty
+        expect(yielded).to be_empty
+      end
+
+      it "drops a message addressed to another role" do
+        messages << { work_item_ref: "work:", body: "MS - add validation", received_at: Time.now }
+        yielded = []
+        receiver.start { |m| yielded << m }
+
+        expect(ai_handler_calls).to be_empty
+        expect(yielded).to be_empty
+      end
+
+      it "accepts a message addressed to its role" do
+        messages << { work_item_ref: "home:", body: "MS - add validation", received_at: Time.now }
+        receiver.start { |m| m }
+
+        expect(ai_handler_calls.first).to include(role: "home", work_item_ref: "MS")
+      end
+
+      it "accepts a message addressed to one of its aliases" do
+        messages << { work_item_ref: "h:", body: "MS - add validation", received_at: Time.now }
+        receiver.start { |m| m }
+
+        expect(ai_handler_calls.first).to include(role: "h", work_item_ref: "MS")
+      end
+    end
+
+    context "with role: default" do
+      before { File.write(config_path, "role: default\n") }
+
+      it "accepts a message with no role token" do
+        msg = { work_item_ref: "MS", body: "- add validation", received_at: Time.now }
+        messages << msg
+        receiver.start { |m| m }
+
+        expect(ai_handler_calls).to eq([msg])
+      end
+
+      it "drops a message addressed to another role" do
+        messages << { work_item_ref: "home:", body: "MS - add validation", received_at: Time.now }
+        yielded = []
+        receiver.start { |m| yielded << m }
+
+        expect(ai_handler_calls).to be_empty
+        expect(yielded).to be_empty
       end
     end
   end

@@ -14,7 +14,7 @@ module WorkCoordinator
 
       def initialize(inner:, ai_command_handler:, deliver_to_main_session:, restart_coordinator:,
                      update_and_restart:, register_command_work_item: nil, slash_commands_enabled: true,
-                     logger: Logger.new(IO::NULL))
+                     config: nil, logger: Logger.new(IO::NULL))
         @inner                      = inner
         @ai_command_handler         = ai_command_handler
         @deliver_to_main_session    = deliver_to_main_session
@@ -22,6 +22,7 @@ module WorkCoordinator
         @restart_coordinator        = restart_coordinator
         @update_and_restart         = update_and_restart
         @slash_commands_enabled     = slash_commands_enabled
+        @config                     = config
         @logger                     = logger
       end
 
@@ -52,6 +53,15 @@ module WorkCoordinator
 
       def dispatch_ai_message(msg, raw)
         role, body = Domain::RoleToken.split(raw)
+
+        # Several coordinators can share one inbox, so each only acts on the
+        # messages addressed to it. A message for someone else is dropped
+        # silently — replying would mean every coordinator answering at once.
+        unless addressed_to_me?(role)
+          @logger.debug "Dropping message for role #{role.inspect}"
+          return
+        end
+
         if role
           @logger.debug "Role token: #{role.inspect}"
           msg = restripped(msg, role, body)
@@ -60,6 +70,11 @@ module WorkCoordinator
         return if @slash_commands_enabled && slash_command_dispatched?(body)
 
         dispatch_command(msg, Domain::AiCommand.new(body))
+      end
+
+      # With no config wired the receiver answers to everything.
+      def addressed_to_me?(role)
+        @config.nil? || @config.matches_role?(role)
       end
 
       def dispatch_command(msg, command)

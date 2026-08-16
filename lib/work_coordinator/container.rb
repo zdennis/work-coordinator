@@ -159,6 +159,7 @@ module WorkCoordinator
         restart_coordinator: @restart_coordinator,
         update_and_restart: @update_and_restart,
         slash_commands_enabled: @config.slash_commands_enabled?,
+        config: @config,
         logger: @logger
       )
     end
