@@ -6,6 +6,58 @@ require "yaml"
 module WorkCoordinator
   class Config
     DEFAULT_AI_COMMAND = "claude -p"
+    DEFAULT_STATUS_REPORTING_TEMPLATE = <<~TEMPLATE
+      <work_coordinator>
+      You are working on %{work_item_ref} in workspace %{workspace}. Report progress by running
+      the commands below. Reports are best-effort — if the coordinator is unreachable they exit 0
+      silently, so always run them.
+
+      <reporting_commands>
+      Meaningful milestone (step done, discovery made, new phase started):
+        %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type status_update --message "<one line>"
+
+      Phase transition (e.g. planning → implementing → testing):
+        %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type phase_change --phase "<phase>"
+
+      Blocked waiting on another agent or external resource:
+        %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type status_update --message "waiting: <what>"
+
+      Question requiring a human decision before you can proceed:
+        %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type error --message "question: <your question>"
+
+      Cannot proceed due to an error or hard blocker:
+        %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type error --message "<reason>"
+
+      Work fully complete, ready for new work:
+      %{task_complete_line}
+      </reporting_commands>
+
+      <artifacts>
+      If the work produced an artifact — audit, report, analysis, recommendation, summary, or any
+      deliverable meant to be read — create a private GitHub gist in Markdown and include the URL
+      in your status_update or task_complete message. The message body may include additional lines
+      for artifact links after the one-line summary.
+
+      Example:
+        %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type status_update \\
+          --message "analysis complete
+      gist: https://gist.github.com/..."
+
+      Rules for gists:
+      - Private only (secret gist, not public).
+      - Markdown format.
+      - No secrets, credentials, tokens, PII, or any sensitive information — describe findings
+        without including the raw sensitive data.
+      </artifacts>
+
+      <rules>
+      - Report at every meaningful transition. Do not go silent for long stretches.
+      - First line of every message is a one-line summary. Additional lines may carry artifact links.
+      - Do not report task_complete more than once.
+      - No matter how trivial the work, always report task_complete when done.
+      </rules>
+      </work_coordinator>
+    TEMPLATE
 
     def self.config_dir
       xdg = ENV.fetch("XDG_CONFIG_HOME", File.expand_path("~/.config"))
@@ -78,9 +130,20 @@ module WorkCoordinator
     DEFAULT_STATUS_REPORTING_CLI = "work-coordinator"
 
     # Template rendered into the `reporting_instructions` field of a `command`
-    # payload. Nil when unset — the field is then omitted entirely.
+    # payload. Falls back to DEFAULT_STATUS_REPORTING_TEMPLATE when unset.
     def status_reporting_template
-      data.fetch("status_reporting_template", nil)
+      data.fetch("status_reporting_template", DEFAULT_STATUS_REPORTING_TEMPLATE)
+    end
+
+    # Returns true only when the key is explicitly present in the config file.
+    def status_reporting_template?
+      data.key?("status_reporting_template")
+    end
+
+    def write_status_reporting_template(template)
+      new_data = data.dup
+      new_data["status_reporting_template"] = template
+      write_data!(new_data)
     end
 
     # Base CLI invocation substituted as %{cli_command}. Configurable because a
@@ -175,14 +238,8 @@ module WorkCoordinator
         # auto_launch_workspace: false  # Automatically launch dormant workspaces when routing AI commands via URL
         # workspace_launch_timeout_seconds: 20  # Max seconds to wait for a launched workspace to become active
         # status_reporting_cli: work-coordinator  # Base CLI invocation used in status reporting instructions
-        # status_reporting_template: |
-        #   --- Status reporting ---
-        #   You are working on %{work_item_ref} in workspace %{workspace}. Report progress by running:
-        #     %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type status_update --message "<brief note>"
-        #     %{cli_command} report --ref %{work_item_ref} --workspace %{workspace} --type error --message "<error detail>"
-        #   The status socket is %{status_socket}.
-        #   Report status_update at meaningful milestones. Report error only when you cannot proceed.
-        #   %{task_complete_line}
+        status_reporting_template: |
+        #{DEFAULT_STATUS_REPORTING_TEMPLATE.gsub(/^/, '  ').rstrip}
         aliases:
           WC: work-coordinator
       YAML

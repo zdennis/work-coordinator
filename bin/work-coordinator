@@ -72,8 +72,9 @@ when "init"
     opts.separator "Create the default configuration file at:"
     opts.separator "  ~/.config/work-coordinator/config.yml"
     opts.separator ""
-    opts.separator "If the file already exists, init reports that and exits without"
-    opts.separator "making any changes."
+    opts.separator "If the file already exists, init checks whether status_reporting_template"
+    opts.separator "is present. If it is missing it adds the default template. If the template"
+    opts.separator "already exists it asks before overwriting."
     opts.separator ""
     opts.separator "Examples:"
     opts.separator "  work-coordinator init"
@@ -84,11 +85,21 @@ when "init"
   end.parse!(ARGV)
 
   config = WorkCoordinator::Config.new
-  if config.exist?
-    puts "Config file already exists: #{config.path}"
-  else
+  if !config.exist?
     config.write_defaults!
     puts "Created #{config.path}"
+  elsif !config.status_reporting_template?
+    config.write_status_reporting_template(WorkCoordinator::Config::DEFAULT_STATUS_REPORTING_TEMPLATE)
+    puts "Added default status_reporting_template to #{config.path}"
+  else
+    $stdout.print "status_reporting_template already set. Overwrite? [y/N] "
+    answer = $stdin.gets&.strip&.downcase
+    if answer == "y"
+      config.write_status_reporting_template(WorkCoordinator::Config::DEFAULT_STATUS_REPORTING_TEMPLATE)
+      puts "Updated status_reporting_template in #{config.path}"
+    else
+      puts "No changes made."
+    end
   end
 
 when "alias"
