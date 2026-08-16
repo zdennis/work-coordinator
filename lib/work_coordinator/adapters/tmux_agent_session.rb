@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "logger"
 require "open3"
 require "shellwords"
 require "work_coordinator/ports/agent_session"
@@ -14,8 +15,10 @@ module WorkCoordinator
       include Ports::AgentSession
 
       # @param work_item_repo [Ports::WorkItemRepository]
-      def initialize(work_item_repo:)
+      # @param logger [Logger]
+      def initialize(work_item_repo:, logger: Logger.new(IO::NULL))
         @work_item_repo = work_item_repo
+        @logger = logger
       end
 
       # Resolves the work item's tmux target without launching anything.
@@ -90,10 +93,10 @@ module WorkCoordinator
       def deliver_to_pane(workspace_name:, pane_index:, message:)
         # Domain pane indices are 1-based; tmux pane indices are 0-based.
         # Subtract 1 to convert: domain pane 1 → tmux 0, domain pane 2 → tmux 1, etc.
-        # Assumes tmux window base-index of 0 (the default). Users with base-index 1
-        # in ~/.tmux.conf will see PaneNotFoundError.
+        # Use '^' to target the first window regardless of tmux base-index setting.
         tmux_pane_index = pane_index - 1
-        window_target   = "#{workspace_name}:0"
+        window_target   = "#{workspace_name}:^"
+        @logger.debug "TmuxAgentSession#deliver_to_pane: window=#{window_target} pane=#{tmux_pane_index}"
 
         out, status = run_command(["tmux", "list-panes", "-t", window_target, "-F", "\#{pane_index}"])
         existing_indices = status.success? ? out.split("\n").map(&:to_i) : []
@@ -104,7 +107,7 @@ module WorkCoordinator
                 "(tmux window #{window_target} has panes: #{existing_indices.inspect})"
         end
 
-        pane_target = "#{workspace_name}:0.#{tmux_pane_index}"
+        pane_target = "#{window_target}.#{tmux_pane_index}"
         send_keys!(pane_target, message)
       end
 
@@ -116,6 +119,7 @@ module WorkCoordinator
 
       def send_keys!(target, message)
         keys = control_sequence?(message) ? [message] : [message, "Enter"]
+        @logger.debug "tmux send-keys -t #{target}"
         out, status = run_command(["tmux", "send-keys", "-t", target, *keys])
         raise "tmux send-keys failed: #{out}" unless status.success?
 

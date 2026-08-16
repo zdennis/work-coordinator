@@ -50,7 +50,7 @@ RSpec.describe WorkCoordinator::Adapters::TmuxAgentSession do
         session.deliver_to_pane(workspace_name: "my-service", pane_index: 1, message: "do the thing")
 
         send_keys_cmd = captured_cmds.find { |c| c.include?("send-keys") }
-        expect(send_keys_cmd).to include("my-service:0.0")
+        expect(send_keys_cmd).to include("my-service:^.0")
       end
 
       it "sends a single send-keys for a single-line message" do
