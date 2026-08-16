@@ -6,6 +6,8 @@ Lists all registered work items with their UUID, external reference, state, phas
 work-coordinator status
 ```
 
+> **Prefer [`work-items status`](work-items.md) going forward.** It shows the same items in a cleaner table — no UUID column — with a header naming the coordinator's role and whether it is running, and it accepts `--state` and `--project` filters. `status` is kept for backward compatibility.
+
 States are color-coded in terminals that support ANSI color: `active` (green), `waiting_for_human` (yellow), `blocked` (red), `completed` (cyan). Piping or redirecting output disables color automatically.
 
 ## Output
