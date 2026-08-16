@@ -200,7 +200,7 @@ when "config"
 
   unless SUPPORTED_CONFIG_KEYS.include?(key)
     warn "Unknown config key: #{key}"
-    warn "Supported keys: #{SUPPORTED_CONFIG_KEYS.join(", ")}"
+    warn "Supported keys: #{SUPPORTED_CONFIG_KEYS.join(', ')}"
     exit 1
   end
 
