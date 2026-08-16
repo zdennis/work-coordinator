@@ -8,12 +8,17 @@ A Ruby CLI that coordinates AI coding agents running in tmux panes. It tracks wo
 |------|----------|
 | `bin/work-coordinator` | CLI entry point — `COMMANDS` hash plus a `case` block with one OptionParser per command |
 | `lib/work_coordinator/domain/` | Domain objects: `WorkItem`, `Conversation`, `Event`, `Decision`, `ResourceLease`. No infrastructure, no ActiveRecord. |
-| `lib/work_coordinator/ports/` | Interfaces the domain depends on: `AgentSession`, `MessageReceiver`, `MessageSender`, `WorkItemRepository` |
+| `lib/work_coordinator/ports/` | Interfaces the domain depends on: `AgentSession`, `MessageReceiver`, `MessageSender`, `WorkItemRepository`, `WorkspaceAgentRegistry` |
 | `lib/work_coordinator/adapters/` | Port implementations: tmux, Unix socket, SQLite, AppleScript, plus fakes and in-memory doubles |
-| `lib/work_coordinator/application/` | Use cases: `RegisterWorkItem`, `StartWorkItem`, `RouteMessage`, `NotifyHuman`, `EventStore` |
+| `lib/work_coordinator/adapters/workspace_agent_session.rb` | Decorator around `TmuxAgentSession` — routes delivery to a registered workspace agent's socket, falling back to tmux |
+| `lib/work_coordinator/adapters/workspace_status_receiver.rb` | `UNIXServer` on the status socket; turns agent status reports into domain actions |
+| `lib/work_coordinator/adapters/sqlite_workspace_agent_registry.rb` | Persists workspace agent registrations (`fake_workspace_agent_registry.rb` is its in-memory twin) |
+| `lib/work_coordinator/application/` | Use cases: `RegisterWorkItem`, `StartWorkItem`, `RouteMessage`, `NotifyHuman`, `CompleteWorkItem`, `EventStore` |
+| `lib/work_coordinator/application/complete_work_item.rb` | Terminal pipeline completion — moves the item to `completed` and announces it without asking for a reply |
 | `lib/work_coordinator/persistence/` | ActiveRecord setup and `models/` — records are persistence detail, never passed into the domain |
 | `lib/work_coordinator/container.rb` | Composition root. Opens the DB, runs migrations, picks adapters per mode, wires use cases. |
 | `spec/` | RSpec suite, mirroring `lib/`; `spec/factories/` holds FactoryBot definitions |
+| `spec/support/fake_workspace_agent.rb` | Test helper that simulates a workspace agent listening on a Unix socket |
 | `docs/commands/` | One markdown file per CLI command |
 
 ## Key architectural patterns
@@ -25,6 +30,19 @@ A Ruby CLI that coordinates AI coding agents running in tmux panes. It tracks wo
 **Dependency injection via `Container`.** Nothing constructs its own collaborators. `Container#initialize` builds adapters based on the requested modes and `Container#wire!` passes them into the use cases as keyword arguments. Constructing a container has side effects (it connects and migrates the database), so it is built once per command invocation and never inside library code.
 
 **Modes.** `:local` uses a Unix socket; `:messages` polls the macOS Messages database. Receivers are built per mode and combined in `CompositeMessageReceiver`; the sender is picked from the modes with `:messages` winning over `:local`.
+
+**The `WorkspaceAgentSession` decorator.** `WorkspaceAgentSession` implements `Ports::AgentSession` and wraps `TmuxAgentSession`, delegating everything it does not care about. It intercepts `deliver` to consult the `WorkspaceAgentRegistry`: on a hit it writes a JSON `command` payload to the agent's socket; on `Errno::ECONNREFUSED` it retries with exponential backoff (`BACKOFF_SECONDS`, ~1 minute total) and raises `DeliveryTimeout` if the budget runs out; on `Errno::ENOENT` the socket is gone, so it unregisters the workspace and falls back to plain tmux delivery. `inject` steers a live pipeline and reads the agent's reply — no fallback and no retry, since a steer only matters while the pipeline it interrupts is still running. This decorator is the canonical way to add routing behavior: use cases keep talking to `Ports::AgentSession` and never learn that workspace agents exist.
+
+**Status receiver.** `WorkspaceStatusReceiver` owns its own `UNIXServer` and accept loop, the same shape as `SocketMessageReceiver`, but it is deliberately **not** a `MessageReceiver` — it carries agent telemetry, not human conversation, and nothing it receives is typed into a pane. Each connection carries one JSON message and gets one reply telling the agent whether to continue (`give_up`, `abort_pipeline`, `drop`). The CLI `run` command starts it in its own thread and stops it on shutdown.
+
+## Reply routing
+
+`RouteMessage` resolves `reply:` against **only** the items in `:waiting_for_human`. Two forms:
+
+- **Implicit** — `reply: use Postgres` needs exactly one waiting item. Zero gives `:nothing_waiting`; more than one gives `:ambiguous_reply` and a message naming the candidates.
+- **Explicit** — `reply: WC-42 use Postgres` names its target. An unknown reference gives `:unknown_reference`; a known item that is not waiting gives `:not_waiting`, with wording that distinguishes completed from abandoned.
+
+Refusals come back as an unrouted `Result` carrying a `reason` and a `human_message`; they never raise. When the item's workspace has a registered agent, the reply is injected as a steer instead of typed into the pane, and a refused steer leaves the item waiting — the human's words never landed, so the open question stays open.
 
 ## Adding a new command
 
@@ -48,6 +66,7 @@ A Ruby CLI that coordinates AI coding agents running in tmux panes. It tracks wo
 
 - **Constructor injection everywhere.** Collaborators arrive as keyword arguments. No globals, no singletons, no `Adapter.new` inside a use case.
 - **Fakes, not mocks, for internal classes.** Use `FakeAgentSession`, `FakeMessageSender`, `InMemoryWorkItemRepository`. Do not `allow`/`expect` on classes we own — if a fake is awkward to write, the seam is in the wrong place.
+- **Use `FakeWorkspaceAgent` for socket-facing specs.** Any spec exercising code that talks to a workspace agent socket uses `spec/support/fake_workspace_agent.rb`: it opens a `UNIXServer`, accepts one connection, records the JSON it receives, and writes a configurable `reply`. Start it in `before`, `stop` it in `after`, and use `wait_for_message` to synchronize.
 - **Mocks are acceptable only at true system boundaries** where no fake is practical, and even then prefer a thin adapter that can be faked.
 - **Domain stays pure.** No ActiveRecord, no shelling out, no `ENV` reads below the adapter layer.
 - **Conventional commits.** `feat(scope):`, `fix(scope):`, `refactor(scope):`, `chore(scope):`, `docs(scope):`. Scope is usually a layer (`cli`, `adapters`, `domain`, `container`).
