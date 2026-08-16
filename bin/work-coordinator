@@ -602,6 +602,7 @@ when "run"
 
   status_socket_path = ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock")
   puts "Accepting workspace agent status reports on #{status_socket_path}"
+  container.workspace_agent_registry.clear
   status_thread = Thread.new { container.workspace_status_receiver.start }
 
   stop_all = proc do
