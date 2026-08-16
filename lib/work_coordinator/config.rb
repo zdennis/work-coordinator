@@ -54,13 +54,20 @@ module WorkCoordinator
       copy
     end
 
-    # An untargeted message (no role token) is only for the default role;
-    # a targeted one matches the role itself or any of its aliases.
-    def matches_role?(role_token)
-      mine = role.to_s.downcase
-      return mine.empty? || mine == "default" if role_token.nil?
+    # Role assumed for messages that carry no role token.
+    # Defaults to "default" so existing senders continue to work on
+    # unconfigured machines.
+    def default_message_role
+      data.fetch("default_message_role", "default")
+    end
 
-      token = role_token.to_s.downcase
+    # An untargeted message (no role token) is treated as carrying
+    # `default_message_role`; a targeted one matches the coordinator's role
+    # or any of its aliases.
+    def matches_role?(role_token)
+      effective_token = role_token.nil? ? default_message_role : role_token
+      token = effective_token.to_s.downcase
+      mine  = role.to_s.downcase
       token == mine || role_aliases.map { |a| a.to_s.downcase }.include?(token)
     end
 
@@ -150,6 +157,7 @@ module WorkCoordinator
         # implicit_reply_enabled: true # Allow bare `reply: …` to route to the single waiting item
         # role: default                # Role token this coordinator answers to
         # role_aliases: []             # Extra names this coordinator also answers to
+        # default_message_role: default  # Role assumed for messages with no role token
         # auto_launch_workspace: false  # Automatically launch dormant workspaces when routing AI commands via URL
         # workspace_launch_timeout_seconds: 20  # Max seconds to wait for a launched workspace to become active
         aliases:

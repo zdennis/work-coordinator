@@ -101,6 +101,27 @@ RSpec.describe WorkCoordinator::Config do
       File.write(config_path, "role: home\n")
       expect(config.matches_role?("work")).to be(false)
     end
+
+    it "treats a nil token as the default_message_role when configured" do
+      File.write(config_path, "role: home\ndefault_message_role: home\n")
+      expect(config.matches_role?(nil)).to be(true)
+    end
+
+    it "drops a nil token when default_message_role does not match the coordinator role" do
+      File.write(config_path, "role: home\ndefault_message_role: work\n")
+      expect(config.matches_role?(nil)).to be(false)
+    end
+  end
+
+  describe "#default_message_role" do
+    it "returns 'default' when not configured" do
+      expect(config.default_message_role).to eq("default")
+    end
+
+    it "returns the configured value" do
+      File.write(config_path, "default_message_role: work\n")
+      expect(config.default_message_role).to eq("work")
+    end
   end
 
   describe "#ai_command" do

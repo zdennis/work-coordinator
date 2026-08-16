@@ -160,6 +160,7 @@ when "config"
   SUPPORTED_CONFIG_KEYS = %w[
     ai_command
     role
+    default_message_role
     instruction_context
     slash_commands_enabled
     tmux_fallback_enabled
