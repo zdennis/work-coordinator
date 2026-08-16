@@ -37,6 +37,10 @@ module WorkCoordinator
       data.fetch("aliases", {})
     end
 
+    def role
+      data.fetch("role", "default")
+    end
+
     def instruction_context
       data.fetch("instruction_context", "")
     end

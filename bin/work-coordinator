@@ -489,6 +489,29 @@ when "run"
     debug: options.fetch(:debug, false)
   )
   container.restart_coordinator.announce_boot!
+
+  if options.fetch(:debug, false)
+    aliases_str = config.aliases.empty? ? "(none)" : config.aliases.map { |k, v| "#{k}→#{v}" }.join(", ")
+    ctx = config.instruction_context.to_s
+    ctx_str = if ctx.empty?
+                "(none)"
+              elsif ctx.length > 40
+                "#{ctx[0, 40]}…"
+              else
+                ctx
+              end
+    container.logger.debug("work-coordinator booting")
+    container.logger.debug("config: #{config.path}")
+    container.logger.debug("mode(s): #{modes.join(', ')}")
+    container.logger.debug("role: #{config.role}")
+    container.logger.debug("slash_commands_enabled: #{config.slash_commands_enabled?}")
+    container.logger.debug("dispatch_via_sockets: #{config.dispatch_via_sockets?}")
+    container.logger.debug("tmux_fallback_enabled: #{config.tmux_fallback_enabled?}")
+    container.logger.debug("implicit_reply_enabled: #{config.implicit_reply_enabled?}")
+    container.logger.debug("instruction_context: #{ctx_str}")
+    container.logger.debug("aliases: #{aliases_str}")
+  end
+
   modes.each do |m|
     case m
     when :local    then puts "work-coordinator running on #{socket_path} (local socket)"
