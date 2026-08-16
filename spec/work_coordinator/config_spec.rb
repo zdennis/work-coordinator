@@ -58,6 +58,51 @@ RSpec.describe WorkCoordinator::Config do
     end
   end
 
+  describe "#role_aliases" do
+    it "returns an empty list when the config file does not exist" do
+      expect(config.role_aliases).to eq([])
+    end
+
+    it "returns the aliases from the config file" do
+      File.write(config_path, "role: home\nrole_aliases:\n  - house\n  - casa\n")
+      expect(config.role_aliases).to eq(%w[house casa])
+    end
+  end
+
+  describe "#with_role" do
+    it "overrides the role without touching the file-backed config" do
+      File.write(config_path, "role: home\n")
+      expect(config.with_role("work").role).to eq("work")
+      expect(config.role).to eq("home")
+    end
+  end
+
+  describe "#matches_role?" do
+    it "matches a nil token when the role is the default" do
+      expect(config.matches_role?(nil)).to be(true)
+    end
+
+    it "does not match a nil token when the role is not the default" do
+      File.write(config_path, "role: home\n")
+      expect(config.matches_role?(nil)).to be(false)
+    end
+
+    it "matches its own role regardless of case" do
+      File.write(config_path, "role: home\n")
+      expect(config.matches_role?("HOME")).to be(true)
+    end
+
+    it "matches any of its aliases regardless of case" do
+      File.write(config_path, "role: home\nrole_aliases:\n  - House\n")
+      expect(config.matches_role?("house")).to be(true)
+    end
+
+    it "does not match an unrelated token" do
+      File.write(config_path, "role: home\n")
+      expect(config.matches_role?("work")).to be(false)
+    end
+  end
+
   describe "#ai_command" do
     it "returns the default when the config file does not exist" do
       expect(config.ai_command).to eq(WorkCoordinator::Config::DEFAULT_AI_COMMAND)

@@ -66,7 +66,7 @@ module WorkCoordinator
                 :set_default_project, :restart_state_repo, :git_runner,
                 :restart_coordinator, :update_and_restart, :register_command_work_item,
                 :workspace_agent_registry, :complete_work_item, :workspace_status_receiver,
-                :logger
+                :logger, :config
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -77,6 +77,7 @@ module WorkCoordinator
     # @param modes [Array<Symbol>, Symbol] any of `:local`, `:messages`
     # @param argv [Array<String>] command line to re-exec on restart
     # @param env [Hash{String=>String}] environment to re-exec with
+    # @param role [String, nil] overrides the role from config when given
     # @raise [ArgumentError] when a mode is unrecognized
     def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"), # rubocop:disable Metrics/AbcSize
                    socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"),
@@ -85,9 +86,10 @@ module WorkCoordinator
                    argv: [$PROGRAM_NAME],
                    env: ENV.to_h,
                    debug: false,
+                   role: nil,
                    config: Config.load)
       modes = Array(modes).map(&:to_sym).uniq
-      @config = config
+      @config = role ? config.with_role(role) : config
       @socket_path = socket_path
       @argv = argv
       @env = env

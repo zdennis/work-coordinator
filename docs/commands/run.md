@@ -14,6 +14,18 @@ By default `run` enables all modes — local socket and Messages.app polling —
 |------|-------------|
 | `-m`, `--mode MODE` | Receive mode. Repeatable and comma-separated. Valid values: `all`, `local`, `messages`. Defaults to `all`. |
 | `--debug` | Enable debug logging to stderr. Prints routing decisions, registry hits and misses, tmux targets, and agent registration events as they happen. |
+| `--role ROLE` | Role this coordinator answers to, overriding the `role:` key in `config.yml` for this run. |
+
+The role names this coordinator so messages can be addressed to it when more
+than one coordinator is running. Alongside `role:`, the config file accepts
+`role_aliases:` — a list of other names the same coordinator answers to:
+
+```yaml
+role: home
+role_aliases:
+  - house
+  - casa
+```
 
 The `--mode` flag can be given multiple times or with a comma-separated list:
 

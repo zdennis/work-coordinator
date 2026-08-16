@@ -527,7 +527,13 @@ when "run"
     opts.separator "  # Run on a custom socket path"
     opts.separator "  WC_SOCKET=/var/run/wc.sock work-coordinator run"
     opts.separator ""
+    opts.separator "  # Override the role this coordinator answers to"
+    opts.separator "  work-coordinator run --role home"
+    opts.separator ""
     opts.separator "Options:"
+    opts.on("--role ROLE", "Role this coordinator answers to (overrides config)") do |v|
+      options[:role] = v
+    end
     opts.on("--debug", "Enable debug logging of message routing to stderr") do
       options[:debug] = true
     end
@@ -548,14 +554,15 @@ when "run"
     exit 1
   end
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
-  config    = WorkCoordinator::Config.load
   container = WorkCoordinator::Container.new(
-    config: config,
+    config: WorkCoordinator::Config.load,
     modes: modes,
     argv: [$PROGRAM_NAME, *ORIGINAL_ARGV],
     env: ENV.to_h,
-    debug: options.fetch(:debug, false)
+    debug: options.fetch(:debug, false),
+    role: options[:role]
   )
+  config = container.config
   container.restart_coordinator.announce_boot!
 
   if options.fetch(:debug, false)
@@ -571,7 +578,9 @@ when "run"
     container.logger.debug("work-coordinator booting")
     container.logger.debug("config: #{config.path}")
     container.logger.debug("mode(s): #{modes.join(', ')}")
-    container.logger.debug("role: #{config.role}")
+    aliases_list = config.role_aliases.empty? ? "(none)" : config.role_aliases.join(", ")
+    container.logger.debug("role: #{config.role}#{' (from --role)' if options[:role]}")
+    container.logger.debug("role_aliases: #{aliases_list}")
     container.logger.debug("slash_commands_enabled: #{config.slash_commands_enabled?}")
     container.logger.debug("dispatch_via_sockets: #{config.dispatch_via_sockets?}")
     container.logger.debug("tmux_fallback_enabled: #{config.tmux_fallback_enabled?}")

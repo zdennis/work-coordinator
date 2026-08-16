@@ -4,6 +4,7 @@ require "logger"
 require "work_coordinator/ports/message_receiver"
 require "work_coordinator/application/route_message"
 require "work_coordinator/domain/ai_command"
+require "work_coordinator/domain/role_token"
 require "work_coordinator/domain/slash_command"
 
 module WorkCoordinator

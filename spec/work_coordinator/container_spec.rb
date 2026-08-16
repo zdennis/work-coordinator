@@ -63,6 +63,20 @@ RSpec.describe WorkCoordinator::Container do
     expect { described_class.new(modes: [:carrier_pigeon]) }.to raise_error(ArgumentError, /carrier_pigeon/)
   end
 
+  it "exposes the config's role when no role is given" do
+    container = described_class.new
+
+    expect(container.config.role).to eq(WorkCoordinator::Config.load.role)
+  end
+
+  it "overrides the config's role when one is given" do
+    config = WorkCoordinator::Config.new("/nonexistent/config.yml")
+    container = described_class.new(config: config, role: "home")
+
+    expect(container.config.role).to eq("home")
+    expect(config.role).to eq("default")
+  end
+
   it "wires the restart collaborators" do
     container = described_class.new
 

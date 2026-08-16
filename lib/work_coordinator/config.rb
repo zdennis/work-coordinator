@@ -38,7 +38,30 @@ module WorkCoordinator
     end
 
     def role
-      data.fetch("role", "default")
+      @role_override || data.fetch("role", "default")
+    end
+
+    # Other names this coordinator answers to, in addition to its role.
+    def role_aliases
+      Array(data.fetch("role_aliases", []))
+    end
+
+    # Returns a copy of this config whose role is overridden, leaving the
+    # file-backed config untouched.
+    def with_role(role)
+      copy = dup
+      copy.role_override = role
+      copy
+    end
+
+    # An untargeted message (no role token) is only for the default role;
+    # a targeted one matches the role itself or any of its aliases.
+    def matches_role?(role_token)
+      mine = role.to_s.downcase
+      return mine.empty? || mine == "default" if role_token.nil?
+
+      token = role_token.to_s.downcase
+      token == mine || role_aliases.map { |a| a.to_s.downcase }.include?(token)
     end
 
     def instruction_context
@@ -101,6 +124,10 @@ module WorkCoordinator
       removed
     end
 
+    protected
+
+    attr_writer :role_override
+
     private
 
     def data
@@ -121,6 +148,8 @@ module WorkCoordinator
         # tmux_fallback_enabled: true  # Fall back to tmux delivery when a workspace agent's socket is gone
         # dispatch_via_sockets: true   # Steer registered workspace agents via their socket instead of tmux
         # implicit_reply_enabled: true # Allow bare `reply: …` to route to the single waiting item
+        # role: default                # Role token this coordinator answers to
+        # role_aliases: []             # Extra names this coordinator also answers to
         # auto_launch_workspace: false  # Automatically launch dormant workspaces when routing AI commands via URL
         # workspace_launch_timeout_seconds: 20  # Max seconds to wait for a launched workspace to become active
         aliases:
