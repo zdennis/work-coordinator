@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "logger"
+
 module WorkCoordinator
   # Composition root: connects the database, picks adapters for the requested
   # modes, and wires up the application use cases. Constructing a container has
@@ -63,7 +65,8 @@ module WorkCoordinator
                 :deliver_to_main_session, :project_repo, :project_resolver,
                 :set_default_project, :restart_state_repo, :git_runner,
                 :restart_coordinator, :update_and_restart, :register_command_work_item,
-                :workspace_agent_registry, :complete_work_item, :workspace_status_receiver
+                :workspace_agent_registry, :complete_work_item, :workspace_status_receiver,
+                :logger
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -75,16 +78,20 @@ module WorkCoordinator
     # @param argv [Array<String>] command line to re-exec on restart
     # @param env [Hash{String=>String}] environment to re-exec with
     # @raise [ArgumentError] when a mode is unrecognized
-    def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"),
+    def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"), # rubocop:disable Metrics/AbcSize
                    socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"),
                    status_socket_path: ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock"),
                    modes: [:local],
                    argv: [$PROGRAM_NAME],
-                   env: ENV.to_h)
+                   env: ENV.to_h,
+                   debug: false)
       modes = Array(modes).map(&:to_sym).uniq
       @socket_path = socket_path
       @argv = argv
       @env = env
+      @logger = debug ? Logger.new($stderr) : Logger.new(IO::NULL)
+      @logger.level = Logger::DEBUG
+      @logger.formatter = proc { |sev, _, _, msg| "[#{sev}] #{msg}\n" }
       Persistence.connect!(database: db_path)
       Persistence.migrate!
       build_core_adapters!(modes)
@@ -100,9 +107,10 @@ module WorkCoordinator
       @project_resolver = Application::ProjectResolver.new(project_repo: @project_repo)
       @work_item_repo   = Adapters::SqliteWorkItemRepository.new
       @event_store      = Adapters::SqliteEventStore.new
-      @workspace_agent_registry = Adapters::SqliteWorkspaceAgentRegistry.new
-      tmux = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
-      @agent_session  = Adapters::WorkspaceAgentSession.new(tmux: tmux, registry: @workspace_agent_registry)
+      @workspace_agent_registry = Adapters::SqliteWorkspaceAgentRegistry.new(logger: @logger)
+      tmux = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo, logger: @logger)
+      @agent_session  = Adapters::WorkspaceAgentSession.new(tmux: tmux, registry: @workspace_agent_registry,
+                                                            logger: @logger)
       @message_sender = build_sender(modes)
     end
 
@@ -112,7 +120,8 @@ module WorkCoordinator
         work_item_repo: @work_item_repo,
         event_store: @event_store,
         complete_work_item: @complete_work_item,
-        notify_human: @notify_human
+        notify_human: @notify_human,
+        logger: @logger
       )
     end
 
@@ -144,7 +153,8 @@ module WorkCoordinator
         register_command_work_item: @register_command_work_item,
         restart_coordinator: @restart_coordinator,
         update_and_restart: @update_and_restart,
-        slash_commands_enabled: Config.new.slash_commands_enabled?
+        slash_commands_enabled: Config.new.slash_commands_enabled?,
+        logger: @logger
       )
     end
 
@@ -179,7 +189,8 @@ module WorkCoordinator
         agent_session: @agent_session,
         event_store: @event_store,
         workspace_agent_registry: @workspace_agent_registry,
-        notify_human: @notify_human
+        notify_human: @notify_human,
+        logger: @logger
       )
     end
 
@@ -250,7 +261,8 @@ module WorkCoordinator
         message_sender: @message_sender,
         aliases: config.aliases,
         instruction_context: config.instruction_context,
-        project_repo: @project_repo
+        project_repo: @project_repo,
+        logger: @logger
       )
     end
   end

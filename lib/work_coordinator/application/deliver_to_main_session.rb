@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "logger"
 require "work_coordinator/ports/agent_session"
 
 module WorkCoordinator
@@ -31,12 +32,13 @@ module WorkCoordinator
       # @param instruction_context [String] text appended to every instruction before delivery
       # @param project_repo [Ports::ProjectRepository, nil] used for DB-backed alias resolution
       def initialize(agent_session:, message_sender:, aliases: {}, instruction_context: "",
-                     project_repo: nil)
+                     project_repo: nil, logger: Logger.new(IO::NULL))
         @agent_session       = agent_session
         @message_sender      = message_sender
         @aliases             = aliases
         @instruction_context = instruction_context
         @project_repo        = project_repo
+        @logger              = logger
       end
 
       # @param workspace_name [String] name (or alias) of the tmux session to target
@@ -46,6 +48,8 @@ module WorkCoordinator
       # @return [Result]
       def call(workspace_name:, instructions:, recipient:, work_item_ref: nil)
         resolved = resolve_alias(workspace_name)
+        @logger.debug "DeliverToMainSession: workspace_name=#{workspace_name.inspect} " \
+                      "resolved=#{resolved.inspect} pane=#{MAIN_PANE_INDEX}"
         full_message = build_message(instructions)
         @agent_session.deliver_to_pane(
           workspace_name: resolved,

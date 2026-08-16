@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "logger"
+
 module WorkCoordinator
   module Application
     # Outcome of a {RouteMessage} call.
@@ -39,12 +41,14 @@ module WorkCoordinator
       # @param notify_human [NotifyHuman, nil] told when an injected steer is refused
       # @return [void]
       def initialize(work_item_repo:, agent_session:, event_store:,
-                     workspace_agent_registry: nil, notify_human: nil)
+                     workspace_agent_registry: nil, notify_human: nil,
+                     logger: Logger.new(IO::NULL))
         @work_item_repo = work_item_repo
         @agent_session = agent_session
         @event_store = event_store
         @workspace_agent_registry = workspace_agent_registry
         @notify_human = notify_human
+        @logger = logger
       end
 
       # Delivers the message when its prefix names a known work item with a live
@@ -55,6 +59,7 @@ module WorkCoordinator
       # @param raw_message [String]
       # @return [Result]
       def call(raw_message:)
+        @logger.debug "RouteMessage: raw=#{raw_message.inspect}"
         if (reply_match = REPLY_PATTERN.match(raw_message))
           return route_reply(instruction: reply_match[1].strip, raw_message: raw_message)
         end
@@ -69,6 +74,7 @@ module WorkCoordinator
 
       def route_with_prefix(ref:, body:, raw_message:)
         work_item = @work_item_repo.find_all.find { |wi| wi.external_reference == ref }
+        @logger.debug "route_with_prefix: ref=#{ref.inspect} workspace=#{work_item&.workspace_name.inspect}"
         return Result.new(routed: false, work_item: nil, body: body) unless work_item
 
         session_id = @agent_session.active_session(work_item_id: work_item.id)

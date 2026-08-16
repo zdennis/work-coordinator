@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "logger"
 require "work_coordinator/ports/message_receiver"
 require "work_coordinator/application/route_message"
 require "work_coordinator/domain/ai_command"
@@ -11,7 +12,8 @@ module WorkCoordinator
       include Ports::MessageReceiver
 
       def initialize(inner:, ai_command_handler:, deliver_to_main_session:, restart_coordinator:,
-                     update_and_restart:, register_command_work_item: nil, slash_commands_enabled: true)
+                     update_and_restart:, register_command_work_item: nil, slash_commands_enabled: true,
+                     logger: Logger.new(IO::NULL))
         @inner                      = inner
         @ai_command_handler         = ai_command_handler
         @deliver_to_main_session    = deliver_to_main_session
@@ -19,6 +21,7 @@ module WorkCoordinator
         @restart_coordinator        = restart_coordinator
         @update_and_restart         = update_and_restart
         @slash_commands_enabled     = slash_commands_enabled
+        @logger                     = logger
       end
 
       def start(&block)
@@ -50,6 +53,10 @@ module WorkCoordinator
         return if @slash_commands_enabled && slash_command_dispatched?(body)
 
         command = Domain::AiCommand.new(body)
+        @logger.debug "AiCommand parsed: verb=#{command.verb.inspect} " \
+                      "workspace=#{command.workspace.inspect} " \
+                      "instructions=#{command.instructions.inspect}"
+        @logger.debug "Routing: #{command.send_to_main_session? ? 'main session' : 'ai command handler'}"
         if command.send_to_main_session?
           deliver_to_main(workspace_name: command.workspace, instructions: command.instructions)
         else

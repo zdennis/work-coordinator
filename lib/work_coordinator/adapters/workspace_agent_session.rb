@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "logger"
 require "securerandom"
 require "socket"
 require "work_coordinator/ports/agent_session"
@@ -28,10 +29,13 @@ module WorkCoordinator
       # @param tmux [Ports::AgentSession] the session used when no agent is registered
       # @param registry [Ports::WorkspaceAgentRegistry]
       # @param sleeper [#call] waits the given number of seconds between retries
-      def initialize(tmux:, registry:, sleeper: ->(seconds) { sleep(seconds) })
+      # @param logger [Logger]
+      def initialize(tmux:, registry:, sleeper: ->(seconds) { sleep(seconds) },
+                     logger: Logger.new(IO::NULL))
         @tmux = tmux
         @registry = registry
         @sleeper = sleeper
+        @logger = logger
       end
 
       # Sends a message to the workspace's agent, or to its tmux pane.
@@ -44,6 +48,8 @@ module WorkCoordinator
       # @raise [DeliveryTimeout] when a registered agent stops answering
       def deliver(session_id:, message:, work_item_ref: nil)
         entry = work_item_ref && @registry.find(session_id)
+        @logger.debug "WorkspaceAgentSession#deliver: workspace=#{session_id.inspect} " \
+                      "has_registry=#{entry ? true : false}"
         return @tmux.deliver(session_id: session_id, message: message) unless entry
 
         deliver_to_agent(
@@ -53,6 +59,8 @@ module WorkCoordinator
           body: message
         )
       rescue Errno::ENOENT
+        @logger.debug "WorkspaceAgentSession#deliver: socket gone for workspace=#{session_id.inspect}, " \
+                      "unregistering and falling back to tmux"
         @registry.unregister(workspace_name: session_id)
         @tmux.deliver(session_id: session_id, message: message)
       end
@@ -74,6 +82,7 @@ module WorkCoordinator
             .merge(interrupt: interrupt)
         )
       rescue Errno::ENOENT
+        @logger.debug "WorkspaceAgentSession#inject: socket gone for workspace=#{workspace_name.inspect}, unregistering"
         @registry.unregister(workspace_name: workspace_name)
         { ok: false, error: "agent_gone" }
       rescue Errno::ECONNREFUSED

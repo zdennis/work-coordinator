@@ -1,0 +1,699 @@
+{
+  "schemaVersion": 1,
+  "$agent": {
+    "expansion": "/plg:agent run",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$create-pr": {
+    "expansion": "$pull-request:create",
+    "description": "Shorthand alias for $pull-request:create — open a PR with full polish pipeline",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$backup-branch": {
+    "expansion": "Run /git-backup-branch",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$commit": {
+    "expansion": "$git:commit",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$commit-and-push": {
+    "expansion": "$git:commit-and-push",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$commit-review": {
+    "expansion": "$git:commit-review",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$commit-template": {
+    "expansion": "$git:commit-template",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$conventional-commit": {
+    "expansion": "$git:conventional-commit",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$daily-thread": {
+    "expansion": "Run the command: ~/bin/open-daily-thread",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$devspace:startup": {
+    "expansion": "DevSpace is starting. Wait 1 minute, then $devspace:verify. If sync is not confirmed, wait another minute and repeat the same verification steps.",
+    "description": "DevSpace is starting — wait 1 min then verify sync, retry once if needed",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$devspace:up": {
+    "expansion": "DevSpace is up. $devspace:verify",
+    "description": "DevSpace is up — verify changes are synced",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$devspace:verify": {
+    "expansion": "Verify that changes are synced to DevSpace. Create a randomly-named temporary file in tmp/ai/ (e.g. tmp/ai/sync-check-<random>.txt) with a known timestamp, then run `devspace run command 'cat tmp/ai/<filename>'` to confirm the file appears inside the container. Report whether sync is confirmed or not, then delete the temp file.",
+    "description": "Verify DevSpace sync by creating a temp file locally and confirming it appears in the container",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$diagram:class": {
+    "expansion": "Generate a class diagram using the /plg:diagram skill. Run: /plg:diagram class <description>. Use for: object-oriented design, domain models, inheritance hierarchies, composition relationships, interface contracts. Show classes with attributes and methods, relationships (inherits, composes, uses), and cardinality.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$diagram:er": {
+    "expansion": "Generate an entity-relationship diagram using the /plg:diagram skill. Run: /plg:diagram er <description>. Use for: database schemas, data models, relationships between entities, foreign key relationships, cardinality (one-to-one, one-to-many, many-to-many).",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$diagram:flow": {
+    "expansion": "Generate a flow diagram using the /plg:diagram skill. Run: /plg:diagram flow <description>. Use for: system architecture, data flows, component relationships, layer diagrams, request/response paths, infrastructure topology. Colorize nodes by layer (infrastructure, consumer, API, service, persistence, jobs).",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$diagram:sequence": {
+    "expansion": "Generate a sequence diagram using the /plg:diagram skill. Run: /plg:diagram sequence <description>. Use for: message flows between actors/services, request/response cycles, async interactions, protocol walkthroughs, API call chains. Show participants, arrows with labels, activation bars where helpful.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$diagram:state": {
+    "expansion": "Generate a state diagram using the /plg:diagram skill. Run: /plg:diagram state <description>. Use for: lifecycle models, FSMs, status transitions, workflow states. Show states as nodes, transitions as labeled arrows, initial and terminal states clearly marked.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$fix-rebase": {
+    "expansion": "$git:fix-rebase",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$force-push": {
+    "expansion": "$git:force-push",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$format:bold-lead": {
+    "expansion": "Bold the lead sentence of each major section or thought unit:\n- The lead sentence (the question, recommendation, or key takeaway) should be bolded so it's visible on a scan\n- This applies especially when leading with a question (LWQ) or a Pyramid Principle answer — the bold makes the structure visible\n- Don't bold the whole paragraph, just the first sentence\n- Don't bold for decoration — only bold when the sentence genuinely anchors the section\n- In bullet lists, bold the first phrase if the bullet has a label-then-explanation structure (e.g. **Old before new:** begin sentences with...)",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$format:callouts": {
+    "expansion": "Use callout blocks to surface information that would otherwise hide in prose:\n- Use callouts for: warnings (destructive or irreversible actions), prerequisites (must-do-before), gotchas (non-obvious behavior), tips (time-saving shortcuts), and status (current state of something)\n- Label each callout explicitly: **Warning**, **Note**, **Tip**, **Prerequisite**, **Gotcha** — don't leave readers to guess the intent\n- Keep callout content short: one to three sentences. If it needs more, it's a section, not a callout.\n- Don't overuse: if everything is a callout, nothing is. Reserve them for information a reader could miss but shouldn't.\n- Format (markdown): use blockquote + bold label: `> **Warning:** text here`",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$format:executive-summary": {
+    "expansion": "Open long documents with an executive summary: 3–5 sentences covering (1) what this document covers, (2) the key finding or recommendation, (3) what the reader needs to do (if anything). The summary must stand alone — a reader who reads nothing else should know what was decided and why. Place it immediately after the title, before any section headers. Never use the summary to preview structure (\"this document will cover...\"); use it to deliver the answer.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$format:tables": {
+    "expansion": "Use a table when comparing: if you're writing \"X is Y, whereas Z is W\", that's a table. Table rules: use when rows are parallel and columns are consistent; label columns with the distinguishing dimension; keep cell content short (one concept per cell); omit the table when there are fewer than 3 rows or 2 meaningful columns — prose handles it more naturally. Never use a table just to impose visual structure on content that isn't genuinely comparative.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$format:toc": {
+    "expansion": "Add a table of contents when the document has three or more navigable sections:\n- Place it immediately after the opening paragraph or abstract — never before the lead\n- Use the actual section headings verbatim (or a shortened version that's still recognizable)\n- Link each entry to its section anchor (markdown: `[Section Name](#section-name)`)\n- Omit the TOC entry for the introduction itself\n- Don't include sub-sections in the TOC unless the document is long enough that sub-navigation adds real value\n- Keep the TOC as a plain list, not nested bullets, unless the hierarchy is genuinely two-level and meaningful",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:backup-branch": {
+    "expansion": "Run /git-backup-branch",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:commit": {
+    "expansion": "First run $run-lint. Then run $run-tests. If either fails, attempt to fix the failures using $fix-rebase, then re-run the failed check. Retry up to 5 times total. If all 5 attempts fail, stop and report to the user what failed and what was tried. If both pass, commit using $conventional-commit.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:commit-and-push": {
+    "expansion": "First, run \\$rubocop-rspec if it hasn't been run yet. Then commit using: \\$conventional-commit . Then push.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:commit-review": {
+    "expansion": "Run /plg:play commit-review",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:commit-template": {
+    "expansion": "  ---\n  {subject line in conventional commit format}\n\n  {brief description of change}\n\n  Command ran:\n\n    {bundle update command ran}\n\n  REFERENCES:\n\n  - {full url to related jira}",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:conventional-commit": {
+    "expansion": "Use conventional commit format. Make sure the commit message body answers the 'Why?' question for the change. Ensure commits are logicaly chunked and cohesively related. Test updates, linting, docs should go int he change that made them necessary. At the end be sure to include a REFERENCES section that is a markdown list that includes at least the full JIRA being worked on (if present)",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:fix-rebase": {
+    "expansion": "Use fixup commits to enable autosquashing for changes that belong back into the commit that introduced the code being updated. To find the right target, use `git log --oneline` to identify the commit that first introduced the file or method being changed, then run `git commit --fixup=<sha>`. Otherwise, use a conventional commit for standalone changes — ensure the commit body answers the 'why', and include a REFERENCES section with the full JIRA URL (if one exists).",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:force-push": {
+    "expansion": "Force push using --force-with-lease: run `git push --force-with-lease`. Never use --force.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:rebase-autosquash": {
+    "expansion": "Run git rebase autosquash on this topic branch against main: use `git log main..HEAD --oneline` to identify the commit range, then run `git rebase -i --autosquash main`. Verify the rebase todo list looks correct before executing. Do not drop any commits.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:verify-steps": {
+    "expansion": "Find and run the \"How to Verify Changes\" steps for the open PR and any verify scripts in bin/. Check: (1) `gh pr view --json body` to extract the How to Verify section from the open PR (skip if no PR is open); (2) `ls bin/verify* bin/*scenario* 2>/dev/null` for executable verify scripts. Run any scripts found via devspace (`devspace --kube-context scooter-usw2-1 run command './bin/<script>'`). Report pass/fail for each step.",
+    "description": "Find and run the PR's How to Verify steps and any bin/verify* scripts via devspace",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$git:workflow": {
+    "expansion": "Run the full git workflow in order: (1) $git:backup-branch, (2) $git:fix-rebase for each change made, (3) $run-lint — stop and report if red, do not proceed, (4) $run-tests — stop and report if red, do not proceed, (5) $git:rebase-autosquash, (6) if applicable: $git:verify-steps — if no PR is open and no verify scripts exist, note that and move on, (7) $git:force-push.",
+    "description": "Full git workflow: backup → fixup commits → lint → tests → autosquash rebase → verify steps → force push",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$handoff": {
+    "expansion": "Write a handoff document for the current session so work can resume in a new conversation. Save it to the active project's Obsidian notes directory (Projects/<ProjectName>/) as 'handoff-<short-slug>.md' with frontmatter (parent, tags, date, updated_at, status: active, type: handoff, next-play, git_commit, branch, repository). Include: (1) What to do first — the single most important next action; (2) Tasks table with status (✅/🔴/⬜); (3) Branch state — git log --oneline main..HEAD output; (4) Any open design questions that must be resolved before coding; (5) Blockers with root cause and recommended fix; (6) Suggestions/minor items with file:line references; (7) Key files table; (8) How to resume — numbered steps a fresh session can follow. After writing, print the Obsidian deep link and file path to the note.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$jira:add-jira": {
+    "expansion": "Create a JIRA follow-up ticket. Each ticket needs a title, a goal, and context. Always show me a draft before posting. Format all content (description, acceptance criteria, comments) using JIRA wiki markup: use `h2.` for section headings, `*` for bullet lists (never `#` for bullets — JIRA renders those as h1 headings), `{code:ruby}...{code}` for code blocks, `{{monospace}}` for inline code, and `[text|url]` for links. Put the acceptance criteria in custom field customfield_19300. Use PUFFINS as the project unless told otherwise. After posting, fetch the created ticket and verify the rendered content looks correct — check for mangled headings, broken lists, or escaped characters. If anything looks wrong, fix it by updating the ticket.",
+    "description": "Draft and post a JIRA follow-up ticket with title, goal, context, and acceptance criteria",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$loop:address-comments": {
+    "expansion": "$orchestrator:workpony\n\nRun this as an orchestrator-mode PR comment address-and-verify loop on the current branch. You are the orchestrator: do not read files, edit code, run rubocop/rspec, or make commits yourself — delegate every step to an agent and pass context between them.\n\n1. Delegate: create a backup branch of the current branch state ($backup-branch) before any changes are made. Confirm the backup branch name before proceeding.\n\n2. Delegate: run /plg:play pr-comments to fetch and summarize all open PR comments. Capture the full list as input to step 3.\n\nSTOP CONDITION: if there are no open, actionable comments (all resolved, or only compliments/acknowledgements), stop here and report clean. Do not loop further.\n\n3. Skeptic pass (before triage): for each comment, delegate one skeptic agent whose job is to treat the comment as wrong until codebase evidence proves otherwise. The agent must: read the files the comment references, search for counter-evidence, and return a verdict — VALID (evidence supports the comment), INVALID (evidence contradicts it), or UNCLEAR (insufficient evidence either way) — with a one-sentence rationale and the specific file/line that drove the verdict. Run all skeptic agents in parallel. Capture their verdicts as input to step 4.\n\n4. Triage (orchestrator judgment, not delegated): review the comment list with skeptic verdicts in hand and decide what to address, what to decline, and what needs clarification from the author. INVALID-verdicted comments should be declined unless you override. UNCLEAR verdicts may warrant a response without a code change. Note every decision — surface all rejections and their reasons in the final summary, never apply silently.\n\n5. For each accepted comment, delegate the code change to an agent with focused context: the exact comment text, the skeptic verdict, the file/line it targets, and the target commit SHA for a fixup (found via `git log main...HEAD --oneline`). Group independent comments and run them in parallel; serialize only when one change depends on another.\n\n6. After each code change, delegate a test run scoped to the changed files ($run-tests). If tests fail, delegate a fix-and-retry to an agent, capped at 3 retries before escalating to the user.\n\n7. Delegate the commit for each applied change, following $fix-rebase: fixup commit against the originating commit when the change belongs there, otherwise a standalone $conventional-commit with a why body and REFERENCES section.\n\n8. Before each commit, delegate a lint check ($run-lint). Do not proceed to commit on red — delegate a fix-and-retry, capped at 3 retries per file before escalating.\n\n9. Once all accepted comments are addressed and committed, delegate $rebase-autosquash against main. Have the agent report the rebase todo list before executing; verify no commits are dropped.\n\n10. Delegate a force-push of the topic branch (never main) once the rebase is clean, using $force-push.\n\n11. Delegate a final pass applying $writing:anti-ai to any written comment responses or commit messages.\n\n12. Summarize: what each agent changed, the skeptic verdict for each comment, which comments were declined and why, which need author clarification, and what comes next (e.g. ready for re-review, or blocked on retry cap in step 6 or 8).",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$loop:docs": {
+    "expansion": "$orchestrator:workpony\n\nRun this as an orchestrator-mode documentation-quality loop on the current branch. You are the orchestrator: do not edit files, run rubocop/rspec, or make commits yourself — delegate every step to an agent and pass file/branch state between them. Track the iteration count; stop after 10 iterations regardless of skeptic verdict.\n\n1. Delegate: create a backup branch of the current branch state ($backup-branch) before any changes are made. Confirm the backup branch name before proceeding.\n\n2. Delegate: identify the documentation scope. Run `git diff main...HEAD --name-only` to find changed files. For each changed file, use `git diff main...HEAD -- <file>` to identify: (a) classes, modules, methods, and attributes added or modified on this branch; (b) methods in those files that are invoked by the changed code but not themselves in the diff — include these only because we are already touching the file. Report the full in-scope element list as structured input to step 3.\n\nSTOP CONDITION: if no in-scope elements are missing documentation and no prior skeptic pass flagged anything as INACCURATE or UNCLEAR, stop and report clean. Do not loop further.\n\n3. Documentation pass (one agent per changed file, run in parallel): each agent receives the file, its diff, and the in-scope element list for that file. The agent must: read the full file, identify which in-scope elements lack documentation or have only a stub, and write or improve documentation for those elements. Constraint: do not add documentation to any code not in the in-scope list for this file. Documentation must cover: purpose/intent, parameters (name, type, and semantics), return value, and any notable edge cases or invariants visible in the implementation.\n\n4. Skeptic pass (one agent per documented element, run in parallel): the skeptic assumes every doc is well-intentioned but inaccurate until the source code proves otherwise. For each doc block, the skeptic must: read the method/class/attribute implementation, check that the description matches what the code actually does, verify parameter names and types match the signature, verify the return value description matches what is returned, and flag any doc that overstates, understates, or contradicts the implementation. Verdict per element: ACCURATE (code supports the doc), INACCURATE (code contradicts the doc), or UNCLEAR (doc makes claims the code does not clarify).\n\n5. Triage (orchestrator judgment, not delegated): review skeptic verdicts. If all verdicts are ACCURATE, proceed to step 6. If any are INACCURATE or UNCLEAR, delegate targeted rewrites to documentation agents — one per flagged element, run in parallel — then re-run step 4 on only the revised elements. Repeat until all verdicts are ACCURATE or the iteration count reaches 10, whichever comes first. Surface every rejection and its reason in the final summary; never silently discard a skeptic finding.\n\n6. Delegate the commit for each documented file, following $fix-rebase: fixup commit against the originating commit that introduced or last modified the file being documented — identify it with `git log main...HEAD --oneline -- <file>`. Documentation belongs in the commit that introduced the code it describes, not in a standalone docs commit.\n\n7. Before each commit, delegate a lint check ($run-lint). Do not proceed to commit on red — delegate a fix-and-retry, capped at 3 retries per file before escalating to the user.\n\n8. Once all commits are staged, delegate $rebase-autosquash against main. Have the agent report the rebase todo list before executing; verify no commits are dropped.\n\n9. Delegate a force-push of the topic branch (never main) once the rebase is clean, using $force-push.\n\n10. Delegate a final anti-AI pass ($writing:anti-ai) on all documentation written this session — strip hollow openers, AI vocabulary, and excessive bullet-pointing from doc blocks.\n\n11. Summarize: total iterations run, elements documented, skeptic verdict for each, which elements (if any) remain unverified because the iteration cap was reached, and what comes next.",
+    "description": "Orchestrator-mode loop: document branch-touched code, skeptic-verify accuracy, fixup-commit into originating commits",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$loop:fix-ci": {
+    "expansion": "$orchestrator:workpony\n\nRun this as an orchestrator-mode CI-fix loop on the current branch. You are the orchestrator: do not edit files, run rubocop/rspec, or make commits yourself -- delegate every step to an agent and pass file/branch state between them.\n\n1. Delegate: create a backup branch of the current branch state ($backup-branch) before any changes are made. Confirm the backup branch name before proceeding.\n\n2. Delegate: fetch the latest CI run for this branch from GitHub. Use `gh run list --branch <branch> --limit 1 --json databaseId,status,conclusion` to identify the most recent run, then `gh run view <run-id> --log-failed` to get the failure output. Capture the full list of failed jobs and their error output as the input to step 3.\n\nSTOP CONDITION: if the latest CI run is passing (no failed jobs, or no runs exist), stop here and report clean. Do not loop further.\n\n3. Triage: review the failure list yourself (orchestrator judgment call, not delegated) and decide what to fix and what to skip (e.g. pre-existing flaky failures unrelated to this branch's changes). Note everything you are skipping and why -- surface all skips in the final summary, never silently.\n\n4. For each failure to fix, delegate the code change to an agent with focused context: the specific failure output, the file/line implicated, and what to change. One agent per independent failure; run independent failures in parallel.\n\n5. Delegate the commit for each applied fix, following $fix-rebase: fixup commit against the originating commit (found via `git log --oneline`) when the fix belongs there, otherwise a standalone $conventional-commit commit with a why body and REFERENCES section.\n\n6. Before each commit, delegate a lint check ($run-lint). Do not proceed to commit on red -- delegate a fix-and-retry to an agent, capped at 3 retries per file before escalating to me instead of looping silently.\n\n7. After all fixes are committed, delegate a local test run scoped to the changed files ($run-tests). If tests fail, delegate a fix-and-retry to an agent, capped at 3 retries before escalating to the user.\n\n8. Once all fixes are applied and committed, delegate $rebase-autosquash against main. Have the agent report the rebase todo list before executing; verify no commits are dropped.\n\n9. Delegate a force-push of the topic branch (never main) once the rebase is clean, using $force-push.\n\n10. Delegate a final pass applying $writing:anti-ai to all commit messages.\n\n11. Summarize: what each agent did, which CI failures were fixed, which were skipped and why, what comes next (e.g. CI re-run needed, or blocked on retry cap in step 6 or 7).",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$loop:local-review": {
+    "expansion": "$orchestrator:workpony\n\nRun this as an orchestrator-mode local-review-and-fix loop on the current branch. You are the orchestrator: do not edit files, run rubocop/rspec, or make commits yourself -- delegate every step to an agent and pass file/branch state between them.\n\n1. Delegate: create a backup branch of the current branch state ($backup-branch) before any changes are made. Confirm the backup branch name before proceeding.\n\n2. Delegate: run /plg:play local-review, selecting the three agents best suited to this change-set (choose from system-architect, api-consumer, tester, maintainer, newcomer based on what the diff actually touches). Capture the consolidated feedback list as the input to step 3.\n\nSTOP CONDITION: if the reviewers return no actionable feedback (approve-as-is, or only feedback already rejected in a prior loop pass), stop here and report clean. Do not loop further.\n\n3. Triage: review the feedback list yourself (orchestrator judgment call, not delegated) and decide what to apply. Note anything you are rejecting and why -- surface this in the final summary, do not apply it silently.\n\n4. For each accepted feedback item, delegate the code change to an agent with focused context: the specific finding, the file/line, and what to change. One agent per independent item; run independent items in parallel.\n\n5. Delegate the commit for each applied change, following $fix-rebase: fixup commit against the originating commit (found via `git log --oneline`) when the change belongs there, otherwise a standalone $conventional-commit commit with a why body and REFERENCES section.\n\n6. Before each commit, delegate a check per $rubocop. Do not proceed to commit on red -- delegate a fix-and-retry to an agent, capped at 3 retries per file before escalating to me instead of looping silently.\n\n7. Once all accepted feedback is applied and committed, delegate $rebase-autosquash against main. Have the agent report the rebase todo list before executing; verify no commits are dropped.\n\n8. Delegate a force-push of the topic branch (never main) once the rebase is clean, using $force-push.\n\n9. Delegate a final pass applying $writing:anti-ai to all commit messages and any written review responses.\n\n10. Summarize: what each agent did, what feedback was rejected and why, what comes next (e.g. ready for PR, or blocked on retry cap in step 6).",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$notify:me": {
+    "expansion": "Send a brief status update for the current task using the send-message CLI. Run: `~/.bin-zdennis/bin/send-message --message \"MESSAGE\"`. Compose MESSAGE as: the JIRA key or PR number (infer from branch or context), status in one word (completed / failed / blocked / needs-input), and one sentence on what's ready next or what's blocking. Keep it under 3 sentences. Example: \"PUFFINS-2079: Completed. Feature is implemented and tests pass — ready for PR review.\"",
+    "description": "Send a brief task status update via send-message CLI (completed / failed / blocked / needs-input + next step)",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$model:auto": {
+    "expansion": "Pick whichever model tier (haiku/sonnet/opus) best fits this task's complexity, and spawn the agent with that model explicitly set rather than leaving it unspecified.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$model:haiku": {
+    "expansion": "Spawn this as a Haiku subagent (model: haiku) — fast and cheap, best for simple lookups, file search, note reading, summarization, or simple edits.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$model:opus": {
+    "expansion": "Spawn this as an Opus subagent (model: opus) — best for architecture decisions, security-critical code, or complex new feature design.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$model:sonnet": {
+    "expansion": "Spawn this as a Sonnet subagent (model: sonnet) — best for bug investigation, test writing, refactoring, or general implementation work.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$open-pull": {
+    "expansion": "Run `git open-pull` in the shell.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$outside-in": {
+    "expansion": "Work outside-in, acceptance test driven, inspired by Behavior Driven Development (BDD). Follow this discipline strictly:\n\n## The outside-in loop\n\n1. **Start with a failing scenario** — write a high-level acceptance test (BDD-style: Given/When/Then) that describes the desired behavior from the user's or caller's perspective. This test exercises the full stack (or the full unit boundary). It must fail before you write any implementation.\n2. **Let the scenario drive the design** — the failing scenario names the collaborators and interfaces needed. Don't design upfront; let the failure messages surface what's required.\n3. **Work inward with unit tests** — for each collaborator the scenario reveals, drop down and write a failing unit test (Red) before implementing that collaborator. Make it pass (Green), then refactor. Red-Green-Refactor at each level.\n4. **Write only enough code to pass the current failing test** — no speculative implementation. If a test is green, stop writing production code.\n5. **Return outward** — once a unit is green and refactored, return to the scenario. If it still fails, it will point to the next collaborator to implement. Repeat until the scenario passes.\n6. **Scenario drives completion** — the feature is done when the acceptance scenario passes. Not before.\n\n## BDD language and framing\n- Describe scenarios in the language of the domain, not the implementation: `Given a trial has expired / When billing runs / Then the account is subscribed`\n- Test names must describe behavior, not internals (`creates_subscription_when_trial_expires`, not `calls_stripe_api`)\n- Scenarios should be readable by a non-engineer familiar with the domain\n- Use shared examples and step definitions to avoid duplicating scenario setup\n\n## Key constraints\n- Never write production code without a failing test that demands it\n- Never skip the acceptance scenario in favor of jumping straight to unit tests\n- Each red-green-refactor cycle must be small and complete before moving inward or outward\n- Pending steps are acceptable placeholders; unimplemented steps are not — if a step exists, it must run",
+    "description": "Work outside-in, BDD-inspired: acceptance scenario first (Given/When/Then), work inward with unit tests, return outward until scenario passes",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$orchestrator-mode": {
+    "expansion": "You are an orchestrator. Do not carry out implementation work yourself. Instead:\n- Break the task into discrete steps\n- For each step, define: (1) which agent type to use, (2) a focused prompt with all needed context, (3) explicit file/note paths to read from and write to\n- Pass outputs from one agent as inputs to the next by specifying shared file paths\n- Sequence agents so dependencies are respected — parallel where independent, serial where one feeds the next\n- After each agent completes, review its output before dispatching the next\n- Summarize what each agent did and what comes next\n- Never write code, read files, or edit notes yourself — delegate everything",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$orchestrator:workcharger": {
+    "expansion": "$orchestrator-mode\n\nAdditionally, for model selection across stages: use Opus at medium effort for planning/architecture, then hand off implementation, review, and testing to Sonnet 4.6/4.8 or Haiku — the 'workhorse' tier. Reserve Opus for planning that benefits from stronger architectural reasoning than Sonnet 5 provides.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$orchestrator:workdestrier": {
+    "expansion": "$orchestrator-mode\n\nAdditionally, for model selection across stages: use Opus at high effort for planning/architecture, then hand off implementation, review, and testing to Sonnet 4.6/4.8 or Haiku — the 'workhorse' tier. Reserve this for the most architecturally demanding planning — the highest reasoning tier available, at correspondingly higher cost.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$orchestrator:workfoal": {
+    "expansion": "$orchestrator-mode\n\nAdditionally, for model selection across stages: use Sonnet 4.6[1m] at low effort for planning/architecture, then hand off implementation, review, and testing to Sonnet 4.6/4.8 or Haiku — the 'workhorse' tier. Use the lightest effort tier here — this is for quick, low-stakes multi-stage work.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$orchestrator:workhorse": {
+    "expansion": "$orchestrator-mode\n\nAdditionally, for model selection across stages: use Sonnet 4.6[1m] at high effort for planning/architecture, then hand off implementation, review, and testing to Sonnet 4.6/4.8 or Haiku — the 'workhorse' tier.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$orchestrator:workpony": {
+    "expansion": "$orchestrator-mode\n\nAdditionally, for model selection across stages: use Sonnet 4.6[1m] at medium effort for planning/architecture, then hand off implementation, review, and testing to Sonnet 4.6/4.8 or Haiku — the 'workhorse' tier. Reserve high effort for planning only when needed.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$orchestrator:workstallion": {
+    "expansion": "$orchestrator-mode\n\nAdditionally, for model selection across stages: use Opus at low effort for planning/architecture, then hand off implementation, review, and testing to Sonnet 4.6/4.8 or Haiku — the 'workhorse' tier. Reserve Opus for planning that benefits from stronger architectural reasoning than Sonnet 5 provides, while keeping effort at the low end to manage cost.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$project:activate": {
+    "expansion": "$project:instructions $project:find $project:rounds $project:tracking $session:concise",
+    "description": "Activate project context: load instructions, find project in vault, enable round tracking",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$project:find": {
+    "expansion": "Find this project in the Zendesk work notes vault. Search /Users/zdennis/Documents/Obsidian-LocalOnly/Zendesk/Projects/ for a project matching the current JIRA key, project name, or topic. If no JIRA identifier is present, determine the current repository's GitHub URL (from git remote, package.json, or CLAUDE.md) and search all notes tagged with #project in the vault for a matching github-url frontmatter field — use that note as the project. If there is exactly one match, activate it: read the main project note and confirm the project name and one-sentence goal. If there are multiple candidates, list them with their status and let the user choose before activating. If no match exists, create a new project note automatically following project management conventions: main note at Projects/<ProjectName>.md with tags including #project and #project-<slug>, a github-url frontmatter field set to the repository's HTTPS URL, a directory at Projects/<ProjectName>/, and status set to active.",
+    "description": "Find project in vault by JIRA key, topic, or github-url frontmatter fallback; auto-create if missing",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$project:instructions": {
+    "expansion": "Activate project context for this session using the Zendesk work notes vault. Follow these steps:\n1. Ask the user which project they are working on (or infer it from context if they just mentioned a JIRA key, project name, or topic).\n2. Look up the project in Projects/ under /Users/zdennis/Documents/Obsidian-LocalOnly/Zendesk/Projects/ — find the directory whose name matches the project name or JIRA key.\n3. Read the main project note (Projects/<ProjectName>.md) to load: goal, acceptance criteria, JIRA link, branch, worktree, status, tags, and the project slug used in tags (e.g. project-cart-abandonment).\n4. For all notes created this session for this project:\n   - Place files in Projects/<ProjectName>/<filename>.md\n   - Include frontmatter with: parent (wikilink to main project note), tags (project-note + project-<slug> + relevant domain tags like growth-engine, billing-app, puffins), date, updated_at (ISO 8601 YYYY-MM-DDTHH:MM), status, aliases, related, urls, slack-channels\n   - Keep updated_at current whenever a note is modified\n5. If the project doesn't exist yet, offer to create it following the project management conventions: main note at Projects/<ProjectName>.md with #project and #project-<slug> tags, directory at Projects/<ProjectName>/, and status set appropriately.\n6. Confirm which project is active and summarize its goal and status in one sentence.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$project:rounds": {
+    "expansion": "Treat each note created this session as a new round in this project. Determine the current round number: check Projects/<ProjectName>/ for existing notes. Any note whose name does not already end in \"- Round N\" counts as an implicit Round 1. If notes already exist with \"- Round N\" suffixes, the next round is N+1. Append \"- Round {n}\" to each new note filename and to the note's H1 title. When listing or summarizing notes for this project, include the round number so the sequence is visible. Never renumber or rename earlier rounds — only new notes created this session get the suffix.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:add-diagrams": {
+    "expansion": "Add pertinent diagrams to the PR description to help reviewers ramp up on the changes. Choose diagram type from those offered by /plg:diagram (flow, sequence, class, state, er). Add Before and After diagrams when structure changed. Find the best zoom level for the changeset: start at the component boundary that changed, zoom out one level if the change affects callers, zoom in one level if the internal structure is the point. Skip diagrams entirely if none would materially aid understanding.\n\n## Color scheme\nUse consistent node colors across both diagrams. The rule: gray = completely untouched (not part of the change at all); subdued layer color = in-scope but unchanged; vivid layer color = changed or new; red = removed.\n\nLayer colors:\n- Infrastructure / external — unchanged: #bfdbfe (light blue), changed/new: #3b82f6 (blue)\n- Services / orchestration — unchanged: #ddd6fe (light purple), changed/new: #8b5cf6 (purple)\n- Persistence / data stores — unchanged: #99f6e4 (light teal), changed/new: #0d9488 (teal)\n- Jobs / async — unchanged: #fde68a (light amber), changed/new: #f59e0b (amber)\n- Completely untouched nodes (any layer): #9ca3af (gray)\n- Removed / absent nodes: #dc2626 (red) — show in Before, omit or mark red in After\n\nIn the Before diagram, all shown nodes use their subdued layer color (or gray if truly untouched context). In the After diagram, changed/new nodes use vivid layer colors; unchanged in-scope nodes use subdued; untouched context nodes use gray.\n\n## Callout text\nUnder each diagram section (### Before and ### After), add a short bulleted summary — 3–5 bullets max — that tells the reviewer exactly what to look at:\n- Under ### Before: what was missing, broken, or absent (\"billing_cycle and skus were captured in cart events but never written to cart_states\")\n- Under ### After: what changed and why it matters (\"FindOrCreateCartState now merges billing_cycle + skus into cart_states.data on each known event\"); one bullet per vivid-colored node or new edge\nKeep bullets to one line each. The goal: a reviewer who reads only the bullets and glances at the diagram should understand the change in under 30 seconds. $pull-request:fix-formatting",
+    "description": "Add Before/After diagrams with subdued/vivid color-coded changes and callout bullets",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:address-comments": {
+    "expansion": "You are an orchestrator. Do not carry out implementation work yourself. Instead:\n- Read the comment draft note (ask the user for the path if not already known)\n- Group comments by the files they touch — comments that share no overlapping files can be fixed in parallel\n- For each group, define: (1) which agent type to use, (2) a focused prompt with full context (file paths, exact changes needed, target commit SHA for fixup), (3) which files to read and edit\n- All fixup commits must target the original commit on this topic branch that introduced the code being changed — identify it with `git log main...HEAD --oneline` and pass the target SHA to each agent\n- Launch independent groups in parallel; serial only when one group's output feeds another\n- After all agents complete, run `git rebase -i --autosquash main` to fold the fixups\n- Summarize what each agent changed and confirm the rebase result\n- After confirming the rebase result, $pull-request:reply-threads\n- Never write code, read files, or edit notes yourself — delegate everything",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:create": {
+    "expansion": "Launch an agent with context, instructions, references, etc so they can create a pull request using the following skill:\n\n/plg:play pull-request\n\nThen run:\n\n$pull-request:improve-description\n\\$pull-request:match-template\n\\$pull-request:add-diagrams\n\\$pull-request:update-examples\n\\$pull-request:update-tasks\n\\$pull-request:fix-formatting",
+    "description": "Open a PR via /plg:play pull-request then run the full description polish pipeline",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:fix-formatting": {
+    "expansion": "When submitting PR descriptions or comments via gh CLI or API, pass the body as a literal string — never escape backticks as \\` or use shell escape sequences inside the content. The rendered output must be valid GitHub Markdown with no literal backslashes before backticks, quotes, or special characters.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:improve-comments": {
+    "expansion": "Review the PR comments and rewrite each one to follow these principles:\n\nApply $writing:lwq — every comment must open with the question or ask, never with context or background.\nApply $writing:pyramid-principle — lead with the conclusion, follow with reasoning and supporting detail.\nApply $writing:style-clarity-and-grace — characters as subjects, actions as verbs, old before new, no metadiscourse.\nApply $writing:anti-ai — no hollow openers, no preamble, no trailing pleasantries, no AI vocabulary.\nApply $writing:anti-hedging — no false-uncertainty questions, no apologetic qualifiers, state priority as fact not apology.\nApply $format:bold-lead — bold the lead sentence of each comment so the question or verdict is visible on scan.\n\nFor each comment: show (1) Original, (2) Revised, (3) one sentence on what changed.\n\nFormatting: when submitting content via gh CLI or API, pass the body as a literal string — never escape backticks as \\` or use shell escape sequences inside the content. The rendered output must be valid GitHub Markdown with no literal backslashes before backticks, quotes, or special characters.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:improve-description": {
+    "expansion": "$pull-request:improve-writing",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:improve-writing": {
+    "expansion": "Review the PR description and improve it for the reviewer. Apply the $writing:pull-request principles: lead with user-facing behavior change, ensure the opening sentence stands alone, add a concrete example if the change affects a command or API, apply the Pyramid Principle (answer first, detail last), cut metadiscourse and hollow intensifiers. Preserve all technical facts; only improve structure and language. $pull-request:fix-formatting",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:match-template": {
+    "expansion": "Read .github/PULL_REQUEST_TEMPLATE.md in the current repository. Restructure the current PR description to match the template's sections exactly — preserve all existing content but reorganize it under the correct headings. Add any missing required sections from the template. Do not remove content that belongs under a different heading; move it. $pull-request:fix-formatting",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:skeptic": {
+    "expansion": "Launch a subagent to skeptically review the open PR. The agent's job is to treat every claim in the PR description as false or misleading until the diff proves otherwise. For each claim in the Description, How to Verify Changes, and Risks sections: find the code that either supports or contradicts it. Identify gaps — behaviors in the diff that the description never mentions, verification steps that are vague or unverifiable, risks that are understated or missing entirely. Output a structured report: (1) Verified claims — what the diff actually confirms, (2) Unverified or misleading claims — what the description says but the diff doesn't support, (3) Gaps — what changed in the diff that the description doesn't mention, (4) Verification step problems — steps that are untestable, incomplete, or wrong. Be direct and specific: quote the claim, cite the file and line that confirms or contradicts it. Do not soften findings.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:update-examples": {
+    "expansion": "Enrich the 'How to Verify Changes' section of the open PR with copy/pasteable examples derived from the diff. For each behavior changed, write a minimal runnable example (CLI command, Rails console snippet, curl call, or UI path) with expected output where useful. Group examples by the change they verify, not by file. Include edge cases and error paths, not just the happy path. The goal is that a reviewer can copy an example, run it directly, and spend their thinking time on exploratory testing rather than decoding what changed. Do not include steps to run tests — CI covers that; focus on observable behavior in a running environment. $pull-request:fix-formatting",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:update-tasks": {
+    "expansion": "Review the PR description's task/checklist items against the actual changeset (git diff, changed files, commit messages). Mark tasks as N/A when they clearly don't apply to this change. Check off tasks that are demonstrably complete based on the code. Leave tasks unchecked if you can't confirm they're done. $pull-request:fix-formatting",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$rfc:write": {
+    "expansion": "Invoke the rfc-writer agent to write or improve this RFC or Technical Design note. Apply these writing guidelines throughout: $writing:dev-docs, $writing:for-busy-readers, $writing:plain-english, $writing:pyramid-principle, $writing:style-clarity-and-grace, $writing:add-diagrams, $writing:anti-ai, $writing:anti-hedging, $writing:visual-rhythm, $writing:synthesis. Voice: $voice:dannorth, $voice:kentbeck, $voice:zdennis. The agent should follow the BX (PLG) RFC Template at a high level and use only Zach Dennis's previously authored RFCs as reference (see Confluence: Proposals and RFCs space under PJGGP).",
+    "description": "Write or improve an RFC or Technical Design note using the rfc-writer agent with full writing guidelines",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$rebase-autosquash": {
+    "expansion": "Run git rebase autosquash on this topic branch against main: use `git log main..HEAD --oneline` to identify the commit range, then run `git rebase -i --autosquash main`. Verify the rebase todo list looks correct before executing. Do not drop any commits.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$require-approval": {
+    "expansion": "Before making any changes, show me exactly what you plan to do: list each file you would modify, what changes you would make, and any commands you would run. Do not proceed until I explicitly confirm. Wait for my approval before taking any action.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$rubocop": {
+    "expansion": "Make sure all ruby files on this branch pass rubocop. Make sure all specs affected on this branch pass.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$run-lint": {
+    "expansion": "Find linting instructions by checking in this order: (1) docs/QUALITY_CHECKS.md, (2) CLAUDE.md, (3) infer from the project (e.g. presence of .rubocop.yml, eslint config, etc.). Tell the user which source you found instructions in. Identify files changed on this topic branch with `git diff main...HEAD --name-only`. Filter to only files relevant to the detected linter (e.g. for RuboCop: .rb files only; for ESLint: .js/.ts/.jsx/.tsx only — never lint .md, .yml, .txt, or other non-source files). Run the linter against those files only. If the linter supports --autocorrect (e.g. rubocop --autocorrect), use it.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$run-tests": {
+    "expansion": "Find testing instructions by checking in this order: (1) docs/QUALITY_CHECKS.md, (2) spec/TESTING_GUIDELINES.md, (3) CLAUDE.md, (4) infer from project structure. Tell the user which source you found instructions in. Determine the base branch: if a PR exists for this branch (check with `gh pr view --json baseRefName`), use the PR's base branch. Otherwise, detect the default branch by running `git remote show origin | grep 'HEAD branch'`. If the default branch cannot be determined with confidence, ask the user before proceeding. Identify changed files with `git diff <base>...HEAD --name-only`. Run tests only for files changed on this topic branch.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:diverse-perspectives": {
+    "expansion": "Broaden the analysis by inhabiting perspectives you're not currently holding.\n- List the stakeholders, roles, or disciplines affected by this decision or situation — not just the primary actor\n- For each: what do they care about that the current framing ignores or discounts? What would they say is wrong with this analysis?\n- Include at least: the end user, the operator/maintainer, a skeptic inside the organization, and one outside-the-industry perspective (a regulator, a competitor, a newcomer)\n- Look for: whose interests are invisible in the current framing? Who bears costs not currently accounted for? Who would call this a failure even if the stated goal is met?\n- After surfacing each perspective: does any of them reveal a blind spot, reframe the problem, or change what success looks like?",
+    "description": "Surface perspectives of stakeholders and roles not currently in the framing",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:falsification": {
+    "expansion": "Apply Popperian falsification: ask what evidence would prove this wrong before asking what supports it.\n- A claim that cannot be falsified is not a scientific or empirical claim — it may be useful, but treat it differently\n- Before accepting a finding: what data would have looked different if the hypothesis were false? Was that data collected?\n- Confirmation bias trap: we naturally seek evidence that confirms; falsification forces us to seek evidence that would refute\n- For plans and designs: what would have to be true for this to fail? Are those conditions being tested?\n- Strong theories survive attempts to break them; weak theories survive only because they're never tested",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:first-principles": {
+    "expansion": "Apply first-principles thinking: strip away analogy and convention, decompose to the fundamental truths, then reason up from there. What is actually, provably true about this problem? What assumptions are being smuggled in that aren't load-bearing facts? Build back up from the foundations rather than from accepted practice.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:inversion": {
+    "expansion": "Apply inversion: instead of asking how to succeed, ask how to guarantee failure — then avoid those things.\n- For any goal, ask: what would reliably produce the opposite outcome?\n- List the failure conditions explicitly — they're often clearer and more actionable than success conditions\n- Check whether any current plans contain elements from the failure list\n- Inversion surfaces constraints and anti-patterns that forward thinking misses\n- Works for decisions too: instead of \"what's the best choice?\", ask \"what choice would I most regret?\"",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:opportunity-cost": {
+    "expansion": "Apply opportunity cost thinking: every choice forecloses other choices. What are you giving up by choosing this? Not just what it costs in time or money, but what else those same resources could buy. The full cost of a decision includes the value of the best alternative not taken. Name the alternatives explicitly — don't just weigh the option against a vague \"doing nothing\".",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:outside-view": {
+    "expansion": "Apply the outside view: set aside the specifics of this case and ask what usually happens in situations like this.\n- Find a reference class: what category does this belong to, and what's the base rate for that category?\n- Resist the pull of unique details — every situation feels unique from the inside; the outside view asks what the data says about the class\n- Adjust from the base rate only when you have specific, concrete evidence that this case differs — not just a feeling\n- Common traps: planning fallacy (underestimating time/cost), optimism bias (overestimating success rate), narrative fallacy (the story feels compelling so it must be right)\n- Ask: if I showed this plan to someone who knew nothing about us, what would they predict?",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:premortem": {
+    "expansion": "Run a premortem: assume this has already failed, and work backwards to understand why.\n- Start from the failure state as given — don't ask \"could it fail?\", ask \"it failed — what happened?\"\n- List every plausible failure mode, including ones that feel unlikely now\n- Weight by: probability × impact — a low-probability catastrophic failure deserves more attention than a high-probability minor one\n- Look for: single points of failure, assumptions that are load-bearing but untested, dependencies outside your control\n- Output: a ranked list of risks with a mitigation or acceptance rationale for each",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:second-order": {
+    "expansion": "Think in second-order effects: after the immediate consequence, ask what happens next.\n- First-order thinking: this action produces this result\n- Second-order thinking: that result produces further results — what are they?\n- Third-order and beyond: continue until the chain reaches either stability or irrelevance\n- Most obvious decisions look different at second order: incentives shift, behaviors adapt, systems respond\n- Ask: if everyone did this, what would happen? If this works as intended, what new problems does it create?\n- Watch for: solutions that export the problem rather than solve it, and fixes that become the next constraint",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:skeptic": {
+    "expansion": "Approach this with skepticism: treat claims as false until evidence supports them.\n- Default to \"not proven\" rather than \"probably true\"\n- Distinguish between assertion and evidence — someone saying something is not evidence it's true\n- Ask: what would this look like if it were wrong? If the answer is \"the same\", the claim isn't falsifiable\n- Identify the burden of proof: who is making the positive claim, and have they met it?\n- Watch for: anecdote presented as pattern, correlation presented as causation, absence of counterexample presented as proof\n- Strong prior = harder to overturn: the more surprising the claim, the stronger the evidence needs to be",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$thinking:steelman": {
+    "expansion": "Before critiquing or dismissing, steelman the position: construct the strongest possible version of the argument.\n- State the position as its best proponent would state it — not as a caricature\n- Identify the real concern, value, or insight behind the view, even if the framing is weak\n- Only engage with the steelmanned version — defeating a weak version proves nothing\n- If you can't steelman it, you probably don't understand it yet\n- After steelmanning: what would it take for this to be wrong? That's where the real critique lives",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$voice:dannorth": {
+    "expansion": "Write in Dan North's voice: plain, practical, sometimes gently provocative. Lead with the business outcome or user value before explaining the mechanism. Use story structure where it helps (\"given... when... then...\"). Short sentences. Active voice. Call out assumptions directly rather than burying them. Willing to name what's actually broken rather than softening it diplomatically. Bridges business and engineering language without being condescending to either. Accessible to a non-expert but never dumbed down.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$voice:feynman": {
+    "expansion": "Write in Richard Feynman's explanatory voice: start from first principles, build up. Use analogies from everyday experience before introducing technical terms. Make the abstract concrete with a specific example before naming the abstraction. Admit what you don't know — treat uncertainty as honest, not weak. Ask genuine questions and answer them directly. The reader should feel like they're watching someone actually think through a problem from scratch, not recite a prepared answer.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$voice:josephwilliams": {
+    "expansion": "Write in Joseph M. Williams' voice: precise, unhurried, analytically clear. Make characters do things — put the agent as the grammatical subject, the action as the verb. Avoid nominalized abstractions that flatten agency. Old information opens each sentence; new information closes it. Cut metadiscourse ruthlessly. The prose should feel like a patient expert showing you exactly how the pieces fit, one clear sentence at a time. Never try to impress — just clarify.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$voice:kentbeck": {
+    "expansion": "Write in Kent Beck's voice: direct, personal, conversational. Short sentences. Use \"I\", \"we\", \"you\" freely — don't hide behind passive voice. Open with a concrete example or observation before introducing the abstraction it illustrates. Admit uncertainty (\"I'm not sure...\", \"I wonder if...\") — treat it as honest, not weak. Ask genuine questions, not rhetorical setup. Let the narrative show discovery: something surprised you, here's what you learned. Keep technical vocabulary but use it for precision, not impression. The reader should feel like they're pair programming with someone thinking out loud.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$voice:zdennis": {
+    "expansion": "Write in Zach Dennis's voice. Read the personal communications style guide at /Users/zdennis/Documents/Obsidian-LocalOnly/Zendesk/Zach Dennis - Personal Communications Style Guide.md and apply it. Key characteristics: lede always first (no preamble), warm authority (collegial but direct), contractions as default register, specificity as discipline (exact names/numbers/output — never vague), evidence before opinion, feedback always arrives with a path forward, non-blocking items labeled, mistakes admitted plainly without hedging, humor as a single phrase then back to substance, proactive status narration, structure scales with complexity, the zero-setup register for simple closures. Absent: hollow intensifiers, passive voice in status updates, performative gratitude, tentative language in results.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$voice:zinsser": {
+    "expansion": "Write in William Zinsser's voice: stripped down, direct, honest. Every word must earn its place — if it doesn't add meaning, cut it. Active verbs, not passive. Say \"I\" when you mean \"I\". Use the simplest word that does the job — never \"utilize\" when \"use\" works. Cut adverbs (they're usually confessing that the verb wasn't strong enough). No jargon that masks meaning, no pomposity, no throat-clearing. Short sentences when the thought is short. The reader should feel the writer respects their time. Rewriting IS writing — the draft is not done when the words are down.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:add-diagrams": {
+    "expansion": "Add pertinent diagrams to illustrate the content at hand. Choose diagram type from those offered by /plg:diagram (flow, sequence, class, state, er). Find the best zoom level: start at the component or concept boundary being discussed, zoom out one level if relationships to callers or dependents matter, zoom in if the internal structure is the point. Skip diagrams entirely if none would materially aid understanding.\n\n## Color scheme\nThe rule: gray = completely untouched (not part of the discussion at all); subdued layer color = in-scope but not the focus; vivid layer color = the focal subject or key concept; red = removed or absent.\n\nLayer colors:\n- Infrastructure / external — background: #bfdbfe (light blue), focal: #3b82f6 (blue)\n- Services / orchestration — background: #ddd6fe (light purple), focal: #8b5cf6 (purple)\n- Persistence / data stores — background: #99f6e4 (light teal), focal: #0d9488 (teal)\n- Jobs / async — background: #fde68a (light amber), focal: #f59e0b (amber)\n- Completely untouched / context-only nodes (any layer): #9ca3af (gray)\n- Removed / absent concepts: #dc2626 (red) — only when their absence is the point\n\nFocal nodes (the subject of the diagram) use vivid layer colors. Supporting in-scope nodes use subdued layer colors. Pure context nodes use gray.\n\n## Callout text\nUnder each diagram, add a short bulleted summary — 3–5 bullets max:\n- What the diagram shows and why it matters\n- Any non-obvious relationships or flows a reader might miss; one bullet per vivid-colored node or key edge\nKeep bullets to one line. The goal: a reader who reads only the bullets and glances at the diagram should understand the concept in under 30 seconds.",
+    "description": "Add diagrams with subdued/vivid color-coding for focal vs. background concepts",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:anti-ai": {
+    "expansion": "Avoid common AI communication patterns in this writing:\n- No hollow openers: never start with \"Certainly!\", \"Of course!\", \"Absolutely!\", \"Great question!\", \"I'd be happy to\", or \"I'm excited to\"\n- No preamble: answer immediately — don't warm up to it\n- No trailing pleasantries: cut \"Feel free to ask\" and \"Let me know if you need anything else\"\n- No contrastive pivots overuse: avoid leaning on \"however\", \"that said\", \"while X... nevertheless Y\" as structural crutches\n- No hollow intensifiers: cut \"incredibly\", \"truly\", \"deeply\", \"fundamentally\", \"real\" (when it means \"significant\" — \"real complexity\", \"real value\", \"real weight\" — not when it means \"actual\"), \"it's important to note that\"\n- No AI vocabulary: avoid \"delve\", \"leverage\", \"utilize\", \"navigate\", \"comprehensive\", \"nuanced\", \"multifaceted\", \"in the realm of\"\n- No meta-commentary: don't say \"In this response, I will...\" or \"Let me walk you through...\"\n- No excessive bullet-pointing: use prose when content flows naturally; don't atomize everything into lists\n- No rhetorical setup questions: don't open sections with \"So what does this mean?\" or \"Why does this matter?\"\n- No false-uncertainty hedges: cut \"one might argue\", \"it could be said\", \"it's worth considering\"\n- Limit em dashes: use only for genuine interruptions or parenthetical asides that would lose something as commas — not for elaboration or consequence (those get a colon or a new sentence). Replace em dashes with the punctuation that fits the relationship: colon when introducing a consequence or elaboration, comma for a brief aside, period when the thought deserves its own sentence.\n- Write in first person when you have a view — don't hide behind passive voice or abstraction",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:anti-hedging": {
+    "expansion": "Avoid hedging and apologetic softening:\n- No false-uncertainty questions: cut \"Would it be worth...\", \"Might it make sense to...\", \"Is it possible that...\" — these signal you're unsure the suggestion has merit. Use a direct question (\"What if we...\", \"What do you think about...\") or a direct statement instead. The question form is fine when genuinely uncertain; it's a hedge when you already hold the view.\n- No apologetic qualifiers: cut \"just flagging it\", \"just noting\", \"just mentioning\", \"low priority — just...\" If the point isn't worth making, cut it. If it is, own it.\n- State priority as fact, not apology: \"Non-blocking\" or \"Suggestion\" is correct; \"low priority — just flagging\" is an apology for making the point.\n- Write in first person when you have a view — don't hide behind \"one might\" or \"it could be argued\".",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:brevity": {
+    "expansion": "Prioritize brevity and clarity: lead with the answer or conclusion first, cut every word that doesn't earn its place, use plain language over jargon, and prefer short sentences and scannable structure (lists/tables) over dense prose. When in doubt, cut it.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:dev-docs": {
+    "expansion": "Apply developer/engineering documentation writing guidelines from ~/Documents/Obsidian-LocalOnly/Zendesk/My AI Writing Guidelines - Zendesk.md (Technical Documentation section): make docs executable — copy-pasteable commands, labeled console blocks by environment, show real output where it helps, lead with prerequisites and gotchas, keep helper snippets self-contained, use prose for why and code for how.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:for-busy-readers": {
+    "expansion": "Apply principles from Writing for Busy Readers (Rogers & Lasky-Fink):\n- Less is more: every word not needed costs the reader attention they could spend on what matters. Cut ruthlessly.\n- Lead with the action: the most important information — the ask, the decision, the takeaway — goes first. Not last.\n- One idea per sentence: complex multi-clause sentences lose readers. Split them.\n- Headers earn their weight: they should telegraph the content so clearly that a reader knows whether to continue.\n- Visual hierarchy: use formatting — headers, bullets, bold — to let readers scan before they read.\n- Short paragraphs: a wall of text signals high cognitive cost. Readers skip it.\n- Make the ask unmissable: if there's an action required, state it explicitly, prominently, early — never bury a request in the middle of a paragraph.\n- Assume you'll be skimmed: design the document so the key message survives a 10-second scan.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:inverted-pyramid": {
+    "expansion": "Apply the inverted pyramid structure from journalism: most important information first, decreasing relevance toward the end.\n- Open with the full answer: who, what, when, where, why — everything the reader needs to act or decide, in the first sentence or two\n- Each subsequent paragraph adds context, detail, or background — never withholds the point until later\n- The piece must survive being cut from the bottom: if the last paragraph disappears, the core message must still be intact\n- Use this for: incident reports, changelogs, announcements, status updates, technical decisions — anywhere a reader needs to triage quickly\n- Contrast with Pyramid Principle (logical argument structure): inverted pyramid is about information density ordering, not argument construction",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:lwq": {
+    "expansion": "Apply the lead-with-question principle throughout this content: every paragraph, section, and email must open with the ask, question, recommendation, or key point — never with context or background. Context follows the lead; it never precedes it. Where the draft buries a question or ask, surface it to the first sentence.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:orwell": {
+    "expansion": "Apply George Orwell's six rules from Politics and the English Language:\n1. Never use a metaphor, simile, or other figure of speech which you are used to seeing in print — reach for the fresh, concrete image\n2. Never use a long word where a short one will do\n3. If it is possible to cut a word out, always cut it out\n4. Never use the passive where you can use the active\n5. Never use a foreign phrase, a scientific word, or a jargon word if you can think of an everyday English equivalent\n6. Break any of these rules sooner than say anything outright barbarous\nOrwell's deeper point: vague writing is not just bad style — it's a way of hiding thought (or the absence of it). Clarity is a political and ethical act.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:plain-english": {
+    "expansion": "Rewrite for plain English: replace every technical term, acronym, and jargon word with the simplest phrase that conveys the same meaning. If a term must stay (no good substitute), define it on first use in parentheses. Target: a smart non-specialist should follow the argument without stumbling. Don't simplify the ideas — simplify the words used to express them. Run the Orwell test on every sentence: could a shorter word do this job?",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:pr-review-body": {
+    "expansion": "Structure a PR review body using this format. Apply to all PR reviews you write or draft.\n\n## Verdict line\nOpen with a single line: the verdict emoji + one sentence that names the overall state.\n- 🟢 **Approved** — ready to merge; no blockers.\n- 🟡 **Approved with suggestions** — no blockers; suggestions worth considering.\n- 🔴 **Changes requested** — one or more blockers must be addressed before merge.\n\n## Dimensions table\nOne row per review dimension that was evaluated. Columns: Dimension | Status | Notes.\nStatus values:\n- ✅ — clean, no issues\n- ⚠️ — any concern, blocker, or suggestion (design violations, missing tests, API contract gaps, style, etc.)\n- ❌ — ONLY for a confirmed runtime bug or security vulnerability; never for design or convention issues\n\nFor any row with an inline comment already posted, write \"→ see comment\" as the note — do NOT re-elaborate the finding here. For rows with no inline comment, a brief phrase is enough (5-10 words max). The table is a navigation aid, not a summary of findings.\n\nDimensions to include (use only what was reviewed):\n- Correctness\n- Architecture / Design\n- Tests\n- API Contract\n- Security\n- Readability & Docs\n- Maintenance\n- Commit Narrative\n- Verification\n\n## What's Working Well\n2–4 sentences of specific praise. Name real things — methods, patterns, commit structure. Not generic. Skip if there's genuinely nothing notable.\n\n## End-to-End Exploratory Testing Setup (optional)\nInclude only when you exercised the pipeline locally and have concrete setup steps to share. Lead with prerequisites, then trigger command, then expected output excerpt. Omit if you reviewed statically only.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:pull-request": {
+    "expansion": "Apply these principles when writing or improving a PR description. Assume the template sections already exist — focus on content quality.\n\n## Opening sentence\nThe first sentence of the Description must stand alone. If the reader read nothing else, would they know what the PR does and be able to guess why? Lead with the user-facing behavior change — what the reader can now do or observe — not the implementation. Frame it as: 'Running X now also does Y' or 'Z now works correctly when...'. Test it: cover everything after the first sentence. Does the PR make sense? If not, rewrite until it does.\n\n## Example block after the opening\nIf the PR changes a command, API, or script behavior, immediately follow the opening sentence with a concrete example: the command invocation and its expected output. Show the thing, then explain it. Do not delay the example until a later section.\n\n## Context paragraph\nAfter the example, write 3–5 sentences covering: (1) what the previous broken or missing state was, (2) what the new code does, (3) why it matters. This is where implementation details belong — service names, merge behavior, value shapes. Keep it one paragraph. If there are more than 4 distinct ideas (e.g. write side, read side, unknown-event handling, extracted policy), break them out as a short bulleted list under a lead sentence rather than chaining them into one paragraph. Trigger: if you hit a third semicolon or em-dash in a single paragraph, stop and switch to a list.\n\n## Organization for busy readers\nApply the Pyramid Principle: answer first, reasoning second, detail last. Readers should be able to skim the description top-to-bottom and get progressively more detail — not hunt for the point. Use signposting (short lead sentences, section headers) where a section contains more than one distinct idea. Avoid walls of text. Avoid burying the lead in qualifications or context.\n\n## Usage Scenarios section\nWhen a command or script gains new options, add a '### Usage scenarios' section with one concrete invocation per scenario. Each block should show the exact command and a comment describing what the output includes or excludes. Cover the happy path and each new flag.\n\n## Diagrams\nIf the PR introduces design or architectural changes, add a '## Diagrams' section with '### Before' and '### After' subsections. Use top-down flowcharts. If the /plg:diagram skill is available, use '/plg:diagram flow ...'. Otherwise use a mermaid flowchart. Colorize nodes by layer (infrastructure, consumer, API, service, persistence, jobs). Only include diagrams when the structure actually changed — don't diagram trivial changes.\n\n## How to Verify Changes\n- Provide copy-pasteable shell commands, Rails console scripts, or numbered steps a reviewer (human or AI) can follow to reproduce the behavior.\n- Verify every command actually works before including it. Never include steps that don't work.\n- Never include instructions to run tests — those run on CI.\n- No exposition. No wall of text. Highlight what's notable (e.g. a FrozenError that proves immutability, a count that proves registration). Use a collapsible <details> block for longer scripts.\n\n## Writing style\n- Direct, Human Technical Language (Beck/North): name real things — classes, methods, behaviors. Active voice. Say what happened, not what was done. Simplest precise word.\n- Clarity and Grace (Williams): characters as subjects, actions as verbs. No nominalizations. Old information before new. Cut metadiscourse.\n- No hollow intensifiers, no false rapport, no preambles, no repetition for emphasis.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:pyramid-principle": {
+    "expansion": "Apply Barbara Minto's Pyramid Principle:\n- Lead with the answer: state your conclusion or recommendation first, before the reasoning. Never bury the point.\n- SCQA when needed: for persuasive writing, open with Situation (shared context), Complication (what changed or is wrong), Question (what should we do?), Answer (here's what I recommend)\n- One governing thought per group: every set of supporting points must answer a single question and roll up to a single idea\n- MECE grouping: supporting ideas must be Mutually Exclusive (no overlap), Collectively Exhaustive (nothing missing)\n- Deductive or inductive order: deductive = major premise → minor premise → conclusion; inductive = parallel points → governing idea. Choose one; don't mix\n- Top-down reading: a reader should be able to read only the first sentence of each paragraph and understand the full argument\n- No buried leads: context and background come after the answer, not before",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:revision": {
+    "expansion": "Apply a systematic revision pass:\n1. Read aloud — anything that makes you stumble needs rewriting.\n2. Cut the first sentence of every paragraph and see if the paragraph survives — many opening sentences are warm-up.\n3. Find every passive verb and ask whether active serves better.\n4. Highlight every \"is/are/was/were\" and ask whether a stronger verb exists.\n5. Find the longest sentence in each paragraph and split it.\n6. Read only the first sentence of each paragraph — do they tell the whole story on their own?",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:style-clarity-and-grace": {
+    "expansion": "Apply Joseph M. Williams' principles from Style: Clarity and Grace:\n- Characters as subjects: make the agent of the action the grammatical subject. Avoid abstract nouns as subjects.\n- Actions as verbs: convert nominalizations back to verbs. \"Make an assumption\" → \"assume\". \"Conduct an investigation\" → \"investigate\". \"Provide an explanation\" → \"explain\".\n- Old before new: begin sentences with familiar information, end with new. The stress position (end of sentence) carries the most important idea.\n- Cut metadiscourse: remove phrases that comment on what you're about to say — \"It is important to note that...\", \"As I will show...\", \"In this section, I will discuss...\" — just say the thing.\n- Consistent characters: use the same subjects across consecutive sentences. Shifting subjects fragment coherence.\n- Short, clear subject-verb: don't bury the verb. Keep subject and verb close; don't insert long modifying clauses between them.\n- Elegant variation is a myth: repeat key terms rather than varying them for style. Variation creates ambiguity.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:synthesis": {
+    "expansion": "Synthesize scattered notes into a coherent, consultant-style overview:\n- **Find the spine first**: Before writing, identify the single organizing idea — the insight, recommendation, or conclusion that makes everything else make sense. Write toward that.\n- **Group by meaning, not by source**: Cluster ideas by what they're about, not which note they came from. The note boundaries are an artifact of how you captured, not how the topic is structured.\n- **Compress ruthlessly**: Notes accumulate redundancy and context-setting. Strip it. Keep only what is precise, distinctive, or load-bearing.\n- **Fill the gaps silently**: If the notes are fragmentary, write through the gaps using what's implied. Don't flag every place where information was thin — a consultant doesn't footnote their own holes.\n- **Prefer prose over lists**: If the ideas connect and build on each other, let them flow as sentences. Reserve bullets for genuinely parallel, enumerable items.\n- **Write at the right altitude**: Match the level of detail to what a reader needs to act or understand — not every detail you captured, not so abstract it's useless.\n- **One voice throughout**: Notes may have been written in different moods, contexts, or registers. Smooth that out. The synthesis should read like one person thought it all at once.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$writing:visual-rhythm": {
+    "expansion": "Apply visual rhythm: vary the texture of the writing so readers can scan and then read.\n- Prose for reasoning, narrative, and explanation — when ideas connect and flow, keep them as sentences\n- Bullets for genuinely parallel, enumerable items — use lists when the items are truly coordinate and order doesn't create meaning\n- Never bullet what should be a sentence: if each \"bullet\" needs a conjunction to make sense, it's prose being forced into list shape\n- Never prose what should be a list: if you're writing \"First... then... also... and finally...\", that's a list\n- Bold sparingly and intentionally: the first sentence of a section, a key term on first use, or the most critical word in a warning — not for decoration\n- Headers when navigable: use them only when a reader might want to jump or return to a section; don't section every paragraph\n- Short paragraphs signal transitions; long paragraphs carry sustained reasoning — both have a place, but alternate them\n- Tables when comparing: if you're writing \"X is Y, whereas Z is W, and A is B\", use a table\n- Aim for texture: a well-formatted document has visual variety. A wall of prose is exhausting. A wall of bullets is a grocery list.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$session:work": {
+    "expansion": "If applicable: run $run-lint, run $run-tests, commit using $fix-rebase when the change belongs to an existing commit, otherwise $conventional-commit. Then, if applicable: $rebase-autosquash, force-push with $force-push. Then, if a PR is open: update the PR body from the Obsidian source note via gh pr edit --body-file. Then: write a handoff note using $handoff. Finally: $notify:me.",
+    "description": "Session work wrap-up: lint, tests, commit, rebase, push, PR body sync, handoff, notify (all if applicable)",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$session:start": {
+    "expansion": "Load /puffins:expand silently (no output). Then apply $orchestrator:workpony. Then apply $project:activate.",
+    "description": "Session startup: load expand keywords, activate orchestrator mode, activate project context",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$notify:homebrew-bin": {
+    "expansion": "Run this shell command to notify the homebrew-bin pane: workspace run homebrew-bin \"$(basename $(git rev-parse --show-toplevel)) has been updated. Check to see if a new release is available. Update the formula if necessary. $notify:me\" --pane 1",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$rpi": {
+    "expansion": "Apply $orchestrator:workpony mode for the following goal.\n\nOrchestrate agents to accomplish it in this order:\n1. Research agent — read design docs, testing guidelines, and relevant code for the project\n2. Plan agent — produce a step-by-step implementation plan grounded in the research\n3. Validate-plan agent — review the plan for gaps, risks, and alignment with project conventions\n4. Implement agent — execute the plan; each commit must pass tests and linting, using $conventional-commit guidelines\n5. Validate-implementation agent — verify the implementation against the plan; flag any deviations or missing pieces\n6. Code review (run in parallel):\n   - Principal software engineer agent — review for correctness, design quality, and adherence to project conventions\n   - Skeptical software engineer agent — challenge assumptions, probe edge cases, and surface anything that could go wrong\n7. Address any blocking feedback from review, then $force-push\n\nAll agents must read any design and testing guidelines present in the project before doing their work.",
+    "description": "RPI full-cycle orchestration: research → plan → validate → implement → validate → dual code review → push",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$autonomous:mode": {
+    "expansion": "Act autonomously and use agents to help with decisions in order to avoid being blocked. Any truly blocking concerns or issues should use $notify:me and be written to a note in the Obsidian vault.",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$pull-request:reply-threads": {
+    "expansion": "Reply to each PR thread after addressing comments. Use the GitHub API:\n  gh api repos/{owner}/{repo}/pulls/comments/{thread_comment_id}/replies -f body=\"...\"\n\nFetch thread comment IDs with:\n  gh api repos/{owner}/{repo}/pulls/{pr}/comments\n\nUse one of these response forms:\n- Addressed: \"{Good call|Good catch|Thanks for calling that out}! {Updated|Addressed|Fixed} in {sha}. {1-2 sentences on what was incorporated}\"\n- Declined: \"Didn't incorporate — {reason in 1-2 sentences}.\"\n- Uncertain (needs human judgment): \"Leaving for human review — didn't incorporate yet.\"\n\nNever resolve threads — only reply.",
+    "description": "Reply to each PR thread after addressing comments — acknowledged, declined, or deferred",
+    "useCount": 0,
+    "lastUsed": null
+  },
+  "$devspace:start": {
+    "expansion": "iterm2-cli run --horizontal './start-devspace -f'",
+    "description": null,
+    "useCount": 0,
+    "lastUsed": null
+  }
+}

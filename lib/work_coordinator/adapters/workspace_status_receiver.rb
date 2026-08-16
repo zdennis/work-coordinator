@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "json"
+require "logger"
 require "securerandom"
 require "socket"
 
@@ -21,13 +22,16 @@ module WorkCoordinator
       # @param event_store [#append]
       # @param complete_work_item [#call] `call(work_item_id:, summary:)`
       # @param notify_human [#call] `call(work_item_id:, body:)`
+      # @param logger [Logger]
       def initialize(work_item_repo:, event_store:, complete_work_item:, notify_human:,
-                     socket_path: "/tmp/work-coordinator-status.sock")
+                     socket_path: "/tmp/work-coordinator-status.sock",
+                     logger: Logger.new(IO::NULL))
         @socket_path = socket_path
         @work_item_repo = work_item_repo
         @event_store = event_store
         @complete_work_item = complete_work_item
         @notify_human = notify_human
+        @logger = logger
         @epoch = "wc-#{SecureRandom.hex(8)}"
         @processed_message_ids = Set.new
         @last_sequence = {}
@@ -139,15 +143,20 @@ module WorkCoordinator
         @last_sequence[sequence_key(message)] = sequence if sequence
       end
 
-      def handle(message, work_item)
-        case message["type"]
+      def handle(message, work_item) # rubocop:disable Metrics/AbcSize
+        type = message["type"]
+        ref  = message["work_item_ref"]
+        ws   = message["workspace"]
+        @logger.debug "WorkspaceStatusReceiver: type=#{type.inspect} workspace=#{ws.inspect} ref=#{ref.inspect}"
+        case type
         when "status_update"     then handle_status_update(message, work_item)
         when "phase_change"      then handle_phase_change(message, work_item)
         when "pipeline_advanced" then handle_pipeline_advanced(message, work_item)
-        when "task_complete"     then @complete_work_item.call(work_item_id: work_item.id,
-                                                               summary: message["summary"])
-        when "error"             then @notify_human.call(work_item_id: work_item.id, body: message["message"])
-        else warn "[WorkspaceStatusReceiver] dropping message with unknown type: #{message['type'].inspect}"
+        when "task_complete"
+          @logger.debug "WorkspaceStatusReceiver: task_complete for #{ref.inspect} — completing work item"
+          @complete_work_item.call(work_item_id: work_item.id, summary: message["summary"])
+        when "error" then @notify_human.call(work_item_id: work_item.id, body: message["message"])
+        else warn "[WorkspaceStatusReceiver] dropping message with unknown type: #{type.inspect}"
         end
       end
 

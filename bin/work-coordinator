@@ -460,6 +460,9 @@ when "run"
     opts.separator "  WC_SOCKET=/var/run/wc.sock work-coordinator run"
     opts.separator ""
     opts.separator "Options:"
+    opts.on("--debug", "Enable debug logging of message routing to stderr") do
+      options[:debug] = true
+    end
     opts.on("-m", "--mode MODE", "Receive mode (repeatable, comma-separated): all, local, messages") do |v|
       v.split(",").map(&:strip).each { |m| options[:modes] << m.to_sym }
     end
@@ -480,7 +483,8 @@ when "run"
   container = WorkCoordinator::Container.new(
     modes: modes,
     argv: [$PROGRAM_NAME, *ORIGINAL_ARGV],
-    env: ENV.to_h
+    env: ENV.to_h,
+    debug: options.fetch(:debug, false)
   )
   container.restart_coordinator.announce_boot!
   modes.each do |m|
