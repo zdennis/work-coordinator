@@ -492,8 +492,16 @@ when "run"
   puts "Listening for messages starting with: ai:" if modes.include?(:messages)
   puts "Press Ctrl-C to stop."
 
-  Signal.trap("INT")  { container.message_receiver.stop }
-  Signal.trap("TERM") { container.message_receiver.stop }
+  status_socket_path = ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock")
+  puts "Accepting workspace agent status reports on #{status_socket_path}"
+  status_thread = Thread.new { container.workspace_status_receiver.start }
+
+  stop_all = proc do
+    container.message_receiver.stop
+    container.workspace_status_receiver.stop
+  end
+  Signal.trap("INT",  &stop_all)
+  Signal.trap("TERM", &stop_all)
 
   container.message_receiver.start do |msg|
     raw = "#{msg[:work_item_ref]} #{msg[:body]}"
@@ -506,6 +514,9 @@ when "run"
   rescue StandardError => e
     warn "Error routing message: #{e.message}"
   end
+
+  container.workspace_status_receiver.stop
+  status_thread.join(2)
 
 when "notify"
   options = {}

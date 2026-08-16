@@ -28,6 +28,13 @@ module WorkCoordinator
         @store[id]
       end
 
+      # @param external_reference [String] ticket key, e.g. "ABC-123"
+      # @return [Domain::WorkItem, nil]
+      def find_by_external_reference(external_reference)
+        @store.values.find { |wi| wi.external_reference == external_reference }
+      end
+      alias find_by_ref find_by_external_reference
+
       # @param state [Symbol, String, nil] restrict to items in this state
       # @param project_id [String, nil] restrict to items belonging to this project
       # @return [Array<Domain::WorkItem>]

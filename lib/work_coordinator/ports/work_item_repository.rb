@@ -11,6 +11,10 @@ module WorkCoordinator
       # @return [Domain::WorkItem, nil]
       def find(id) = raise NotImplementedError
 
+      # @param external_reference [String] ticket key, e.g. "ABC-123"
+      # @return [Domain::WorkItem, nil]
+      def find_by_external_reference(external_reference) = raise NotImplementedError
+
       # @param state [Symbol, nil] restrict to work items in this state
       # @param project_id [String, nil] restrict to work items belonging to this project
       # @return [Array<Domain::WorkItem>]

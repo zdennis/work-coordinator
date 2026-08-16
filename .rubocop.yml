@@ -38,6 +38,10 @@ Metrics/MethodLength:
 
 Metrics/ClassLength:
   Max: 150
+  # The composition root grows one attr_reader and one builder per collaborator.
+  # Length here reflects how many things the app wires, not a class doing too much.
+  Exclude:
+    - "lib/work_coordinator/container.rb"
 
 Layout/LineLength:
   Max: 120

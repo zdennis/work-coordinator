@@ -51,6 +51,11 @@ module WorkCoordinator
     #   @return [Application::UpdateAndRestart]
     # @!attribute [r] workspace_agent_registry
     #   @return [Adapters::SqliteWorkspaceAgentRegistry]
+    # @!attribute [r] complete_work_item
+    #   @return [Application::CompleteWorkItem]
+    # @!attribute [r] workspace_status_receiver
+    #   @return [Adapters::WorkspaceStatusReceiver] runs on its own socket and thread, not part of
+    #     the composite receiver
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
                 :message_receiver, :inbound_message_repo, :route_message,
                 :register_work_item, :start_work_item, :notify_human,
@@ -58,19 +63,21 @@ module WorkCoordinator
                 :deliver_to_main_session, :project_repo, :project_resolver,
                 :set_default_project, :restart_state_repo, :git_runner,
                 :restart_coordinator, :update_and_restart, :register_command_work_item,
-                :workspace_agent_registry, :complete_work_item
+                :workspace_agent_registry, :complete_work_item, :workspace_status_receiver
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
     #
     # @param db_path [String] SQLite file to connect to and migrate
     # @param socket_path [String] Unix socket used by `:local` mode
+    # @param status_socket_path [String] Unix socket workspace agents report status on
     # @param modes [Array<Symbol>, Symbol] any of `:local`, `:messages`
     # @param argv [Array<String>] command line to re-exec on restart
     # @param env [Hash{String=>String}] environment to re-exec with
     # @raise [ArgumentError] when a mode is unrecognized
     def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"),
                    socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"),
+                   status_socket_path: ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock"),
                    modes: [:local],
                    argv: [$PROGRAM_NAME],
                    env: ENV.to_h)
@@ -83,6 +90,7 @@ module WorkCoordinator
       build_core_adapters!(modes)
       wire!
       @message_receiver = Adapters::CompositeMessageReceiver.new(build_receivers(modes))
+      @workspace_status_receiver = build_workspace_status_receiver(status_socket_path)
     end
 
     private
@@ -96,6 +104,16 @@ module WorkCoordinator
       tmux = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
       @agent_session  = Adapters::WorkspaceAgentSession.new(tmux: tmux, registry: @workspace_agent_registry)
       @message_sender = build_sender(modes)
+    end
+
+    def build_workspace_status_receiver(status_socket_path)
+      Adapters::WorkspaceStatusReceiver.new(
+        socket_path: status_socket_path,
+        work_item_repo: @work_item_repo,
+        event_store: @event_store,
+        complete_work_item: @complete_work_item,
+        notify_human: @notify_human
+      )
     end
 
     def build_receivers(modes)

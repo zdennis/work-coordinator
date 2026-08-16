@@ -32,10 +32,11 @@ module WorkCoordinator
 
       # @param external_reference [String] ticket key, e.g. "ABC-123"
       # @return [Domain::WorkItem, nil]
-      def find_by_ref(external_reference)
+      def find_by_external_reference(external_reference)
         record = Persistence::Models::WorkItemRecord.find_by(external_reference: external_reference)
         record && to_domain(record)
       end
+      alias find_by_ref find_by_external_reference
 
       # @param state [Symbol, String, nil] restrict to work items in this state
       # @param project_id [String, nil] restrict to work items belonging to this project
@@ -79,7 +80,7 @@ module WorkCoordinator
           repository: record.repository,
           workspace_name: record.workspace_name,
           state: record.state.to_sym,
-          phase: record.phase&.to_sym,
+          phase: record.phase,
           project_id: record.project_id,
           created_at: record.created_at,
           updated_at: record.updated_at
