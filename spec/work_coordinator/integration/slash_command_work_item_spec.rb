@@ -94,4 +94,38 @@ RSpec.describe "slash command work item registration" do
 
     expect(work_item_repo.find_all.map(&:external_reference)).to contain_exactly("WC-1", "WC-2")
   end
+
+  context "with a role-based prefix" do
+    let(:register_command_work_item) do
+      WorkCoordinator::Application::RegisterCommandWorkItem.new(
+        register_work_item: WorkCoordinator::Application::RegisterWorkItem.new(
+          work_item_repo: work_item_repo, event_store: event_store
+        ),
+        work_item_repo: work_item_repo,
+        ref_prefix: "HOME"
+      )
+    end
+
+    it "generates refs scoped to that prefix" do
+      receiver.start { |m| m }
+
+      expect(work_item_repo.find_all.first).to have_attributes(external_reference: "HOME-1")
+    end
+
+    it "does not count refs from a different prefix when allocating" do
+      work_item_repo.save(
+        WorkCoordinator::Domain::WorkItem.new(
+          id: SecureRandom.uuid, title: "old", kind: :adhoc,
+          external_reference: "WORK-99", repository: nil, workspace_name: nil,
+          state: :active, phase: nil, project_id: nil,
+          created_at: Time.now, updated_at: Time.now
+        )
+      )
+
+      receiver.start { |m| m }
+
+      expect(work_item_repo.find_all.find { |wi| wi.external_reference&.start_with?("HOME") })
+        .to have_attributes(external_reference: "HOME-1")
+    end
+  end
 end

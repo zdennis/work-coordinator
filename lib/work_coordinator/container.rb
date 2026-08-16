@@ -186,9 +186,7 @@ module WorkCoordinator
       @register_work_item = Application::RegisterWorkItem.new(work_item_repo: @work_item_repo,
                                                               event_store: @event_store,
                                                               project_repo: @project_repo)
-      @register_command_work_item = Application::RegisterCommandWorkItem.new(
-        register_work_item: @register_work_item, work_item_repo: @work_item_repo
-      )
+      @register_command_work_item = build_register_command_work_item
       @start_work_item = Application::StartWorkItem.new(work_item_repo: @work_item_repo,
                                                         agent_session: @agent_session, event_store: @event_store)
       human_deps = { message_sender: @message_sender, work_item_repo: @work_item_repo, event_store: @event_store }
@@ -198,6 +196,14 @@ module WorkCoordinator
       wire_routing!
       wire_ai_commands!
       wire_restart!
+    end
+
+    def build_register_command_work_item
+      Application::RegisterCommandWorkItem.new(
+        register_work_item: @register_work_item,
+        work_item_repo: @work_item_repo,
+        ref_prefix: @config.role.upcase
+      )
     end
 
     def wire_routing!

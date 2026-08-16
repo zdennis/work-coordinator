@@ -7,22 +7,23 @@ module WorkCoordinator
     # Gives a dispatched command an identity before it is forwarded, so status,
     # phase updates, and notifications have a reference to hang off.
     #
-    # References are coordinator-issued: WC-1, WC-2, ... allocated from the
-    # highest WC- reference already stored.
+    # References are coordinator-issued and scoped to the coordinator's role:
+    # HOME-1, HOME-2, ... at role "home"; WORK-1, WORK-2, ... at role "work".
+    # The prefix is derived from the role at construction time so different
+    # coordinator instances maintain independent namespaces.
     class RegisterCommandWorkItem
-      # Matches a coordinator-issued reference, e.g. `WC-12`.
-      # @return [Regexp]
-      REFERENCE_PATTERN = /\AWC-(\d+)\z/
-
-      # Prefix for coordinator-issued references.
+      # Default prefix used when no role is configured.
       # @return [String]
-      REFERENCE_PREFIX = "WC"
+      DEFAULT_PREFIX = "WC"
 
       # @param register_work_item [RegisterWorkItem]
       # @param work_item_repo [Ports::WorkItemRepository] read to allocate the next reference
-      def initialize(register_work_item:, work_item_repo:)
+      # @param ref_prefix [String] uppercase prefix for generated refs, e.g. "HOME" or "WORK"
+      def initialize(register_work_item:, work_item_repo:, ref_prefix: DEFAULT_PREFIX)
         @register_work_item = register_work_item
         @work_item_repo     = work_item_repo
+        @ref_prefix         = ref_prefix.to_s.upcase
+        @reference_pattern  = /\A#{Regexp.escape(@ref_prefix)}-(\d+)\z/
       end
 
       # @param title [String] the command as the human phrased it
@@ -41,9 +42,9 @@ module WorkCoordinator
       private
 
       def next_reference
-        issued  = @work_item_repo.find_all.filter_map { |wi| REFERENCE_PATTERN.match(wi.external_reference.to_s) }
+        issued  = @work_item_repo.find_all.filter_map { |wi| @reference_pattern.match(wi.external_reference.to_s) }
         highest = issued.map { |m| m[1].to_i }.max || 0
-        "#{REFERENCE_PREFIX}-#{highest + 1}"
+        "#{@ref_prefix}-#{highest + 1}"
       end
     end
   end
