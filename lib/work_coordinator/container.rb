@@ -47,13 +47,16 @@ module WorkCoordinator
     #   @return [Application::RestartCoordinator]
     # @!attribute [r] update_and_restart
     #   @return [Application::UpdateAndRestart]
+    # @!attribute [r] workspace_agent_registry
+    #   @return [Adapters::SqliteWorkspaceAgentRegistry]
     attr_reader :work_item_repo, :event_store, :agent_session, :message_sender,
                 :message_receiver, :inbound_message_repo, :route_message,
                 :register_work_item, :start_work_item, :notify_human,
                 :ai_command_runner, :dispatch_ai_command, :handle_query,
                 :deliver_to_main_session, :project_repo, :project_resolver,
                 :set_default_project, :restart_state_repo, :git_runner,
-                :restart_coordinator, :update_and_restart, :register_command_work_item
+                :restart_coordinator, :update_and_restart, :register_command_work_item,
+                :workspace_agent_registry
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -88,7 +91,8 @@ module WorkCoordinator
       @work_item_repo   = Adapters::SqliteWorkItemRepository.new
       @event_store      = Adapters::SqliteEventStore.new
       @agent_session    = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
-      @message_sender   = build_sender(modes)
+      @workspace_agent_registry = Adapters::SqliteWorkspaceAgentRegistry.new
+      @message_sender = build_sender(modes)
     end
 
     def build_receivers(modes)
