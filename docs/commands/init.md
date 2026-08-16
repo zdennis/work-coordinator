@@ -1,12 +1,16 @@
 # init
 
-Creates the default configuration file at `~/.config/work-coordinator/config.yml`.
+Creates or updates the configuration file at `~/.config/work-coordinator/config.yml`.
 
 ```
 work-coordinator init
 ```
 
-If the file does not exist, `init` creates the directory and writes the defaults. If the file already exists, it reports that and exits without making any changes — it is safe to run repeatedly.
+`init` is safe to run at any time. Its behavior depends on the current state of the config file:
+
+- **File does not exist** — creates the directory and writes a full default config, including the built-in `status_reporting_template`.
+- **File exists, `status_reporting_template` key is absent** — adds the default template to the existing config without touching anything else.
+- **File exists, `status_reporting_template` is already set** — prompts before overwriting: `status_reporting_template already set. Overwrite? [y/N]`. Enter `y` to replace it with the current default; any other input leaves the file unchanged.
 
 ## Output
 
@@ -16,10 +20,22 @@ When the file is created:
 Created /Users/<you>/.config/work-coordinator/config.yml
 ```
 
-When the file already exists:
+When the template is added to an existing config:
 
 ```
-Config file already exists: /Users/<you>/.config/work-coordinator/config.yml
+Added default status_reporting_template to /Users/<you>/.config/work-coordinator/config.yml
+```
+
+When the template is overwritten after confirmation:
+
+```
+Updated status_reporting_template in /Users/<you>/.config/work-coordinator/config.yml
+```
+
+When the prompt is declined:
+
+```
+No changes made.
 ```
 
 ## Environment
@@ -31,6 +47,12 @@ Config file already exists: /Users/<you>/.config/work-coordinator/config.yml
 ## Examples
 
 First-time setup:
+
+```bash
+work-coordinator init
+```
+
+Update the reporting template on an existing install (will prompt if one exists):
 
 ```bash
 work-coordinator init
@@ -48,7 +70,7 @@ aliases:
 
 ## Gotchas
 
-**`init` never overwrites an existing config.** If you want to reset to defaults, delete the file first:
+**To fully reset to defaults**, delete the file first:
 
 ```bash
 rm ~/.config/work-coordinator/config.yml && work-coordinator init
