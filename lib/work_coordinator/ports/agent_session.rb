@@ -19,10 +19,15 @@ module WorkCoordinator
 
       # Sends a message into a running session.
       #
+      # Implementors that address the agent directly (rather than typing into a
+      # pane) need `work_item_ref` to say which item the message belongs to;
+      # pane-based implementors ignore it.
+      #
       # @param session_id [String]
       # @param message [String]
+      # @param work_item_ref [String, nil]
       # @return [void]
-      def deliver(session_id:, message:) = raise NotImplementedError
+      def deliver(session_id:, message:, work_item_ref: nil) = raise NotImplementedError
 
       # Tears down a session, releasing whatever the implementor holds for it.
       #

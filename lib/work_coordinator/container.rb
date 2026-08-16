@@ -10,7 +10,7 @@ module WorkCoordinator
     # @!attribute [r] event_store
     #   @return [Adapters::SqliteEventStore]
     # @!attribute [r] agent_session
-    #   @return [Adapters::TmuxAgentSession]
+    #   @return [Adapters::WorkspaceAgentSession]
     # @!attribute [r] message_sender
     #   @return [Ports::MessageSender]
     # @!attribute [r] message_receiver
@@ -90,8 +90,9 @@ module WorkCoordinator
       @project_resolver = Application::ProjectResolver.new(project_repo: @project_repo)
       @work_item_repo   = Adapters::SqliteWorkItemRepository.new
       @event_store      = Adapters::SqliteEventStore.new
-      @agent_session    = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
       @workspace_agent_registry = Adapters::SqliteWorkspaceAgentRegistry.new
+      tmux = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo)
+      @agent_session  = Adapters::WorkspaceAgentSession.new(tmux: tmux, registry: @workspace_agent_registry)
       @message_sender = build_sender(modes)
     end
 
@@ -166,9 +167,7 @@ module WorkCoordinator
       )
     end
 
-    def coordinator_root
-      File.expand_path("../..", __dir__)
-    end
+    def coordinator_root = File.expand_path("../..", __dir__)
 
     def wire_ai_commands!
       config = Config.new

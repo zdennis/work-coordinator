@@ -35,9 +35,10 @@ module WorkCoordinator
       #
       # @param session_id [String] tmux target
       # @param message [String]
+      # @param work_item_ref [String, nil] ignored; keystrokes carry no metadata
       # @return [void]
       # @raise [RuntimeError] when tmux reports failure
-      def deliver(session_id:, message:)
+      def deliver(session_id:, message:, **)
         send_keys!(session_id, message)
       end
 

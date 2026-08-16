@@ -35,8 +35,9 @@ module WorkCoordinator
       #
       # @param session_id [String]
       # @param message [String]
+      # @param work_item_ref [String, nil] ignored
       # @return [void]
-      def deliver(session_id:, message:)
+      def deliver(session_id:, message:, **)
         @messages << { session_id: session_id, message: message }
       end
 
