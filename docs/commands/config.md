@@ -21,6 +21,7 @@ With no arguments, the command prints the path to the config file followed by it
 |-----|---------|-------------|
 | `ai_command` | `claude -p` | Command used to invoke the AI agent |
 | `role` | `default` | Active role profile for the coordinator |
+| `default_message_role` | _(empty)_ | Role assumed when an inbound message carries no role token |
 | `instruction_context` | _(empty)_ | Extra context injected into agent instructions |
 | `slash_commands_enabled` | `true` | Allow slash commands in routed messages |
 | `tmux_fallback_enabled` | `true` | Fall back to tmux delivery when a workspace agent's socket is gone |

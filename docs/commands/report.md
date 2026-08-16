@@ -38,8 +38,8 @@ work-coordinator report --ref <ref> --type <type> [options]
 
 | Code | Condition |
 |------|-----------|
-| 0 | Report accepted (`{"ok":true}`) |
-| 1 | Socket missing/refused, timeout, malformed reply, usage error |
+| 0 | Report accepted (`{"ok":true}`), or coordinator unreachable / timed out (best-effort) |
+| 1 | Malformed reply, usage error (missing required flag), bad `--type` |
 | 2 | `error: "unknown_work_item"` (`action: give_up`) |
 | 3 | `error: "terminal_state"` (`action: abort_pipeline`) |
 | 4 | `error: "out_of_sequence"` (`action: drop`) |
@@ -70,9 +70,9 @@ work-coordinator report --ref WC-42 --type status_update --message "tests passin
   deduplicate and would grow the coordinator's processed-ids set unboundedly; a stateless CLI
   cannot number monotonically, and the coordinator's `check_sequence` returns nil when
   `sequence` is absent.
-- The status socket only exists while `work-coordinator run` is up. A failed report (exit 1)
-  is not a reason to abandon the task — the coordinator may have restarted or be temporarily
-  unavailable.
+- Reporting is best-effort. If the coordinator is unreachable (socket missing, connection
+  refused) or does not reply within 5 seconds, the command exits 0 with a warning to stderr.
+  A missing report is not a reason to abandon the task.
 - For pipeline workspaces, do **not** use `task_complete` unless the operator's template
   explicitly includes it via `%{task_complete_line}`. Reporting it early completes the work
   item before the pipeline's own sentinel fires, causing the subsequent sentinel to fail with
