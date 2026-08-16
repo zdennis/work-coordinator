@@ -84,8 +84,10 @@ module WorkCoordinator
                    modes: [:local],
                    argv: [$PROGRAM_NAME],
                    env: ENV.to_h,
-                   debug: false)
+                   debug: false,
+                   config: Config.load)
       modes = Array(modes).map(&:to_sym).uniq
+      @config = config
       @socket_path = socket_path
       @argv = argv
       @env = env
@@ -110,7 +112,8 @@ module WorkCoordinator
       @workspace_agent_registry = Adapters::SqliteWorkspaceAgentRegistry.new(logger: @logger)
       tmux = Adapters::TmuxAgentSession.new(work_item_repo: @work_item_repo, logger: @logger)
       @agent_session  = Adapters::WorkspaceAgentSession.new(tmux: tmux, registry: @workspace_agent_registry,
-                                                            logger: @logger)
+                                                            logger: @logger,
+                                                            tmux_fallback_enabled: @config.tmux_fallback_enabled?)
       @message_sender = build_sender(modes)
     end
 
@@ -153,7 +156,7 @@ module WorkCoordinator
         register_command_work_item: @register_command_work_item,
         restart_coordinator: @restart_coordinator,
         update_and_restart: @update_and_restart,
-        slash_commands_enabled: Config.new.slash_commands_enabled?,
+        slash_commands_enabled: @config.slash_commands_enabled?,
         logger: @logger
       )
     end
@@ -190,7 +193,9 @@ module WorkCoordinator
         event_store: @event_store,
         workspace_agent_registry: @workspace_agent_registry,
         notify_human: @notify_human,
-        logger: @logger
+        logger: @logger,
+        implicit_reply_enabled: @config.implicit_reply_enabled?,
+        dispatch_via_sockets: @config.dispatch_via_sockets?
       )
     end
 
@@ -214,7 +219,7 @@ module WorkCoordinator
     def coordinator_root = File.expand_path("../..", __dir__)
 
     def wire_ai_commands!
-      config = Config.new
+      config = @config
       @ai_command_runner   = Adapters::ClaudeWorkspaceCommandRunner.new
       @set_default_project = Application::SetDefaultProject.new(
         project_repo: @project_repo,

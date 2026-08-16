@@ -480,7 +480,9 @@ when "run"
     exit 1
   end
   socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
+  config    = WorkCoordinator::Config.load
   container = WorkCoordinator::Container.new(
+    config: config,
     modes: modes,
     argv: [$PROGRAM_NAME, *ORIGINAL_ARGV],
     env: ENV.to_h,

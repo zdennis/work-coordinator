@@ -16,6 +16,13 @@ module WorkCoordinator
       File.join(config_dir, "config.yml")
     end
 
+    def self.load(path: nil)
+      resolved = path ||
+                 ENV.fetch("WC_CONFIG", nil) ||
+                 default_config_path
+      new(resolved)
+    end
+
     attr_reader :path
 
     def initialize(path = self.class.default_config_path)
@@ -36,6 +43,18 @@ module WorkCoordinator
 
     def slash_commands_enabled?
       data.fetch("slash_commands_enabled", true)
+    end
+
+    def tmux_fallback_enabled?
+      data.fetch("tmux_fallback_enabled", true)
+    end
+
+    def dispatch_via_sockets?
+      data.fetch("dispatch_via_sockets", true)
+    end
+
+    def implicit_reply_enabled?
+      data.fetch("implicit_reply_enabled", true)
     end
 
     def auto_launch_workspace
@@ -95,6 +114,9 @@ module WorkCoordinator
         # work-coordinator configuration
         ai_command: "#{DEFAULT_AI_COMMAND}"
         slash_commands_enabled: true
+        # tmux_fallback_enabled: true  # Fall back to tmux delivery when a workspace agent's socket is gone
+        # dispatch_via_sockets: true   # Steer registered workspace agents via their socket instead of tmux
+        # implicit_reply_enabled: true # Allow bare `reply: …` to route to the single waiting item
         # auto_launch_workspace: false  # Automatically launch dormant workspaces when routing AI commands via URL
         # workspace_launch_timeout_seconds: 20  # Max seconds to wait for a launched workspace to become active
         aliases:

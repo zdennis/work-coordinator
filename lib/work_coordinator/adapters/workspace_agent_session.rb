@@ -31,11 +31,12 @@ module WorkCoordinator
       # @param sleeper [#call] waits the given number of seconds between retries
       # @param logger [Logger]
       def initialize(tmux:, registry:, sleeper: ->(seconds) { sleep(seconds) },
-                     logger: Logger.new(IO::NULL))
+                     logger: Logger.new(IO::NULL), tmux_fallback_enabled: true)
         @tmux = tmux
         @registry = registry
         @sleeper = sleeper
         @logger = logger
+        @tmux_fallback_enabled = tmux_fallback_enabled
       end
 
       # Sends a message to the workspace's agent, or to its tmux pane.
@@ -59,10 +60,7 @@ module WorkCoordinator
           body: message
         )
       rescue Errno::ENOENT
-        @logger.debug "WorkspaceAgentSession#deliver: socket gone for workspace=#{session_id.inspect}, " \
-                      "unregistering and falling back to tmux"
-        @registry.unregister(workspace_name: session_id)
-        @tmux.deliver(session_id: session_id, message: message)
+        handle_missing_socket(session_id: session_id, message: message)
       end
 
       # Steers a registered agent mid-pipeline and waits for its answer.
@@ -107,6 +105,15 @@ module WorkCoordinator
       end
 
       private
+
+      def handle_missing_socket(session_id:, message:)
+        raise unless @tmux_fallback_enabled
+
+        @logger.debug "WorkspaceAgentSession#deliver: socket gone for workspace=#{session_id.inspect}, " \
+                      "unregistering and falling back to tmux"
+        @registry.unregister(workspace_name: session_id)
+        @tmux.deliver(session_id: session_id, message: message)
+      end
 
       def deliver_to_agent(socket_path:, workspace:, work_item_ref:, body:)
         write_payload(

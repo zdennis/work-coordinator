@@ -42,12 +42,15 @@ module WorkCoordinator
       # @return [void]
       def initialize(work_item_repo:, agent_session:, event_store:,
                      workspace_agent_registry: nil, notify_human: nil,
+                     implicit_reply_enabled: true, dispatch_via_sockets: true,
                      logger: Logger.new(IO::NULL))
         @work_item_repo = work_item_repo
         @agent_session = agent_session
         @event_store = event_store
         @workspace_agent_registry = workspace_agent_registry
         @notify_human = notify_human
+        @implicit_reply_enabled = implicit_reply_enabled
+        @dispatch_via_sockets = dispatch_via_sockets
         @logger = logger
       end
 
@@ -89,6 +92,10 @@ module WorkCoordinator
         match = PREFIX_PATTERN.match(instruction)
         resolved = if match
                      resolve_named_reply(ref: match[1], instruction: match[2])
+                   elsif !@implicit_reply_enabled
+                     return refusal(body: instruction, reason: :implicit_reply_disabled,
+                                    human_message: "Implicit replies are disabled. " \
+                                                   "Include a work item reference, e.g. `reply: WC-42 ...`.")
                    else
                      resolve_implicit_reply(instruction: instruction)
                    end
@@ -159,6 +166,8 @@ module WorkCoordinator
       # @return [Hash, nil] the agent's reply, or nil when the item is not
       #   managed by a registered agent and should go to tmux instead
       def steer(work_item:, body:)
+        return nil unless @dispatch_via_sockets
+
         workspace = work_item.workspace_name
         return nil unless @workspace_agent_registry && workspace && work_item.external_reference
         return nil unless @workspace_agent_registry.registered?(workspace)
