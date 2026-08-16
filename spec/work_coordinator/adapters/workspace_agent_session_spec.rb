@@ -100,6 +100,90 @@ RSpec.describe WorkCoordinator::Adapters::WorkspaceAgentSession do
     end
   end
 
+  describe "#inject" do
+    context "when the agent is listening" do
+      let(:agent) { FakeWorkspaceAgent.new(socket_path: socket_path, reply: { ok: true, queued_for_pane: 1 }) }
+
+      before do
+        register!
+        agent.start
+      end
+
+      after { agent.stop }
+
+      it "writes an inject message to the agent socket" do
+        session.inject(workspace_name: "myapp", work_item_ref: "WC-42", body: "use Postgres not SQLite")
+        agent.wait_for_message
+
+        received = agent.received_messages.first
+        expect(received).to include(
+          "type" => "inject",
+          "workspace" => "myapp",
+          "work_item_ref" => "WC-42",
+          "body" => "use Postgres not SQLite",
+          "interrupt" => false
+        )
+        expect(received["dispatch_id"]).to match(/\Ad-[0-9a-f]{16}\z/)
+      end
+
+      it "carries the interrupt flag through" do
+        session.inject(workspace_name: "myapp", work_item_ref: "WC-42", body: "stop", interrupt: true)
+        agent.wait_for_message
+
+        expect(agent.received_messages.first).to include("interrupt" => true)
+      end
+
+      it "returns the agent's synchronous reply" do
+        result = session.inject(workspace_name: "myapp", work_item_ref: "WC-42", body: "steer")
+
+        expect(result).to eq({ ok: true, queued_for_pane: 1 })
+      end
+
+      it "returns a refusal reply unchanged" do
+        agent.reply = { ok: false, error: "no_active_pipeline" }
+
+        result = session.inject(workspace_name: "myapp", work_item_ref: "WC-42", body: "steer")
+
+        expect(result).to eq({ ok: false, error: "no_active_pipeline" })
+      end
+    end
+
+    context "when the workspace has no registered agent" do
+      it "returns a no_registration error without touching tmux" do
+        result = session.inject(workspace_name: "myapp", work_item_ref: "WC-42", body: "steer")
+
+        expect(result).to eq({ ok: false, error: "no_registration" })
+        expect(tmux.delivered_messages).to be_empty
+      end
+    end
+
+    context "when the socket file is gone" do
+      before { register! }
+
+      it "drops the registry entry and reports the agent gone" do
+        result = session.inject(workspace_name: "myapp", work_item_ref: "WC-42", body: "steer")
+
+        expect(result).to eq({ ok: false, error: "agent_gone" })
+        expect(registry.find("myapp")).to be_nil
+      end
+    end
+
+    context "when the socket refuses connections" do
+      before do
+        register!
+        FileUtils.touch(socket_path)
+        allow(UNIXSocket).to receive(:new).and_raise(Errno::ECONNREFUSED)
+      end
+
+      it "reports the agent unavailable without retrying" do
+        result = session.inject(workspace_name: "myapp", work_item_ref: "WC-42", body: "steer")
+
+        expect(result).to eq({ ok: false, error: "agent_unavailable" })
+        expect(slept).to be_empty
+      end
+    end
+  end
+
   describe "delegation" do
     it "delegates start_session, active_session and end_session to tmux" do
       id = session.start_session(work_item_id: "wi-1")

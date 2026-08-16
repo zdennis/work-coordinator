@@ -8,9 +8,11 @@ require "socket"
 # connection, records the JSON line it receives, and acknowledges.
 class FakeWorkspaceAgent
   attr_reader :received_messages
+  attr_accessor :reply
 
-  def initialize(socket_path:)
+  def initialize(socket_path:, reply: { ok: true })
     @socket_path = socket_path
+    @reply = reply
     @received_messages = []
     @server = nil
     @thread = nil
@@ -23,7 +25,7 @@ class FakeWorkspaceAgent
       conn = @server.accept
       line = conn.gets&.chomp
       @received_messages << JSON.parse(line) if line
-      conn.write("{\"ok\":true}\n")
+      conn.write("#{JSON.generate(@reply)}\n")
       conn.close
     rescue IOError, Errno::EBADF, Errno::EPIPE
       # Commands are fire-and-forget, so the client may already be gone.

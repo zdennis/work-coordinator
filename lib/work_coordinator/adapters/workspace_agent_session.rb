@@ -57,6 +57,29 @@ module WorkCoordinator
         @tmux.deliver(session_id: session_id, message: message)
       end
 
+      # Steers a registered agent mid-pipeline and waits for its answer.
+      #
+      # There is no tmux fallback and no retry: a steer is only meaningful
+      # while the pipeline it interrupts is still running, so a slow or absent
+      # agent is reported back rather than waited out.
+      #
+      # @see Ports::AgentSession#inject
+      def inject(workspace_name:, work_item_ref:, body:, interrupt: false)
+        entry = @registry.find(workspace_name)
+        return { ok: false, error: "no_registration" } unless entry
+
+        exchange(
+          UNIXSocket.new(entry[:socket_path]),
+          payload(type: "inject", workspace: workspace_name, work_item_ref: work_item_ref, body: body)
+            .merge(interrupt: interrupt)
+        )
+      rescue Errno::ENOENT
+        @registry.unregister(workspace_name: workspace_name)
+        { ok: false, error: "agent_gone" }
+      rescue Errno::ECONNREFUSED
+        { ok: false, error: "agent_unavailable" }
+      end
+
       # @see Ports::AgentSession#start_session
       def start_session(work_item_id:) = @tmux.start_session(work_item_id: work_item_id)
 
@@ -77,20 +100,39 @@ module WorkCoordinator
       private
 
       def deliver_to_agent(socket_path:, workspace:, work_item_ref:, body:)
-        payload = {
-          type: "command",
+        write_payload(
+          connect(socket_path, workspace),
+          payload(type: "command", workspace: workspace, work_item_ref: work_item_ref, body: body)
+        )
+      end
+
+      def payload(type:, workspace:, work_item_ref:, body:)
+        {
+          type: type,
           workspace: workspace,
           work_item_ref: work_item_ref,
           dispatch_id: "d-#{SecureRandom.hex(8)}",
           body: body
         }
-        write_payload(connect(socket_path, workspace), payload)
       end
 
       # Commands are fire-and-forget: the agent acknowledges by accepting the
       # write, so there is no reply to read.
       def write_payload(socket, payload)
         socket.write("#{JSON.generate(payload)}\n")
+      ensure
+        socket.close
+      end
+
+      # Writes the payload and reads the agent's single-line reply.
+      def exchange(socket, payload)
+        socket.write("#{JSON.generate(payload)}\n")
+        line = socket.gets
+        return { ok: false, error: "no_reply" } unless line
+
+        JSON.parse(line, symbolize_names: true)
+      rescue JSON::ParserError
+        { ok: false, error: "malformed_reply" }
       ensure
         socket.close
       end

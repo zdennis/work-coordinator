@@ -29,6 +29,19 @@ module WorkCoordinator
       # @return [void]
       def deliver(session_id:, message:, work_item_ref: nil) = raise NotImplementedError
 
+      # Steers an agent that is already mid-pipeline on a work item.
+      #
+      # Unlike {#deliver}, this is synchronous: the agent answers whether it
+      # took the steer, and the caller is expected to act on a refusal.
+      #
+      # @param workspace_name [String]
+      # @param work_item_ref [String]
+      # @param body [String] the instruction to hand the agent
+      # @param interrupt [Boolean] whether the agent should cut its current step short
+      # @return [Hash{Symbol=>Object}] `{ok: true, queued_for_pane: Integer}`, or
+      #   `{ok: false, error: String}`
+      def inject(workspace_name:, work_item_ref:, body:, interrupt: false) = raise NotImplementedError
+
       # Tears down a session, releasing whatever the implementor holds for it.
       #
       # @param session_id [String]

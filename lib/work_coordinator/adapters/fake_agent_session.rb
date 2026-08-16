@@ -18,7 +18,16 @@ module WorkCoordinator
         @all_panes = []
         @pane_deliveries = []
         @stubbed_panes = []
+        @injections = []
+        @inject_reply = { ok: true, queued_for_pane: 0 }
       end
+
+      # @return [Array<Hash{Symbol=>Object}>] every {#inject} call, in order
+      attr_reader :injections
+
+      # Sets the reply {#inject} hands back.
+      # @return [Hash{Symbol=>Object}]
+      attr_writer :inject_reply
 
       # Allocates a new session identifier for the work item and activates it.
       #
@@ -39,6 +48,15 @@ module WorkCoordinator
       # @return [void]
       def deliver(session_id:, message:, **)
         @messages << { session_id: session_id, message: message }
+      end
+
+      # Records the steer and returns the configured reply.
+      #
+      # @return [Hash{Symbol=>Object}]
+      def inject(workspace_name:, work_item_ref:, body:, interrupt: false)
+        @injections << { workspace_name: workspace_name, work_item_ref: work_item_ref,
+                         body: body, interrupt: interrupt }
+        @inject_reply
       end
 
       # Removes the session and deactivates it for the associated work item.

@@ -45,6 +45,11 @@ module WorkCoordinator
         items
       end
 
+      # @return [Array<Domain::WorkItem>] items blocked on a human reply
+      def find_all_waiting_for_human
+        find_all(state: :waiting_for_human)
+      end
+
       # Removes the work item with the given id, if present.
       #
       # @param id [String]

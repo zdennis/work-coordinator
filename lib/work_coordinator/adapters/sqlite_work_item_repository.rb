@@ -48,6 +48,11 @@ module WorkCoordinator
         scope.map { |r| to_domain(r) }
       end
 
+      # @return [Array<Domain::WorkItem>] items blocked on a human reply
+      def find_all_waiting_for_human
+        find_all(state: :waiting_for_human)
+      end
+
       # @param id [String]
       # @return [void]
       def delete(id)

@@ -160,15 +160,24 @@ module WorkCoordinator
       @register_command_work_item = Application::RegisterCommandWorkItem.new(
         register_work_item: @register_work_item, work_item_repo: @work_item_repo
       )
-      @start_work_item    = Application::StartWorkItem.new(work_item_repo: @work_item_repo,
-                                                           agent_session: @agent_session, event_store: @event_store)
-      @route_message      = Application::RouteMessage.new(work_item_repo: @work_item_repo,
-                                                          agent_session: @agent_session, event_store: @event_store)
+      @start_work_item = Application::StartWorkItem.new(work_item_repo: @work_item_repo,
+                                                        agent_session: @agent_session, event_store: @event_store)
       human_deps = { message_sender: @message_sender, work_item_repo: @work_item_repo, event_store: @event_store }
       @notify_human       = Application::NotifyHuman.new(**human_deps)
       @complete_work_item = Application::CompleteWorkItem.new(**human_deps)
+      wire_routing!
       wire_ai_commands!
       wire_restart!
+    end
+
+    def wire_routing!
+      @route_message = Application::RouteMessage.new(
+        work_item_repo: @work_item_repo,
+        agent_session: @agent_session,
+        event_store: @event_store,
+        workspace_agent_registry: @workspace_agent_registry,
+        notify_human: @notify_human
+      )
     end
 
     def wire_restart!

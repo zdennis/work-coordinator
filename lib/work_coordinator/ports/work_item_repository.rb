@@ -20,6 +20,11 @@ module WorkCoordinator
       # @return [Array<Domain::WorkItem>]
       def find_all(state: nil, project_id: nil) = raise NotImplementedError
 
+      # Every item currently blocked on a human reply.
+      #
+      # @return [Array<Domain::WorkItem>]
+      def find_all_waiting_for_human = raise NotImplementedError
+
       # Inserts or updates the work item.
       #
       # @param work_item [Domain::WorkItem]
