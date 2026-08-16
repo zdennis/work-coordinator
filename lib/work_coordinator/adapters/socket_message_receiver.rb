@@ -15,8 +15,17 @@ module WorkCoordinator
     class SocketMessageReceiver
       include Ports::MessageReceiver
 
+      # Version of the agent/coordinator message protocol this receiver speaks.
+      PROTOCOL_VERSION = "1"
+
       # JSON `type` values this receiver knows how to hand upstream.
-      JSON_MESSAGE_TYPES = %w[register deregister].freeze
+      JSON_MESSAGE_TYPES = %w[register deregister command_v1].freeze
+
+      # JSON `type` values answered on the connection instead of yielded.
+      REGISTRATION_TYPES = %w[register deregister].freeze
+
+      # Envelope fields lifted onto a parsed `command_v1` message.
+      COMMAND_FIELDS = %w[role verb workspace instructions work_item_ref source].freeze
 
       # @param socket_path [String]
       # @param workspace_agent_registry [Ports::WorkspaceAgentRegistry, nil] when
@@ -98,7 +107,7 @@ module WorkCoordinator
       end
 
       def registration?(message)
-        @workspace_agent_registry && JSON_MESSAGE_TYPES.include?(message[:type])
+        @workspace_agent_registry && REGISTRATION_TYPES.include?(message[:type])
       end
 
       def reply(conn, payload)
@@ -108,7 +117,8 @@ module WorkCoordinator
       # Answers a register/deregister message. The agent waits on this reply, so
       # it is written on the same connection before it is closed.
       #
-      # @return [Hash] `{ok: true, epoch:}`, `{ok: true}`, or `{ok: false, error:}`
+      # @return [Hash] `{ok: true, epoch:, protocol_version:}`, `{ok: true}`, or
+      #   `{ok: false, error:}`
       def handle_registration(raw)
         case raw["type"]
         when "register"   then handle_register(raw)
@@ -123,7 +133,7 @@ module WorkCoordinator
           pipeline: raw["pipeline"] ? true : false,
           epoch: raw["epoch"]
         )
-        result[:ok] ? { ok: true, epoch: @epoch } : result
+        result[:ok] ? { ok: true, epoch: @epoch, protocol_version: PROTOCOL_VERSION } : result
       end
 
       def parse_line(line)
@@ -148,10 +158,27 @@ module WorkCoordinator
           return nil
         end
 
+        return parse_command(raw) if type == "command_v1"
+
         { type: type, raw: raw, received_at: Time.now }
       rescue JSON::ParserError => e
         warn "[SocketMessageReceiver] dropping malformed JSON message: #{e.message}"
         nil
+      end
+
+      # A `command_v1` envelope carries the whole request in its fields, so it is
+      # flattened here rather than left for every consumer to dig out of `raw`.
+      #
+      # @return [Hash, nil] nil when `instructions` is missing — there is nothing
+      #   to run without it.
+      def parse_command(raw)
+        if raw["instructions"].nil?
+          warn "[SocketMessageReceiver] dropping command_v1 message without instructions"
+          return nil
+        end
+
+        fields = COMMAND_FIELDS.to_h { |field| [field.to_sym, raw[field]] }
+        fields.merge(type: "command_v1", raw: raw, received_at: Time.now)
       end
     end
   end

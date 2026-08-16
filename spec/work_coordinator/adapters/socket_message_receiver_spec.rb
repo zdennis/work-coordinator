@@ -78,10 +78,11 @@ RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
                       "pipeline" => true, "epoch" => epoch)
       end
 
-      it "replies with the coordinator epoch and records the registration" do
+      it "replies with the coordinator epoch and protocol version, and records the registration" do
         start_listener
 
-        expect(request(register_line)).to eq("ok" => true, "epoch" => receiver.epoch)
+        expect(request(register_line)).to eq("ok" => true, "epoch" => receiver.epoch,
+                                             "protocol_version" => "1")
         expect(registry.find("myapp")).to eq(socket_path: "/tmp/workspace-myapp.sock",
                                              pipeline: true, epoch: "wa-1")
       end
@@ -134,6 +135,41 @@ RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
       )
       expect(message[:received_at]).to be_a(Time)
       expect(message).not_to have_key(:work_item_ref)
+    end
+
+    it "yields a flattened message for a command_v1 line" do
+      start_listener
+
+      send_line(JSON.generate("version" => "1", "type" => "command_v1", "role" => "home",
+                              "verb" => "claude", "workspace" => "MS",
+                              "instructions" => "add validation",
+                              "work_item_ref" => "WC-42", "source" => "socket"))
+
+      message = Timeout.timeout(2) { delivered.pop }
+      expect(message).to include(type: "command_v1", role: "home", verb: "claude",
+                                 workspace: "MS", instructions: "add validation",
+                                 work_item_ref: "WC-42", source: "socket")
+      expect(message[:received_at]).to be_a(Time)
+    end
+
+    it "leaves optional command_v1 fields nil" do
+      start_listener
+
+      send_line('{"type":"command_v1","instructions":"just do it"}')
+
+      message = Timeout.timeout(2) { delivered.pop }
+      expect(message).to include(instructions: "just do it", role: nil, verb: nil,
+                                 workspace: nil, work_item_ref: nil, source: nil)
+    end
+
+    it "drops a command_v1 line without instructions" do
+      start_listener
+
+      send_line('{"type":"command_v1","verb":"claude"}')
+      send_line("WC-8 after dropped command")
+
+      message = Timeout.timeout(2) { delivered.pop }
+      expect(message).to include(work_item_ref: "WC-8", body: "after dropped command")
     end
 
     it "drops a JSON line with an unknown type without yielding" do
