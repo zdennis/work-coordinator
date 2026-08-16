@@ -215,17 +215,23 @@ module WorkCoordinator
     def wire_restart!
       @restart_state_repo  = Adapters::SqliteRestartStateRepository.new
       @git_runner          = Adapters::ShellGitRunner.new(dir: coordinator_root)
-      @restart_coordinator = Application::RestartCoordinator.new(
-        message_sender: @message_sender,
-        restart_state_repo: @restart_state_repo,
-        argv: @argv,
-        env: @env,
-        before_exec: -> { ActiveRecord::Base.connection_pool.disconnect! }
-      )
+      @restart_coordinator = build_restart_coordinator
       @update_and_restart = Application::UpdateAndRestart.new(
         message_sender: @message_sender,
         restart_coordinator: @restart_coordinator,
         git_runner: @git_runner
+      )
+    end
+
+    def build_restart_coordinator
+      notifier = Adapters::AgentRestartNotifier.new(registry: @workspace_agent_registry, logger: @logger)
+      Application::RestartCoordinator.new(
+        message_sender: @message_sender,
+        restart_state_repo: @restart_state_repo,
+        argv: @argv,
+        env: @env,
+        notify_restart_fn: -> { notifier.notify_all },
+        before_exec: -> { ActiveRecord::Base.connection_pool.disconnect! }
       )
     end
 
