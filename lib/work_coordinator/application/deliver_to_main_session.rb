@@ -42,8 +42,9 @@ module WorkCoordinator
       # @param workspace_name [String] name (or alias) of the tmux session to target
       # @param instructions [String] text to deliver to the pane
       # @param recipient [String, nil] address to ack; nil uses the default WC_RECIPIENT
+      # @param work_item_ref [String, nil] reference to name in the ack, e.g. "WC-1"
       # @return [Result]
-      def call(workspace_name:, instructions:, recipient:)
+      def call(workspace_name:, instructions:, recipient:, work_item_ref: nil)
         resolved = resolve_alias(workspace_name)
         full_message = build_message(instructions)
         @agent_session.deliver_to_pane(
@@ -52,14 +53,19 @@ module WorkCoordinator
           message: full_message
         )
         summary = instructions.length > 80 ? "#{instructions[0, 80]}..." : instructions
-        @message_sender.send_message(to: recipient, body: "Sent to #{resolved}: #{summary}")
+        ack(recipient, work_item_ref, "Sent to #{resolved}: #{summary}")
         Result.new(success: true, error: nil)
       rescue StandardError => e
-        @message_sender.send_message(to: recipient, body: "Error: #{e.message}")
+        ack(recipient, work_item_ref, "Error: #{e.message}")
         Result.new(success: false, error: e.message)
       end
 
       private
+
+      def ack(recipient, work_item_ref, body)
+        prefixed = work_item_ref ? "[#{work_item_ref}] #{body}" : body
+        @message_sender.send_message(to: recipient, body: prefixed)
+      end
 
       def resolve_alias(workspace_name)
         key = workspace_name.strip.upcase

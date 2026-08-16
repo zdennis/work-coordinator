@@ -11,13 +11,14 @@ module WorkCoordinator
       include Ports::MessageReceiver
 
       def initialize(inner:, ai_command_handler:, deliver_to_main_session:, restart_coordinator:,
-                     update_and_restart:, slash_commands_enabled: true)
-        @inner                   = inner
-        @ai_command_handler      = ai_command_handler
-        @deliver_to_main_session = deliver_to_main_session
-        @restart_coordinator     = restart_coordinator
-        @update_and_restart      = update_and_restart
-        @slash_commands_enabled  = slash_commands_enabled
+                     update_and_restart:, register_command_work_item: nil, slash_commands_enabled: true)
+        @inner                      = inner
+        @ai_command_handler         = ai_command_handler
+        @deliver_to_main_session    = deliver_to_main_session
+        @register_command_work_item = register_command_work_item
+        @restart_coordinator        = restart_coordinator
+        @update_and_restart         = update_and_restart
+        @slash_commands_enabled     = slash_commands_enabled
       end
 
       def start(&block)
@@ -63,7 +64,11 @@ module WorkCoordinator
         if slash.coordinator_command?
           dispatch_coordinator_command(slash)
         elsif slash.recognized?
-          deliver_to_main(workspace_name: slash.workspace, instructions: slash.instructions)
+          deliver_to_main(
+            workspace_name: slash.workspace,
+            instructions: slash.instructions,
+            work_item_ref: register_work_item_for(slash, body)
+          )
         else
           return false
         end
@@ -78,10 +83,19 @@ module WorkCoordinator
         end
       end
 
-      def deliver_to_main(workspace_name:, instructions:)
+      # Every dispatched slash command gets an identity before it is forwarded.
+      # Returns nil when no registrar is wired, leaving delivery unreferenced.
+      def register_work_item_for(slash, body)
+        return nil unless @register_command_work_item
+
+        @register_command_work_item.call(title: body, workspace_name: slash.workspace).external_reference
+      end
+
+      def deliver_to_main(workspace_name:, instructions:, work_item_ref: nil)
         @deliver_to_main_session.call(
           workspace_name: workspace_name,
           instructions: instructions,
+          work_item_ref: work_item_ref,
           recipient: nil # intentional: ack goes to the default WC_RECIPIENT; :from is not forwarded
         )
       end

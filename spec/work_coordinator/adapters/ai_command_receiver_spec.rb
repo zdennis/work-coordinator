@@ -118,8 +118,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
 
     let(:deliveries) { [] }
     let(:deliver_to_main) do
-      lambda do |workspace_name:, instructions:, recipient:|
-        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      lambda do |workspace_name:, instructions:, recipient:, work_item_ref: nil|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient,
+                        work_item_ref: work_item_ref }
       end
     end
 
@@ -131,7 +132,7 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "routes to deliver_to_main_session with correct args" do
         receiver.start { |m| m }
         expect(deliveries).to contain_exactly(
-          { workspace_name: "MS", instructions: "add validation", recipient: nil }
+          { workspace_name: "MS", instructions: "add validation", recipient: nil, work_item_ref: nil }
         )
       end
 
@@ -153,7 +154,7 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "routes to deliver_to_main_session" do
         receiver.start { |m| m }
         expect(deliveries).to contain_exactly(
-          { workspace_name: "MS", instructions: "refactor", recipient: nil }
+          { workspace_name: "MS", instructions: "refactor", recipient: nil, work_item_ref: nil }
         )
       end
 
@@ -224,8 +225,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
 
     let(:deliveries) { [] }
     let(:deliver_to_main) do
-      lambda do |workspace_name:, instructions:, recipient:|
-        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      lambda do |workspace_name:, instructions:, recipient:, work_item_ref: nil|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient,
+                        work_item_ref: work_item_ref }
       end
     end
 
@@ -237,7 +239,8 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "routes to deliver_to_main_session with correct workspace and instructions" do
         receiver.start { |m| m }
         expect(deliveries).to contain_exactly(
-          { workspace_name: "MS", instructions: "We're building a feature: add OAuth support", recipient: nil }
+          { workspace_name: "MS", instructions: "We're building a feature: add OAuth support", recipient: nil,
+            work_item_ref: nil }
         )
       end
 
@@ -254,7 +257,7 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "routes to deliver_to_main_session with instructions '/clear'" do
         receiver.start { |m| m }
         expect(deliveries).to contain_exactly(
-          { workspace_name: "MS", instructions: "/clear", recipient: nil }
+          { workspace_name: "MS", instructions: "/clear", recipient: nil, work_item_ref: nil }
         )
       end
     end
@@ -266,7 +269,7 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "routes to deliver_to_main_session with instructions 'C-c'" do
         receiver.start { |m| m }
         expect(deliveries).to contain_exactly(
-          { workspace_name: "MS", instructions: "C-c", recipient: nil }
+          { workspace_name: "MS", instructions: "C-c", recipient: nil, work_item_ref: nil }
         )
       end
     end
@@ -278,7 +281,7 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "routes with 'Run the test suite'" do
         receiver.start { |m| m }
         expect(deliveries).to contain_exactly(
-          { workspace_name: "MS", instructions: "Run the test suite", recipient: nil }
+          { workspace_name: "MS", instructions: "Run the test suite", recipient: nil, work_item_ref: nil }
         )
       end
     end
@@ -290,7 +293,7 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
       it "routes with 'Run tests: user model'" do
         receiver.start { |m| m }
         expect(deliveries).to contain_exactly(
-          { workspace_name: "MS", instructions: "Run tests: user model", recipient: nil }
+          { workspace_name: "MS", instructions: "Run tests: user model", recipient: nil, work_item_ref: nil }
         )
       end
     end
@@ -323,8 +326,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
 
     let(:deliveries) { [] }
     let(:deliver_to_main) do
-      lambda do |workspace_name:, instructions:, recipient:|
-        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      lambda do |workspace_name:, instructions:, recipient:, work_item_ref: nil|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient,
+                        work_item_ref: work_item_ref }
       end
     end
 
@@ -366,8 +370,9 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
 
     let(:deliveries) { [] }
     let(:deliver_to_main) do
-      lambda do |workspace_name:, instructions:, recipient:|
-        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient }
+      lambda do |workspace_name:, instructions:, recipient:, work_item_ref: nil|
+        deliveries << { workspace_name: workspace_name, instructions: instructions, recipient: recipient,
+                        work_item_ref: work_item_ref }
       end
     end
 

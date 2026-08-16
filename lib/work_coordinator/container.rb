@@ -53,7 +53,7 @@ module WorkCoordinator
                 :ai_command_runner, :dispatch_ai_command, :handle_query,
                 :deliver_to_main_session, :project_repo, :project_resolver,
                 :set_default_project, :restart_state_repo, :git_runner,
-                :restart_coordinator, :update_and_restart
+                :restart_coordinator, :update_and_restart, :register_command_work_item
 
     # A receiver is built per mode and run concurrently; the sender is chosen
     # from the modes, with `:messages` winning over `:local` when both are given.
@@ -113,6 +113,7 @@ module WorkCoordinator
         inner: poller,
         ai_command_handler: @ai_command_handler,
         deliver_to_main_session: @deliver_to_main_session,
+        register_command_work_item: @register_command_work_item,
         restart_coordinator: @restart_coordinator,
         update_and_restart: @update_and_restart,
         slash_commands_enabled: Config.new.slash_commands_enabled?
@@ -131,6 +132,9 @@ module WorkCoordinator
       @register_work_item = Application::RegisterWorkItem.new(work_item_repo: @work_item_repo,
                                                               event_store: @event_store,
                                                               project_repo: @project_repo)
+      @register_command_work_item = Application::RegisterCommandWorkItem.new(
+        register_work_item: @register_work_item, work_item_repo: @work_item_repo
+      )
       @start_work_item    = Application::StartWorkItem.new(work_item_repo: @work_item_repo,
                                                            agent_session: @agent_session, event_store: @event_store)
       @route_message      = Application::RouteMessage.new(work_item_repo: @work_item_repo,
