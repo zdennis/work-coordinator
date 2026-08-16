@@ -745,8 +745,8 @@ when "report"
   sock = begin
     UNIXSocket.new(socket_path)
   rescue Errno::ENOENT, Errno::ECONNREFUSED => e
-    warn "work-coordinator report: cannot reach coordinator at #{socket_path} (#{e.class})"
-    exit 1
+    warn "work-coordinator report: coordinator not reachable at #{socket_path} — skipping"
+    exit 0
   end
 
   line = begin
@@ -757,8 +757,8 @@ when "report"
   end
 
   unless line
-    warn "work-coordinator report: no reply from coordinator within #{report_read_timeout}s"
-    exit 1
+    warn "work-coordinator report: no reply from coordinator within #{report_read_timeout}s — skipping"
+    exit 0
   end
 
   reply = begin
