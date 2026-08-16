@@ -543,7 +543,7 @@ RSpec.describe WorkCoordinator::Application::HandleQuery do
   # status scoped to default project
   # -------------------------------------------------------------------------
 
-  describe "status with default project" do # rubocop:disable RSpec/MultipleMemoizedHelpers
+  describe "status with default project" do
     let(:project_repo) { WorkCoordinator::Adapters::InMemoryProjectRepository.new }
     let(:uc)           { build_project_use_case(project_repo: project_repo) }
     let(:project)      { build(:project_domain, name: "my-service", alias_attr: "MS") }
