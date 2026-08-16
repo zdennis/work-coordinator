@@ -1,6 +1,6 @@
 # run
 
-Starts the coordinator daemon, opens inbound message channels, and routes messages to registered tmux panes.
+Starts the coordinator daemon, opens inbound message channels, and routes messages to registered tmux panes or workspace agents.
 
 ```
 work-coordinator run [options]
@@ -36,6 +36,7 @@ Both forms are equivalent to the default `all`.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `WC_SOCKET` | `/tmp/work-coordinator.sock` | Unix socket path used in `local` mode |
+| `WC_STATUS_SOCKET` | `/tmp/work-coordinator-status.sock` | Unix socket path for inbound workspace agent status reports |
 | `WC_RECIPIENT` | _(required for messages mode)_ | Phone number or email address for outbound notifications |
 | `WC_DATABASE` | `db/work_coordinator.sqlite3` | Path to the SQLite database |
 
@@ -66,6 +67,41 @@ work-coordinator running in messages mode (polling ~/Library/Messages/chat.db)
 Listening for messages starting with: ai:
 Press Ctrl-C to stop.
 ```
+
+The status socket line is printed after the mode lines regardless of which modes are enabled:
+
+```
+Accepting workspace agent status reports on /tmp/work-coordinator-status.sock
+```
+
+## Workspace agent status socket
+
+Alongside the mode receivers, `run` always starts a `WorkspaceStatusReceiver` on its own thread,
+listening at `WC_STATUS_SOCKET` (default `/tmp/work-coordinator-status.sock`). This is a second,
+separate socket from `WC_SOCKET` — it exists so that agents running inside a workspace can report
+their own progress back to the coordinator without going through the human message path.
+
+Each connection carries exactly one JSON line and gets exactly one JSON line back before the
+connection closes. The receiver handles five message types:
+
+| Type | Effect |
+|------|--------|
+| `status_update` | Appends an `agent.status_update` event to the work item |
+| `phase_change` | Sets the work item's `phase` and appends `agent.phase_changed` |
+| `pipeline_advanced` | Appends `agent.pipeline_advanced` with `from_pane` and `to_pane` |
+| `task_complete` | Runs `CompleteWorkItem` with the reported summary |
+| `error` | Runs `NotifyHuman` with the reported message |
+
+Every message names its work item by `work_item_ref`. An unknown ref, or a ref belonging to an item
+already in a terminal state, is refused with a reply telling the agent what to do next rather than
+being silently dropped. Messages carrying a `message_id` are deduplicated, and messages carrying a
+`sequence` that has already been passed are rejected as out of sequence.
+
+The full wire format — every field, every reply, and the retry rules — is in
+[docs/workspace-agent-protocol.md](../workspace-agent-protocol.md).
+
+Shutdown covers both sockets: `Ctrl-C` and SIGTERM stop the message receiver and the status
+receiver together, and `run` joins the status thread before exiting.
 
 ## Concurrent message handling
 
@@ -144,20 +180,28 @@ Every inbound message takes one of two paths depending on whether it matches a k
 MS-123 go ahead and deploy
 ```
 
-**Reply prefix** — `reply: instruction` looks up the most recent outbound notification and routes to that work item with context prepended:
+**Reply prefix** — `reply: instruction` answers an item that is waiting for a human. The target is
+either named explicitly (`reply: WC-42 use Postgres`) or left implicit, in which case exactly one
+item may be waiting:
 
 ```
 reply: investigate, debug, fix
 ```
 
-The agent receives:
+The agent receives the instruction with the notification that prompted it prepended as context:
 
 ```
 Current instruction: investigate, debug, fix
 Context: [MS-123] CI failed on branch main
 ```
 
-The `reply:` prefix is case-insensitive. It always routes to the work item from the most recent `notify` call, regardless of how many work items are registered.
+The `reply:` prefix is case-insensitive. See [send](send.md) for the full set of outcomes,
+including what happens when nothing is waiting or several items are.
+
+**Delivery target.** Once a work item is resolved, delivery depends on whether its workspace has a
+registered agent. Registered workspaces get the body as an `inject` message over the agent's own
+socket — a mid-pipeline steer the agent reads itself. Everything else is typed into the tmux pane
+as keystrokes.
 
 ### AI command dispatch (messages mode only)
 
@@ -203,6 +247,12 @@ ai: /verb WORKSPACE [args]
 | _(omitted)_ | No verb: use the LLM extraction pipeline. |
 
 **Slash shorthand** delivers to the main session using a compact format — no dash or `instructions` keyword needed. `ai: /help slash` lists all verbs. Examples: `ai: /build MS add OAuth`, `ai: /test MS`, `ai: /stop MS`. Slash routing can be disabled globally by setting `slash_commands_enabled: false` in `~/.config/work-coordinator/config.yml`.
+
+**Every dispatched slash command is registered as a work item** before it is forwarded. The
+coordinator allocates the next free `WC-N` reference (`WC-1`, `WC-2`, …), records the command text
+as the title with kind `adhoc`, and passes the reference along with the instructions. That
+reference is what the workspace agent quotes in its status reports and what you name in a
+`reply:`. You do not run `register` for these — see [register](register.md).
 
 **`claude` and `main` bypass the LLM.** No `workspace run` is invoked. The instruction text is
 sent as-is to the first pane (pane 1 in domain terms, tmux pane index 0) of window 0 in the named

@@ -8,6 +8,22 @@ work-coordinator register --title TITLE --kind KIND [options]
 
 The item starts in `created` state. Nothing is routed or dispatched — `register` only writes the record. To activate the item and make it eligible for message delivery, run `start <uuid>` next.
 
+## When you do not need this command
+
+`register` is the manual pathway, for items you are tracking against an external ticket and driving
+from a tmux pane you set up yourself.
+
+Work items dispatched through `ai:` slash commands register themselves. When the daemon dispatches
+`ai: /build MS add OAuth`, it allocates the next coordinator-issued reference — `WC-1`, `WC-2`, and
+so on, counting up from the highest `WC-` reference already stored — records the command text as
+the title with kind `adhoc` and the target workspace, and forwards that reference along with the
+instructions. The workspace agent quotes it in status reports, and you use it to answer:
+`reply: WC-42 use Postgres`.
+
+So: use `register` when you are wiring an item to an external tracker ref and a pane of your own.
+Do not use it to pre-create items for slash commands — you would end up with two records for one
+piece of work.
+
 ## Required flags
 
 | Flag | Description |
