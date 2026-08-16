@@ -65,7 +65,7 @@ RSpec.describe "slash command work item registration" do
     expect(work_item_repo.find_all.first).to have_attributes(
       workspace_name: "myapp",
       external_reference: "WC-1",
-      state: :created
+      state: :active
     )
   end
 

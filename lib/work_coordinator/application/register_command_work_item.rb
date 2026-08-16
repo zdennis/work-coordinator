@@ -33,7 +33,8 @@ module WorkCoordinator
           title: title,
           kind: :adhoc,
           external_reference: next_reference,
-          workspace_name: workspace_name
+          workspace_name: workspace_name,
+          initial_state: :active
         )
       end
 
