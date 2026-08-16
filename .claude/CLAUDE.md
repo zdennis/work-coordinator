@@ -35,6 +35,10 @@ A Ruby CLI that coordinates AI coding agents running in tmux panes. It tracks wo
 
 **Status receiver.** `WorkspaceStatusReceiver` owns its own `UNIXServer` and accept loop, the same shape as `SocketMessageReceiver`, but it is deliberately **not** a `MessageReceiver` — it carries agent telemetry, not human conversation, and nothing it receives is typed into a pane. Each connection carries one JSON message and gets one reply telling the agent whether to continue (`give_up`, `abort_pipeline`, `drop`). The CLI `run` command starts it in its own thread and stops it on shutdown.
 
+**Debug logging.** `work-coordinator run --debug` enables structured debug output to stderr. A `Logger` is threaded through `Container` into `TmuxAgentSession`, `WorkspaceAgentSession`, `AiCommandReceiver`, `RouteMessage`, `DeliverToMainSession`, `SqliteWorkspaceAgentRegistry`, and `WorkspaceStatusReceiver`. All adapters default to `Logger.new(IO::NULL)` so tests and non-debug runs are unaffected.
+
+**tmux window targeting.** `TmuxAgentSession` targets windows with `session:^` (first window by position) rather than `session:0`, fixing `PaneNotFoundError` for users with `base-index 1` in their tmux config. Any new tmux adapter code should follow this pattern.
+
 ## Reply routing
 
 `RouteMessage` resolves `reply:` against **only** the items in `:waiting_for_human`. Two forms:

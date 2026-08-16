@@ -13,6 +13,7 @@ By default `run` enables all modes — local socket and Messages.app polling —
 | Flag | Description |
 |------|-------------|
 | `-m`, `--mode MODE` | Receive mode. Repeatable and comma-separated. Valid values: `all`, `local`, `messages`. Defaults to `all`. |
+| `--debug` | Enable debug logging to stderr. Prints routing decisions, registry hits and misses, tmux targets, and agent registration events as they happen. |
 
 The `--mode` flag can be given multiple times or with a comma-separated list:
 
@@ -147,6 +148,18 @@ Both modes via repeated flag:
 
 ```bash
 WC_RECIPIENT=+1XXXXXXXXXX work-coordinator run -m local -m messages
+```
+
+Enable debug output:
+
+```bash
+work-coordinator run --debug
+```
+
+Debug with local socket only:
+
+```bash
+work-coordinator run --debug --mode local
 ```
 
 Custom socket path:
