@@ -748,5 +748,29 @@ RSpec.describe WorkCoordinator::Adapters::AiCommandReceiver do
         expect(ai_handler_calls).to be_empty
       end
     end
+
+    # "ai:home:work-items status" — role token with coordinator verb in workspace slot
+    context "with 'home:work-items status' (role-embedded coordinator verb)" do
+      subject(:receiver) do
+        described_class.new(
+          inner: inner,
+          ai_command_handler: ai_handler,
+          deliver_to_main_session: ->(**) { raise "must not route to workspace" },
+          restart_coordinator: coordinator.restart,
+          update_and_restart: coordinator.update,
+          work_items_status_fn: ->(msg:) { status_calls << msg },
+          config: instance_double(WorkCoordinator::Config, matches_role?: true)
+        )
+      end
+
+      let(:msg) { { work_item_ref: "home:work-items", body: "status", received_at: Time.now } }
+      let(:messages) { [msg] }
+
+      it "dispatches to status rather than routing to a workspace pane" do
+        receiver.start { |m| m }
+        expect(status_calls).not_to be_empty
+        expect(ai_handler_calls).to be_empty
+      end
+    end
   end
 end

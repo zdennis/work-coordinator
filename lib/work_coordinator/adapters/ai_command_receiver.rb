@@ -67,6 +67,9 @@ module WorkCoordinator
 
         # ai:home:WC instructions — workspace embedded in the role token routes
         # directly to the workspace's main session without further parsing.
+        # Exception: coordinator verbs (e.g. "work-items") look like a workspace
+        # token syntactically but must be dispatched as coordinator commands instead.
+        workspace, body = redirect_coordinator_verb(workspace, body)
         return route_workspace_message(workspace, body) if workspace
 
         msg = restripped(msg, role, body) if role
@@ -74,6 +77,18 @@ module WorkCoordinator
         return if @slash_commands_enabled && slash_command_dispatched?(body, msg)
 
         dispatch_command(msg, Domain::AiCommand.new(body))
+      end
+
+      # When the workspace slot holds a coordinator verb (e.g. ai:home:work-items status),
+      # fold it back into the body so slash command dispatch can handle it.
+      # Returns [workspace, body] — workspace is nil when redirected.
+      def redirect_coordinator_verb(workspace, body)
+        return [workspace, body] unless workspace
+        if Domain::SlashCommand::COORDINATOR_VERBS.include?(workspace.downcase)
+          return [nil, "#{workspace} #{body}".strip]
+        end
+
+        [workspace, body]
       end
 
       def route_workspace_message(workspace, body)
