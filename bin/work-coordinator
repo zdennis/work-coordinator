@@ -29,6 +29,7 @@ end
 COMMANDS = {
   "init" => "Create the default config file (~/.config/work-coordinator/config.yml)",
   "alias" => "List, add, or remove workspace project aliases",
+  "config" => "Read or write a configuration property",
   "project" => "Manage projects (add, list, set-default)",
   "register" => "Register a new work item",
   "start" => "Transition a work item to active state",
@@ -153,6 +154,71 @@ when "alias"
     warn "Unknown alias subcommand: #{subcommand}"
     warn "Usage: work-coordinator alias [list|add SHORT PROJECT|remove SHORT]"
     exit 1
+  end
+
+when "config"
+  SUPPORTED_CONFIG_KEYS = %w[
+    ai_command
+    role
+    instruction_context
+    slash_commands_enabled
+    tmux_fallback_enabled
+    dispatch_via_sockets
+    implicit_reply_enabled
+    auto_launch_workspace
+    workspace_launch_timeout_seconds
+  ].freeze
+
+  OptionParser.new do |opts|
+    opts.banner = "Usage: work-coordinator config <key> [value]"
+    opts.separator ""
+    opts.separator "Read or write a configuration property."
+    opts.separator ""
+    opts.separator "Supported keys:"
+    SUPPORTED_CONFIG_KEYS.each { |k| opts.separator "    #{k}" }
+    opts.separator ""
+    opts.separator "Examples:"
+    opts.separator "  work-coordinator config role"
+    opts.separator "  work-coordinator config role home"
+    opts.separator "  work-coordinator config slash_commands_enabled false"
+    opts.on("-h", "--help", "Print help for this command") do
+      puts opts
+      exit
+    end
+  end.order!(ARGV)
+
+  key   = ARGV.shift
+  value = ARGV.shift
+
+  if key.nil? || key.empty?
+    warn "Usage: work-coordinator config <key> [value]"
+    exit 1
+  end
+
+  unless SUPPORTED_CONFIG_KEYS.include?(key)
+    warn "Unknown config key: #{key}"
+    warn "Supported keys: #{SUPPORTED_CONFIG_KEYS.join(", ")}"
+    exit 1
+  end
+
+  config = WorkCoordinator::Config.new
+
+  if value.nil?
+    method_name = config.respond_to?(:"#{key}?") ? :"#{key}?" : key.to_sym
+    raw = config.send(method_name)
+    puts raw
+  else
+    coerced =
+      case value.downcase
+      when "true"  then true
+      when "false" then false
+      when /\A\d+\z/ then value.to_i
+      else value
+      end
+    new_data = config.__send__(:data).dup
+    new_data[key] = coerced
+    config.__send__(:write_data!, new_data)
+    puts coerced
   end
 
 when "project"

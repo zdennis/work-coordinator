@@ -178,6 +178,7 @@ Outbound messages carry `type`, `workspace`, `work_item_ref`, a generated `dispa
 |---------|-------------|
 | [`init`](docs/commands/init.md) | Create the default config file |
 | [`alias`](docs/commands/alias.md) | List, add, or remove workspace project aliases |
+| [`config`](docs/commands/config.md) | Read or write a configuration property |
 | [`register`](docs/commands/register.md) | Create a work item and print its UUID |
 | [`start <uuid>`](docs/commands/start.md) | Transition a work item to `active` |
 | [`status`](docs/commands/status.md) | List all work items with state, phase, and title |
