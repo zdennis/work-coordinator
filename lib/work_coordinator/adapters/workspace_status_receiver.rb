@@ -76,6 +76,12 @@ module WorkCoordinator
       end
 
       def handle_connection(conn)
+        process_connection(conn)
+      ensure
+        conn.close rescue nil # rubocop:disable Style/RescueModifier
+      end
+
+      def process_connection(conn)
         line = conn.gets&.chomp
         return if line.nil? || line.empty?
 
@@ -85,8 +91,7 @@ module WorkCoordinator
         reply(conn, dispatch(message))
       rescue StandardError => e
         warn "[WorkspaceStatusReceiver] dropping message: #{e.class}: #{e.message}"
-      ensure
-        conn.close rescue nil # rubocop:disable Style/RescueModifier
+        reply(conn, { ok: false, error: "internal_error" }) rescue nil # rubocop:disable Style/RescueModifier
       end
 
       def parse(line)

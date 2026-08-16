@@ -184,4 +184,33 @@ RSpec.describe WorkCoordinator::Adapters::WorkspaceStatusReceiver do
       expect(event_store.all.size).to eq(1)
     end
   end
+
+  describe "internal error during dispatch" do
+    subject(:receiver) do
+      described_class.new(
+        socket_path: socket_path,
+        work_item_repo: work_item_repo,
+        event_store: event_store,
+        complete_work_item: complete_work_item,
+        notify_human: notify_human,
+        inform_human: exploding_inform_human
+      )
+    end
+
+    let(:exploding_inform_human) do
+      ->(**) { raise "boom" }
+    end
+
+    it "sends an error reply instead of closing without responding" do
+      reply = send_status(base("status_update", message_id: "m1", message: "hi"))
+      expect(reply).to include("ok" => false, "error" => "internal_error")
+    end
+
+    it "stays alive after the error so subsequent connections are accepted" do
+      send_status(base("status_update", message_id: "m1", message: "boom"))
+      # A second connection succeeds — the server did not crash
+      reply = send_status(base("status_update", message_id: "m2", message: "boom again"))
+      expect(reply).to include("ok" => false, "error" => "internal_error")
+    end
+  end
 end
