@@ -65,6 +65,8 @@ module WorkCoordinator
         return if line.nil? || line.empty?
 
         block.call(parse_line(line))
+      rescue StandardError => e
+        warn "[SocketMessageReceiver] dropping message: #{e.class}: #{e.message}"
       ensure
         conn.close rescue nil # rubocop:disable Style/RescueModifier
       end
