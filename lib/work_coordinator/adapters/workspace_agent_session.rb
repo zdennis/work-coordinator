@@ -126,7 +126,7 @@ module WorkCoordinator
           instructions = render_reporting_instructions(
             work_item_ref: work_item_ref,
             workspace: workspace,
-            has_pipeline: !pipeline.to_s.strip.empty?
+            has_pipeline: pipeline ? true : false
           )
           data = data.merge(reporting_instructions: instructions) if instructions
         end
