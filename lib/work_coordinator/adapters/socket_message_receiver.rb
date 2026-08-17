@@ -37,11 +37,16 @@ module WorkCoordinator
       # @param dispatch_handler [#call, nil] when given, dispatch messages are
       #   answered here instead of being handed upstream; called with
       #   `(target:, body:, work_item_ref:, from:)` and must return a Hash
+      # How often (seconds) the accept loop wakes up to check whether the socket
+      # file still exists on disk.
+      DEFAULT_WATCHDOG_INTERVAL = 5
+
       def initialize(socket_path: "/tmp/work-coordinator.sock", workspace_agent_registry: nil,
-                     dispatch_handler: nil)
+                     dispatch_handler: nil, watchdog_interval: DEFAULT_WATCHDOG_INTERVAL)
         @socket_path = socket_path
         @workspace_agent_registry = workspace_agent_registry
         @dispatch_handler = dispatch_handler
+        @watchdog_interval = watchdog_interval
         @epoch = "wc-#{SecureRandom.hex(8)}"
         @server = nil
         @stop_requested = false
@@ -84,15 +89,31 @@ module WorkCoordinator
 
       def accept_loop(&)
         until @stop_requested
-          conn = accept_connection || break
+          conn = accept_connection
+          next if conn == :watchdog_tick
+          break unless conn
+
           handle_connection(conn, &)
         end
       end
 
       def accept_connection
+        unless @server.wait_readable(@watchdog_interval)
+          ensure_socket_alive
+          return :watchdog_tick
+        end
+
         @server.accept
       rescue IOError, Errno::EBADF
         nil
+      end
+
+      def ensure_socket_alive
+        return if @stop_requested || File.exist?(@socket_path)
+
+        warn "[SocketMessageReceiver] socket file missing, recreating: #{@socket_path}"
+        @server.close rescue nil # rubocop:disable Style/RescueModifier
+        @server = UNIXServer.new(@socket_path)
       end
 
       def handle_connection(conn, &block)

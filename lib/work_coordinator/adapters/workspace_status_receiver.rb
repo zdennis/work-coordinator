@@ -24,10 +24,16 @@ module WorkCoordinator
       # @param notify_human [#call] `call(work_item_id:, body:)`
       # @param inform_human [#call] `call(work_item_id:, body:, work_item:)`
       # @param logger [Logger]
+      # How often (seconds) the accept loop wakes up to check whether the socket
+      # file still exists on disk.
+      DEFAULT_WATCHDOG_INTERVAL = 5
+
       def initialize(work_item_repo:, event_store:, complete_work_item:, notify_human:, inform_human:,
                      socket_path: "/tmp/work-coordinator-status.sock",
+                     watchdog_interval: DEFAULT_WATCHDOG_INTERVAL,
                      logger: Logger.new(IO::NULL))
         @socket_path = socket_path
+        @watchdog_interval = watchdog_interval
         @work_item_repo = work_item_repo
         @event_store = event_store
         @complete_work_item = complete_work_item
@@ -51,7 +57,10 @@ module WorkCoordinator
         FileUtils.rm_f(@socket_path)
         @server = UNIXServer.new(@socket_path)
         until @stop_requested
-          conn = accept_connection || break
+          conn = accept_connection
+          next if conn == :watchdog_tick
+          break unless conn
+
           handle_connection(conn)
         end
       end
@@ -70,9 +79,22 @@ module WorkCoordinator
       private
 
       def accept_connection
+        unless @server.wait_readable(@watchdog_interval)
+          ensure_socket_alive
+          return :watchdog_tick
+        end
+
         @server.accept
       rescue IOError, Errno::EBADF
         nil
+      end
+
+      def ensure_socket_alive
+        return if @stop_requested || File.exist?(@socket_path)
+
+        warn "[WorkspaceStatusReceiver] socket file missing, recreating: #{@socket_path}"
+        @server.close rescue nil # rubocop:disable Style/RescueModifier
+        @server = UNIXServer.new(@socket_path)
       end
 
       def handle_connection(conn)

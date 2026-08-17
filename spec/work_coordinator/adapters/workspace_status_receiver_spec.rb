@@ -213,4 +213,54 @@ RSpec.describe WorkCoordinator::Adapters::WorkspaceStatusReceiver do
       expect(reply).to include("ok" => false, "error" => "internal_error")
     end
   end
+
+  describe "socket file recovery" do
+    subject(:recovery_receiver) do
+      described_class.new(
+        socket_path: recovery_socket_path,
+        work_item_repo: work_item_repo,
+        event_store: event_store,
+        complete_work_item: complete_work_item,
+        notify_human: notify_human,
+        inform_human: inform_human,
+        watchdog_interval: 0.05
+      )
+    end
+
+    let(:recovery_socket_path) { File.join(tmpdir, "recovery-status.sock") }
+
+    before do
+      listeners << Thread.new { recovery_receiver.start }
+      20.times do
+        break if File.socket?(recovery_socket_path)
+
+        sleep 0.05
+      end
+    end
+
+    after { recovery_receiver.stop }
+
+    def send_recovery_status(payload)
+      Timeout.timeout(2) do
+        UNIXSocket.open(recovery_socket_path) do |client|
+          client.puts(payload.is_a?(String) ? payload : JSON.generate(payload))
+          line = client.gets
+          line && JSON.parse(line)
+        end
+      end
+    end
+
+    it "recreates the socket file and continues accepting connections when deleted while running" do
+      File.delete(recovery_socket_path)
+      40.times do
+        break if File.socket?(recovery_socket_path)
+
+        sleep 0.05
+      end
+
+      reply = send_recovery_status(base("status_update", message_id: "recovery-1", message: "after recovery"))
+      expect(reply).to include("ok" => true)
+      expect(inform_human.calls).not_to be_empty
+    end
+  end
 end

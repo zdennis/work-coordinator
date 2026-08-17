@@ -286,5 +286,21 @@ RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
         expect(delivered.empty?).to be true
       end
     end
+
+    context "when the socket file is deleted while running" do
+      subject(:receiver) { described_class.new(socket_path: socket_path, watchdog_interval: 0.05) }
+
+      it "recreates the socket file and continues accepting connections" do
+        start_listener
+
+        File.delete(socket_path)
+        # Allow the watchdog interval to fire
+        wait_for_socket
+
+        send_line("WC-99 after recreation")
+        message = Timeout.timeout(2) { delivered.pop }
+        expect(message).to include(work_item_ref: "WC-99", body: "after recreation")
+      end
+    end
   end
 end
