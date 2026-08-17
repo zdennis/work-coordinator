@@ -59,6 +59,8 @@ module WorkCoordinator
     #   @return [Application::NotifyHuman]
     # @!attribute [r] inform_human
     #   @return [Application::InformHuman]
+    # @!attribute [r] dispatch_to_agent
+    #   @return [Application::DispatchToAgent]
     # @!attribute [r] workspace_status_receiver
     #   @return [Adapters::WorkspaceStatusReceiver] runs on its own socket and thread, not part of
     #     the composite receiver
@@ -70,7 +72,7 @@ module WorkCoordinator
                 :set_default_project, :restart_state_repo, :git_runner,
                 :restart_coordinator, :update_and_restart, :register_command_work_item,
                 :workspace_agent_registry, :complete_work_item, :workspace_status_receiver,
-                :inform_human, :work_items_status,
+                :inform_human, :work_items_status, :dispatch_to_agent,
                 :logger, :config
 
     # A receiver is built per mode and run concurrently; the sender is chosen
@@ -148,7 +150,10 @@ module WorkCoordinator
       when :local
         Adapters::SocketMessageReceiver.new(
           socket_path: @socket_path,
-          workspace_agent_registry: @workspace_agent_registry
+          workspace_agent_registry: @workspace_agent_registry,
+          dispatch_handler: lambda do |target:, body:, work_item_ref:, from:|
+            @dispatch_to_agent.call(target: target, body: body, work_item_ref: work_item_ref, from: from)
+          end
         )
       when :messages
         build_messages_receiver
@@ -183,6 +188,7 @@ module WorkCoordinator
     end
 
     def wire!
+      @dispatch_to_agent = build_dispatch_to_agent
       @register_work_item = Application::RegisterWorkItem.new(work_item_repo: @work_item_repo,
                                                               event_store: @event_store,
                                                               project_repo: @project_repo)
@@ -196,6 +202,10 @@ module WorkCoordinator
       wire_routing!
       wire_ai_commands!
       wire_restart!
+    end
+
+    def build_dispatch_to_agent
+      Application::DispatchToAgent.new(registry: @workspace_agent_registry, logger: @logger)
     end
 
     def build_register_command_work_item

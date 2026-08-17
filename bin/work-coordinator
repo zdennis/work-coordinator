@@ -46,6 +46,7 @@ COMMANDS = {
   "status" => "List all work items with their current state and phase",
   "work-items" => "Manage and inspect work items (subcommands: status)",
   "send" => "Send a message to the running coordinator via socket",
+  "workspace" => "Dispatch a command to a named registered workspace agent",
   "run" => "Start the coordinator daemon (local socket or Messages mode)",
   "notify" => "Send a human notification for a work item",
   "report" => "Send a status report to the running coordinator's status socket"
@@ -894,6 +895,83 @@ when "report"
   else
     warn "work-coordinator report: #{reply['error']} (action: #{reply['action']})"
     exit({ "give_up" => 2, "abort_pipeline" => 3, "drop" => 4 }.fetch(reply["action"], 1))
+  end
+
+when "workspace"
+  subcommand = ARGV.shift
+
+  case subcommand
+  when "send"
+    options = {}
+    OptionParser.new do |opts|
+      opts.banner = "Usage: work-coordinator workspace send <name> <body>"
+      opts.separator ""
+      opts.separator "Dispatch a command to a named registered workspace agent through the coordinator."
+      opts.separator ""
+      opts.separator "Arguments:"
+      opts.separator "    <name>    Registered agent name (e.g. homebrew-bin)"
+      opts.separator "    <body>    Command text to forward"
+      opts.separator ""
+      opts.separator "Options:"
+      opts.on("--ref REF", "Work item reference (coordinator generates one if omitted)") do |v|
+        options[:work_item_ref] = v
+      end
+      opts.on("--from NAME", "Originating agent name, for audit logging") do |v|
+        options[:from] = v
+      end
+      opts.separator ""
+      opts.separator "Environment:"
+      opts.separator "    WC_SOCKET    Unix socket path (default: /tmp/work-coordinator.sock)"
+      opts.separator ""
+      opts.separator "Examples:"
+      opts.separator "  work-coordinator workspace send homebrew-bin 'update the formula to 0.23.0'"
+      opts.separator "  work-coordinator workspace send myapp 'run tests' --ref WC-42"
+      opts.on("-h", "--help", "Print help for this command") do
+        puts opts
+        exit
+      end
+    end.parse!(ARGV)
+
+    name = ARGV.shift
+    body = ARGV.shift
+
+    if name.nil? || name.strip.empty?
+      warn "Usage: work-coordinator workspace send <name> <body>"
+      exit 1
+    end
+    if body.nil? || body.strip.empty?
+      warn "Usage: work-coordinator workspace send <name> <body>"
+      exit 1
+    end
+
+    client = WorkCoordinator::Adapters::WorkCoordinatorClient.new
+    begin
+      result = client.dispatch_to(name: name, body: body, **options.slice(:work_item_ref, :from))
+    rescue Errno::ENOENT, Errno::ECONNREFUSED => e
+      warn "work-coordinator workspace send: coordinator not reachable — #{e.message}"
+      exit 1
+    end
+
+    if result[:ok]
+      puts "Dispatched to #{name} (ref: #{result[:work_item_ref]})"
+    else
+      warn "work-coordinator workspace send: #{result[:error]} (target: #{result[:target]})"
+      exit 1
+    end
+
+  when nil, "--help", "-h"
+    puts "Usage: work-coordinator workspace <subcommand> [options]"
+    puts ""
+    puts "Subcommands:"
+    puts "    send    Dispatch a command to a named registered workspace agent"
+    puts ""
+    puts "Run 'work-coordinator workspace <subcommand> --help' for subcommand options."
+    exit subcommand.nil? ? 1 : 0
+
+  else
+    warn "Unknown workspace subcommand: #{subcommand}"
+    warn "Run 'work-coordinator workspace --help' for usage."
+    exit 1
   end
 
 else

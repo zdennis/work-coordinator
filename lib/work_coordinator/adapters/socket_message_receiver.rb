@@ -19,10 +19,13 @@ module WorkCoordinator
       PROTOCOL_VERSION = "1"
 
       # JSON `type` values this receiver knows how to hand upstream.
-      JSON_MESSAGE_TYPES = %w[register deregister command_v1].freeze
+      JSON_MESSAGE_TYPES = %w[register deregister command_v1 dispatch].freeze
 
       # JSON `type` values answered on the connection instead of yielded.
       REGISTRATION_TYPES = %w[register deregister].freeze
+
+      # JSON `type` values answered on the connection via an injected handler.
+      DISPATCH_TYPES = %w[dispatch].freeze
 
       # Envelope fields lifted onto a parsed `command_v1` message.
       COMMAND_FIELDS = %w[role verb workspace instructions work_item_ref source].freeze
@@ -31,9 +34,14 @@ module WorkCoordinator
       # @param workspace_agent_registry [Ports::WorkspaceAgentRegistry, nil] when
       #   given, register/deregister messages are answered here and are not
       #   handed upstream
-      def initialize(socket_path: "/tmp/work-coordinator.sock", workspace_agent_registry: nil)
+      # @param dispatch_handler [#call, nil] when given, dispatch messages are
+      #   answered here instead of being handed upstream; called with
+      #   `(target:, body:, work_item_ref:, from:)` and must return a Hash
+      def initialize(socket_path: "/tmp/work-coordinator.sock", workspace_agent_registry: nil,
+                     dispatch_handler: nil)
         @socket_path = socket_path
         @workspace_agent_registry = workspace_agent_registry
+        @dispatch_handler = dispatch_handler
         @epoch = "wc-#{SecureRandom.hex(8)}"
         @server = nil
         @stop_requested = false
@@ -91,6 +99,7 @@ module WorkCoordinator
         message = read_message(conn)
         return if message.nil?
         return reply(conn, handle_registration(message[:raw])) if registration?(message)
+        return if dispatch_consumed?(conn, message)
 
         block.call(message)
       rescue StandardError => e
@@ -108,6 +117,35 @@ module WorkCoordinator
 
       def registration?(message)
         @workspace_agent_registry && REGISTRATION_TYPES.include?(message[:type])
+      end
+
+      # Returns true when the message was consumed — either dispatched or silently
+      # dropped because it is a dispatch type but no handler is configured.
+      def dispatch_consumed?(conn, message)
+        return false unless dispatch_type?(message)
+
+        reply(conn, handle_dispatch(message[:raw])) if dispatchable?(message)
+        true
+      end
+
+      def dispatchable?(message)
+        @dispatch_handler && dispatch_type?(message)
+      end
+
+      def dispatch_type?(message)
+        DISPATCH_TYPES.include?(message[:type])
+      end
+
+      def handle_dispatch(raw)
+        @dispatch_handler.call(
+          target: raw["target"],
+          body: raw["body"],
+          work_item_ref: raw["work_item_ref"],
+          from: raw["from"]
+        )
+      rescue StandardError => e
+        warn "[SocketMessageReceiver] dispatch handler raised: #{e.class}: #{e.message}"
+        { ok: false, error: "internal_error" }
       end
 
       def reply(conn, payload)

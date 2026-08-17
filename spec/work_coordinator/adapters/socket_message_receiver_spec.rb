@@ -208,5 +208,83 @@ RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
       message = Timeout.timeout(2) { delivered.pop }
       expect(message).to include(work_item_ref: "wi-2", body: "still here")
     end
+
+    describe "dispatch messages" do
+      subject(:receiver) do
+        described_class.new(socket_path: socket_path, dispatch_handler: dispatch_handler)
+      end
+
+      let(:dispatch_results) { Queue.new }
+      let(:dispatch_handler) do
+        lambda do |target:, body:, work_item_ref:, from:|
+          { ok: true, work_item_ref: work_item_ref || "WC-d-generated", _args: { target:, body:, from: } }
+        end
+      end
+
+      def send_dispatch(payload)
+        UNIXSocket.open(socket_path) do |client|
+          client.puts(JSON.generate(payload))
+          client.gets
+        end
+      end
+
+      def start_capturing_receiver(path, &handler)
+        r = described_class.new(socket_path: path, dispatch_handler: handler)
+        t = Thread.new { r.start { |_m| nil } }
+        20.times do
+          break if File.socket?(path)
+
+          sleep 0.05
+        end
+        [r, t]
+      end
+
+      before { start_listener }
+
+      it "answers the connection with the dispatch handler result" do
+        reply_line = send_dispatch({ type: "dispatch", target: "homebrew-bin", body: "update formula" })
+        reply = JSON.parse(reply_line, symbolize_names: true)
+        expect(reply[:ok]).to be true
+      end
+
+      it "passes target, body, work_item_ref, and from to the handler" do
+        received = nil
+        cap_path = File.join(tmpdir, "cap.sock")
+        r, t = start_capturing_receiver(cap_path) do |target:, body:, work_item_ref:, from:|
+          received = { target:, body:, work_item_ref:, from: }
+          { ok: true, work_item_ref: "WC-d-x" }
+        end
+        UNIXSocket.open(cap_path) do |c|
+          c.puts(JSON.generate({ type: "dispatch", target: "app", body: "do it",
+                                 work_item_ref: "WC-42", from: "workspace" }))
+          c.gets
+        end
+        r.stop
+        t.join(2)
+
+        expect(received).to eq(target: "app", body: "do it", work_item_ref: "WC-42", from: "workspace")
+      end
+
+      it "does not yield dispatch messages upstream" do
+        send_dispatch({ type: "dispatch", target: "homebrew-bin", body: "update formula" })
+        expect(delivered.empty?).to be true
+      end
+
+      it "drops dispatch messages when no dispatch_handler is configured" do
+        plain_receiver = described_class.new(socket_path: File.join(tmpdir, "plain.sock"))
+        plain_thread = Thread.new { plain_receiver.start { |m| delivered << m } }
+        20.times do
+          break if File.socket?(File.join(tmpdir, "plain.sock"))
+
+          sleep 0.05
+        end
+        UNIXSocket.open(File.join(tmpdir, "plain.sock")) do |c|
+          c.puts(JSON.generate({ type: "dispatch", target: "x", body: "y" }))
+        end
+        plain_receiver.stop
+        plain_thread.join(2)
+        expect(delivered.empty?).to be true
+      end
+    end
   end
 end
