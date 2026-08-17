@@ -184,7 +184,10 @@ Outbound messages carry `type`, `workspace`, `work_item_ref`, a generated `dispa
 | [`status`](docs/commands/status.md) | List all work items with state, phase, and title |
 | [`run`](docs/commands/run.md) | Start the daemon and listen for inbound messages |
 | [`send "REF body"`](docs/commands/send.md) | Send a message to the running daemon over its socket |
+| [`workspace send <name> <body>`](docs/commands/workspace.md) | Dispatch a command to a named registered workspace agent |
 | [`notify <uuid> "body"`](docs/commands/notify.md) | Send a human notification for a work item |
+| [`work-items`](docs/commands/work-items.md) | Manage and inspect work items (subcommands: status) |
+| [`report`](docs/commands/report.md) | Send a status report to the running coordinator's status socket |
 
 Run `work-coordinator <command> --help` for command-specific options.
 
