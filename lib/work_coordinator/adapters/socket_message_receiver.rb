@@ -195,7 +195,8 @@ module WorkCoordinator
           workspace_name: raw["name"],
           socket_path: raw["socket"],
           pipeline: raw["pipeline"] ? true : false,
-          epoch: raw["epoch"]
+          epoch: raw["epoch"],
+          pid: raw["pid"]&.to_i
         )
         result[:ok] ? { ok: true, epoch: @epoch, protocol_version: PROTOCOL_VERSION } : result
       end

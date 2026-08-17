@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "work_coordinator/ports/workspace_agent_registry"
+require "work_coordinator/adapters/process_liveness"
 
 module WorkCoordinator
   module Adapters
@@ -8,17 +9,20 @@ module WorkCoordinator
     # not need the database.
     class FakeWorkspaceAgentRegistry
       include Ports::WorkspaceAgentRegistry
+      include ProcessLiveness
 
       def initialize
         @entries = {}
       end
 
       # @return [Hash] `{ok: true}` or `{ok: false, error: "already_registered"}`
-      def register(workspace_name:, socket_path:, pipeline:, epoch:)
+      def register(workspace_name:, socket_path:, pipeline:, epoch:, pid: nil)
         existing = @entries[workspace_name]
-        return { ok: false, error: "already_registered" } if existing && existing[:epoch] != epoch
+        if existing && existing[:epoch] != epoch && !stale_process?(existing[:pid])
+          return { ok: false, error: "already_registered" }
+        end
 
-        @entries[workspace_name] = { socket_path: socket_path, pipeline: pipeline, epoch: epoch }
+        @entries[workspace_name] = { socket_path: socket_path, pipeline: pipeline, epoch: epoch, pid: pid }
         { ok: true }
       end
 

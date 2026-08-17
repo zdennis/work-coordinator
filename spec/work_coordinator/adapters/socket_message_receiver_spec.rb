@@ -84,7 +84,7 @@ RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
         expect(request(register_line)).to eq("ok" => true, "epoch" => receiver.epoch,
                                              "protocol_version" => "1")
         expect(registry.find("myapp")).to eq(socket_path: "/tmp/workspace-myapp.sock",
-                                             pipeline: true, epoch: "wa-1")
+                                             pipeline: true, epoch: "wa-1", pid: nil)
       end
 
       it "refuses a workspace already claimed by another process" do

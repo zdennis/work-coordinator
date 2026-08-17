@@ -99,7 +99,7 @@ handling.
 `register` claims a workspace and tells the coordinator where to reach the agent.
 
 ```json
-{"type":"register","workspace_name":"my-service","socket_path":"/tmp/wa-my-service.sock","pipeline":"build","epoch":"wa-7c1f0a93"}
+{"type":"register","workspace_name":"my-service","socket_path":"/tmp/wa-my-service.sock","pipeline":"build","epoch":"wa-7c1f0a93","pid":12345}
 ```
 
 | Field | Description |
@@ -108,11 +108,20 @@ handling.
 | `socket_path` | Where the coordinator should send `command` and `inject` |
 | `pipeline` | Name of the pipeline the agent runs |
 | `epoch` | Identifier for this agent process's lifetime |
+| `pid` | OS process ID of the registering agent (integer; send your `$$` / `Process.pid`). Optional — omit only when talking to a coordinator that pre-dates this field. |
 
 A workspace can be claimed once. Re-registering under the **same** `epoch` is the same process
 restarting its listener, and refreshes the stored row. A **different** `epoch` is a second process
-and is refused with `{"ok":false,"error":"already_registered"}`; the first agent keeps the
-workspace. Otherwise the reply is `{"ok":true}`.
+and is normally refused with `{"ok":false,"error":"already_registered"}`.
+
+**Stale-registration eviction.** If the new request includes a `pid` field and the coordinator
+finds an existing registration with a `pid` whose process is no longer running, it evicts the
+stale claim and accepts the new registration. This lets a restarted agent take over a workspace
+that its predecessor held but did not cleanly deregister.
+
+- Send `pid` on every registration — it is the only way your epoch can ever evict a stale claim.
+- Omitting `pid` (or registering against a coordinator that pre-dates this field) disables eviction;
+  a conflicting epoch will always be refused until someone calls `deregister` or the coordinator restarts.
 
 `deregister` releases the claim and takes only the workspace name:
 

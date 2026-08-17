@@ -14,23 +14,26 @@ module WorkCoordinator
       # @param socket_path [String]
       # @param pipeline [Boolean]
       # @param epoch [String] identifies the registering process
+      # @param pid [Integer, nil] OS process id of the registering agent; lets a
+      #   conflicting claim be evicted once its process is gone
       # @return [Hash] `{ok: true}`, or `{ok: false, error: "already_registered"}`
-      #   when a different epoch already holds the workspace
-      def register(workspace_name:, socket_path:, pipeline:, epoch:) = raise NotImplementedError
+      #   when a different epoch already holds the workspace and its process is
+      #   still alive
+      def register(workspace_name:, socket_path:, pipeline:, epoch:, pid: nil) = raise NotImplementedError
 
       # @param workspace_name [String]
       # @return [Hash] `{ok: true}`, whether or not a registration existed
       def unregister(workspace_name:) = raise NotImplementedError
 
       # @param workspace_name [String]
-      # @return [Hash{Symbol=>Object}, nil] `{socket_path:, pipeline:, epoch:}`
+      # @return [Hash{Symbol=>Object}, nil] `{socket_path:, pipeline:, epoch:, pid:}`
       def find(workspace_name) = raise NotImplementedError
 
       # @param workspace_name [String]
       # @return [Boolean]
       def registered?(workspace_name) = raise NotImplementedError
 
-      # @return [Array<Hash{Symbol=>Object}>] `{workspace_name:, socket_path:, pipeline:, epoch:}`
+      # @return [Array<Hash{Symbol=>Object}>] `{workspace_name:, socket_path:, pipeline:, epoch:, pid:}`
       def all = raise NotImplementedError
 
       # Drops every registration. Registrations only mean something for the life

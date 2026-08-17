@@ -9,7 +9,7 @@ RSpec.shared_examples "a workspace agent registry" do
                                epoch: "e1")).to eq({ ok: true })
 
       expect(registry.find("ws-1")).to eq(
-        { socket_path: "/tmp/a.sock", pipeline: false, epoch: "e1" }
+        { socket_path: "/tmp/a.sock", pipeline: false, epoch: "e1", pid: nil }
       )
     end
 
@@ -20,7 +20,7 @@ RSpec.shared_examples "a workspace agent registry" do
                                epoch: "e1")).to eq({ ok: true })
 
       expect(registry.find("ws-1")).to eq(
-        { socket_path: "/tmp/b.sock", pipeline: true, epoch: "e1" }
+        { socket_path: "/tmp/b.sock", pipeline: true, epoch: "e1", pid: nil }
       )
     end
 
@@ -31,8 +31,43 @@ RSpec.shared_examples "a workspace agent registry" do
                                epoch: "e2")).to eq({ ok: false, error: "already_registered" })
 
       expect(registry.find("ws-1")).to eq(
-        { socket_path: "/tmp/a.sock", pipeline: false, epoch: "e1" }
+        { socket_path: "/tmp/a.sock", pipeline: false, epoch: "e1", pid: nil }
       )
+    end
+
+    it "stores pid alongside other fields" do
+      registry.register(workspace_name: "ws-1", socket_path: "/tmp/a.sock",
+                        pipeline: false, epoch: "e1", pid: 12_345)
+      expect(registry.find("ws-1")).to include(pid: 12_345)
+    end
+
+    it "accepts a new registration when the registered process is dead" do
+      # 99_999_999 exceeds macOS kern.maxproc; guaranteed not to be a live pid
+      registry.register(workspace_name: "ws-1", socket_path: "/tmp/a.sock",
+                        pipeline: false, epoch: "e1", pid: 99_999_999)
+
+      result = registry.register(workspace_name: "ws-1", socket_path: "/tmp/b.sock",
+                                 pipeline: false, epoch: "e2", pid: Process.pid)
+      expect(result).to eq({ ok: true })
+      expect(registry.find("ws-1")).to include(epoch: "e2", socket_path: "/tmp/b.sock")
+    end
+
+    it "rejects a new registration when the registered process is still alive" do
+      registry.register(workspace_name: "ws-1", socket_path: "/tmp/a.sock",
+                        pipeline: false, epoch: "e1", pid: Process.pid)
+
+      result = registry.register(workspace_name: "ws-1", socket_path: "/tmp/b.sock",
+                                 pipeline: false, epoch: "e2", pid: Process.pid)
+      expect(result).to eq({ ok: false, error: "already_registered" })
+    end
+
+    it "rejects on epoch conflict when registered pid is nil (legacy agent)" do
+      registry.register(workspace_name: "ws-1", socket_path: "/tmp/a.sock",
+                        pipeline: false, epoch: "e1", pid: nil)
+
+      result = registry.register(workspace_name: "ws-1", socket_path: "/tmp/b.sock",
+                                 pipeline: false, epoch: "e2", pid: Process.pid)
+      expect(result).to eq({ ok: false, error: "already_registered" })
     end
   end
 
@@ -73,8 +108,8 @@ RSpec.shared_examples "a workspace agent registry" do
       registry.register(workspace_name: "ws-2", socket_path: "/tmp/b.sock", pipeline: true, epoch: "e2")
 
       expect(registry.all).to contain_exactly(
-        { workspace_name: "ws-1", socket_path: "/tmp/a.sock", pipeline: false, epoch: "e1" },
-        { workspace_name: "ws-2", socket_path: "/tmp/b.sock", pipeline: true, epoch: "e2" }
+        { workspace_name: "ws-1", socket_path: "/tmp/a.sock", pipeline: false, epoch: "e1", pid: nil },
+        { workspace_name: "ws-2", socket_path: "/tmp/b.sock", pipeline: true, epoch: "e2", pid: nil }
       )
     end
 
