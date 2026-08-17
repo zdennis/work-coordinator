@@ -32,7 +32,7 @@ module WorkCoordinator
       # @param logger [Logger]
       def initialize(tmux:, registry:, sleeper: ->(seconds) { sleep(seconds) },
                      logger: Logger.new(IO::NULL), tmux_fallback_enabled: true,
-                     status_socket_path: "/tmp/work-coordinator-status.sock",
+                     status_socket_path: Paths.status_socket,
                      config: nil)
         @tmux = tmux
         @registry = registry

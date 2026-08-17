@@ -29,7 +29,7 @@ module WorkCoordinator
       DEFAULT_WATCHDOG_INTERVAL = 5
 
       def initialize(work_item_repo:, event_store:, complete_work_item:, notify_human:, inform_human:,
-                     socket_path: "/tmp/work-coordinator-status.sock",
+                     socket_path: Paths.status_socket,
                      watchdog_interval: DEFAULT_WATCHDOG_INTERVAL,
                      logger: Logger.new(IO::NULL))
         @socket_path = socket_path

@@ -10,7 +10,7 @@ module WorkCoordinator
     # back the reply.
     class WorkCoordinatorClient
       # @param socket_path [String]
-      def initialize(socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"))
+      def initialize(socket_path: Paths.socket)
         @socket_path = socket_path
       end
 

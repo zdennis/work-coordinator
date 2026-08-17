@@ -87,8 +87,8 @@ module WorkCoordinator
     # @param role [String, nil] overrides the role from config when given
     # @raise [ArgumentError] when a mode is unrecognized
     def initialize(db_path: ENV.fetch("WC_DATABASE", "db/work_coordinator.sqlite3"), # rubocop:disable Metrics/AbcSize
-                   socket_path: ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock"),
-                   status_socket_path: ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock"),
+                   socket_path: Paths.socket,
+                   status_socket_path: Paths.status_socket,
                    modes: [:local],
                    argv: [$PROGRAM_NAME],
                    env: ENV.to_h,

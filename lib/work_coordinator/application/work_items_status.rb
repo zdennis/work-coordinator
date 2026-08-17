@@ -12,7 +12,7 @@ module WorkCoordinator
         @work_item_repo = work_item_repo
         @message_sender = message_sender
         @config         = config
-        @socket_path    = socket_path || ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
+        @socket_path    = socket_path || Paths.socket
       end
 
       # @param msg [Hash, nil] inbound message to reply to; nil returns the body only

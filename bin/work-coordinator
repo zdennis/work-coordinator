@@ -548,7 +548,7 @@ when "work-items"
     project_id_filter = resolve_project_id(container, work_items_options[:project])
 
     role = container.config.role || "unknown"
-    running = File.exist?(ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")) ? "running" : "not running"
+    running = File.exist?(WorkCoordinator::Paths.socket) ? "running" : "not running"
     separator = "─" * 84
 
     puts "Coordinator  role: #{role}  |  status: #{running}"
@@ -591,7 +591,7 @@ when "send"
     opts.separator '    "REF body"    Full message string; REF identifies the work item'
     opts.separator ""
     opts.separator "Environment:"
-    opts.separator "    WC_SOCKET    Unix socket path (default: /tmp/work-coordinator.sock)"
+    opts.separator "    WC_SOCKET    Unix socket path (default: ~/.local/run/work-coordinator/work-coordinator.sock)"
     opts.separator ""
     opts.separator "Examples:"
     opts.separator "  # Signal that a work item (ref #42) is blocked"
@@ -676,7 +676,8 @@ when "run"
     warn "Unknown mode(s): #{unknown.join(', ')}. Valid modes: all, #{KNOWN_MODES.join(', ')}"
     exit 1
   end
-  socket_path = ENV.fetch("WC_SOCKET", "/tmp/work-coordinator.sock")
+  WorkCoordinator::Paths.ensure_run_dir
+  socket_path = WorkCoordinator::Paths.socket
   container = WorkCoordinator::Container.new(
     config: WorkCoordinator::Config.load,
     modes: modes,
@@ -721,9 +722,8 @@ when "run"
   puts "Listening for messages starting with: ai:" if modes.include?(:messages)
   puts "Press Ctrl-C to stop."
 
-  status_socket_path = ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock")
+  status_socket_path = WorkCoordinator::Paths.status_socket
   puts "Accepting workspace agent status reports on #{status_socket_path}"
-  container.workspace_agent_registry.clear
   status_thread = Thread.new { container.workspace_status_receiver.start }
 
   stop_all = proc do
@@ -861,7 +861,7 @@ when "report"
   payload[:workspace] = workspace if workspace
   REPORT_REQUIRED_FIELDS.fetch(options[:type]).each { |f| payload[f] = options[f] }
 
-  socket_path = options[:socket] || ENV.fetch("WC_STATUS_SOCKET", "/tmp/work-coordinator-status.sock")
+  socket_path = options[:socket] || WorkCoordinator::Paths.status_socket
   report_read_timeout = 5
 
   sock = begin
@@ -921,7 +921,7 @@ when "workspace"
       end
       opts.separator ""
       opts.separator "Environment:"
-      opts.separator "    WC_SOCKET    Unix socket path (default: /tmp/work-coordinator.sock)"
+      opts.separator "    WC_SOCKET    Unix socket path (default: ~/.local/run/work-coordinator/work-coordinator.sock)"
       opts.separator ""
       opts.separator "Examples:"
       opts.separator "  work-coordinator workspace send homebrew-bin 'update the formula to 0.23.0'"

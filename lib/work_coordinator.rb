@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "work_coordinator/version"
+require_relative "work_coordinator/paths"
 require_relative "work_coordinator/config"
 require_relative "work_coordinator/domain/project"
 require_relative "work_coordinator/domain/work_item"

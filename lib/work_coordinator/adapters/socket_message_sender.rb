@@ -11,7 +11,7 @@ module WorkCoordinator
       include Ports::MessageSender
 
       # @param socket_path [String]
-      def initialize(socket_path: "/tmp/work-coordinator.sock")
+      def initialize(socket_path: Paths.socket)
         @socket_path = socket_path
       end
 

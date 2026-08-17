@@ -41,7 +41,7 @@ module WorkCoordinator
       # file still exists on disk.
       DEFAULT_WATCHDOG_INTERVAL = 5
 
-      def initialize(socket_path: "/tmp/work-coordinator.sock", workspace_agent_registry: nil,
+      def initialize(socket_path: Paths.socket, workspace_agent_registry: nil,
                      dispatch_handler: nil, watchdog_interval: DEFAULT_WATCHDOG_INTERVAL)
         @socket_path = socket_path
         @workspace_agent_registry = workspace_agent_registry
