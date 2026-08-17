@@ -60,11 +60,16 @@ module WorkCoordinator
       # messages are answered here instead of being yielded — the agent blocks
       # on the reply, so it has to be written before the connection closes.
       #
+      # Existing registrations are intentionally preserved across restarts.
+      # Agents that are still running will have valid entries in the registry;
+      # stale entries for dead agents are cleaned up lazily by
+      # {WorkspaceAgentSession} when the first delivery attempt fails with
+      # Errno::ENOENT.
+      #
       # @yieldparam message [Hash] `{ work_item_ref:, body:, received_at: }` for
       #   plain lines, `{ type:, raw:, received_at: }` for JSON lines
       # @return [void]
       def start(&)
-        @workspace_agent_registry&.clear
         FileUtils.rm_f(@socket_path)
         @server = UNIXServer.new(@socket_path)
         accept_loop(&)

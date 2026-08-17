@@ -111,12 +111,12 @@ RSpec.describe WorkCoordinator::Adapters::SocketMessageReceiver do
         expect(Timeout.timeout(2) { delivered.pop }).to include(work_item_ref: "WC-7")
       end
 
-      it "drops registrations left behind by a previous coordinator process" do
-        registry.register(workspace_name: "myapp", socket_path: "/tmp/stale.sock",
+      it "preserves registrations from a previous coordinator process so agents survive restarts" do
+        registry.register(workspace_name: "myapp", socket_path: "/tmp/workspace-myapp.sock",
                           pipeline: true, epoch: "wa-old")
         start_listener
 
-        expect(registry.registered?("myapp")).to be(false)
+        expect(registry.registered?("myapp")).to be(true)
       end
     end
 
