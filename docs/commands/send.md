@@ -18,7 +18,7 @@ The message is delivered over the socket to the `run` daemon, which routes it to
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `WC_SOCKET` | `/tmp/work-coordinator.sock` | Unix socket path that the daemon is listening on |
+| `WC_SOCKET` | `~/.local/run/work-coordinator/work-coordinator.sock` | Unix socket path that the daemon is listening on |
 
 ## Output
 

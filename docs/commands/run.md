@@ -41,15 +41,16 @@ Both forms are equivalent to the default `all`.
 | Mode | What it does |
 |------|--------------|
 | `all` | Enables every known mode. Currently equivalent to `local,messages`. This is the default when no `--mode` is given. |
-| `local` | Opens a Unix domain socket at `WC_SOCKET` (default `/tmp/work-coordinator.sock`) and listens for messages sent via `work-coordinator send`. |
+| `local` | Opens a Unix domain socket at `WC_SOCKET` (default `~/.local/run/work-coordinator/work-coordinator.sock`) and listens for messages sent via `work-coordinator send`. |
 | `messages` | Polls `~/Library/Messages/chat.db` every few seconds for iMessages prefixed with `ai: `. Requires `WC_RECIPIENT` to be set. |
 
 ## Environment variables
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `WC_SOCKET` | `/tmp/work-coordinator.sock` | Unix socket path used in `local` mode |
-| `WC_STATUS_SOCKET` | `/tmp/work-coordinator-status.sock` | Unix socket path for inbound workspace agent status reports |
+| `WC_RUN_DIR` | `~/.local/run/work-coordinator` | Directory for runtime files (sockets); overrides all socket path defaults |
+| `WC_SOCKET` | `$WC_RUN_DIR/work-coordinator.sock` | Unix socket path used in `local` mode |
+| `WC_STATUS_SOCKET` | `$WC_RUN_DIR/work-coordinator-status.sock` | Unix socket path for inbound workspace agent status reports |
 | `WC_RECIPIENT` | _(required for messages mode)_ | Phone number or email address for outbound notifications |
 | `WC_DATABASE` | `db/work_coordinator.sqlite3` | Path to the SQLite database |
 
@@ -60,7 +61,7 @@ Each enabled mode prints a line when the daemon starts.
 Local mode:
 
 ```
-work-coordinator running on /tmp/work-coordinator.sock (local socket)
+work-coordinator running on ~/.local/run/work-coordinator/work-coordinator.sock (local socket)
 Press Ctrl-C to stop.
 ```
 
@@ -75,7 +76,7 @@ Press Ctrl-C to stop.
 Both modes together (default):
 
 ```
-work-coordinator running on /tmp/work-coordinator.sock (local socket)
+work-coordinator running on ~/.local/run/work-coordinator/work-coordinator.sock (local socket)
 work-coordinator running in messages mode (polling ~/Library/Messages/chat.db)
 Listening for messages starting with: ai:
 Press Ctrl-C to stop.
@@ -84,13 +85,13 @@ Press Ctrl-C to stop.
 The status socket line is printed after the mode lines regardless of which modes are enabled:
 
 ```
-Accepting workspace agent status reports on /tmp/work-coordinator-status.sock
+Accepting workspace agent status reports on ~/.local/run/work-coordinator/work-coordinator-status.sock
 ```
 
 ## Workspace agent status socket
 
 Alongside the mode receivers, `run` always starts a `WorkspaceStatusReceiver` on its own thread,
-listening at `WC_STATUS_SOCKET` (default `/tmp/work-coordinator-status.sock`). This is a second,
+listening at `WC_STATUS_SOCKET` (default `~/.local/run/work-coordinator/work-coordinator-status.sock`). This is a second,
 separate socket from `WC_SOCKET` — it exists so that agents running inside a workspace can report
 their own progress back to the coordinator without going through the human message path.
 
@@ -387,6 +388,6 @@ When `auto_launch_workspace` is `false` (the default) and a dormant workspace is
 
 **Full Disk Access is required for Messages.app polling.** The process that reads `chat.db` must have FDA granted to the terminal app in System Settings → Privacy & Security → Full Disk Access. After granting FDA, quit and relaunch the terminal and kill any existing tmux server (`tmux kill-server`) before starting a new session — the tmux server inherits permissions at launch, not retroactively.
 
-**Socket path conflicts.** If a stale socket file exists at `WC_SOCKET` from a previous run, the daemon may fail to bind. Remove it manually: `rm /tmp/work-coordinator.sock`.
+**Socket path conflicts.** If a stale socket file exists at `WC_SOCKET` from a previous run, the daemon removes it automatically before binding.
 
 **Unknown modes fail fast.** Passing an unrecognized mode value prints an error and exits with status 1 before starting anything.

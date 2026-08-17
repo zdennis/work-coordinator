@@ -41,7 +41,7 @@ Exits 1 with a usage line if either `work-item-id` or `body` is missing. Raises 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `WC_RECIPIENT` | _(required for messages mode)_ | Phone number or email for the iMessage recipient |
-| `WC_SOCKET` | `/tmp/work-coordinator.sock` | Unix socket path used in local mode |
+| `WC_SOCKET` | `~/.local/run/work-coordinator/work-coordinator.sock` | Unix socket path used in local mode |
 | `WC_DATABASE` | `db/work_coordinator.sqlite3` | Path to the SQLite database |
 
 ## Examples

@@ -54,11 +54,11 @@ bundle exec ruby bin/work-coordinator run
 ```
 
 ```
-work-coordinator running on /tmp/work-coordinator.sock
+work-coordinator running on ~/.local/run/work-coordinator/work-coordinator.sock
 Press Ctrl-C to stop.
 ```
 
-This opens a Unix domain socket at `/tmp/work-coordinator.sock` and listens for inbound messages. Keep this running while you work.
+This opens a Unix domain socket at `~/.local/run/work-coordinator/work-coordinator.sock` and listens for inbound messages. Keep this running while you work.
 
 ### Step 4: Route a reply (Terminal 2)
 
@@ -102,7 +102,7 @@ The REF prefix is stripped; only the message body is delivered to the pane. In a
 | Variable       | Default                        | Purpose                                          |
 |----------------|--------------------------------|--------------------------------------------------|
 | `WC_DATABASE`  | `db/work_coordinator.sqlite3`  | Path to the SQLite database file                 |
-| `WC_SOCKET`    | `/tmp/work-coordinator.sock`   | Path to the Unix domain socket (local mode)      |
+| `WC_SOCKET`    | `~/.local/run/work-coordinator/work-coordinator.sock`   | Path to the Unix domain socket (local mode)      |
 | `WC_RECIPIENT` | _(required for messages mode)_ | Phone number or email for outbound notifications |
 
 ---

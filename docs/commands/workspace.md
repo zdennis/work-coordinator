@@ -55,7 +55,7 @@ work-coordinator workspace send: coordinator not reachable — No such file or d
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `WC_SOCKET` | `/tmp/work-coordinator.sock` | Unix socket path the coordinator is listening on |
+| `WC_SOCKET` | `~/.local/run/work-coordinator/work-coordinator.sock` | Unix socket path the coordinator is listening on |
 
 ## Examples
 

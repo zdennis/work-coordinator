@@ -11,8 +11,8 @@ terminated by `\n`. Each connection carries exactly one message and is then clos
 
 | Socket | Owner | Default path | Carries |
 |--------|-------|--------------|---------|
-| Message socket | coordinator | `/tmp/work-coordinator.sock` (`WC_SOCKET`) | Human messages, plus agent `register` / `deregister` |
-| Status socket | coordinator | `/tmp/work-coordinator-status.sock` (`WC_STATUS_SOCKET`) | Agent status reports |
+| Message socket | coordinator | `~/.local/run/work-coordinator/work-coordinator.sock` (`WC_SOCKET`) | Human messages, plus agent `register` / `deregister` |
+| Status socket | coordinator | `~/.local/run/work-coordinator/work-coordinator-status.sock` (`WC_STATUS_SOCKET`) | Agent status reports |
 | Agent socket | workspace agent | agent's choice, declared at registration | `command` and `inject` from the coordinator |
 
 The coordinator opens both of its sockets when `run` starts and removes the socket files on
@@ -33,7 +33,7 @@ A new unit of work. Fire-and-forget — the agent acknowledges by accepting the 
 coordinator reads no reply.
 
 ```json
-{"type":"command","workspace":"my-service","work_item_ref":"WC-42","dispatch_id":"d-3f9a1c2e5b7d8a06","body":"add OAuth support","reporting_instructions":"To report status back to the coordinator, run:\n  work-coordinator report --ref WC-42 --type status_update --message \"<message>\"\n  work-coordinator report --ref WC-42 --type task_complete --summary \"<one-line summary>\"\n  work-coordinator report --ref WC-42 --type error --message \"<error detail>\"\nThe status socket is at /tmp/work-coordinator-status.sock (WC_STATUS_SOCKET)."}
+{"type":"command","workspace":"my-service","work_item_ref":"WC-42","dispatch_id":"d-3f9a1c2e5b7d8a06","body":"add OAuth support","reporting_instructions":"To report status back to the coordinator, run:\n  work-coordinator report --ref WC-42 --type status_update --message \"<message>\"\n  work-coordinator report --ref WC-42 --type task_complete --summary \"<one-line summary>\"\n  work-coordinator report --ref WC-42 --type error --message \"<error detail>\"\nThe status socket is at ~/.local/run/work-coordinator/work-coordinator-status.sock (WC_STATUS_SOCKET)."}
 ```
 
 | Field | Description |
@@ -257,7 +257,7 @@ Substitution variables (Ruby `%{name}` format):
 | Variable | Value |
 |----------|-------|
 | `%{work_item_ref}` | The work item ref for this command (e.g. `WC-42`) |
-| `%{status_socket}` | Path to the status socket (default `/tmp/work-coordinator-status.sock`) |
+| `%{status_socket}` | Path to the status socket (default `~/.local/run/work-coordinator/work-coordinator-status.sock`) |
 | `%{cli_command}` | The base CLI invocation (default `work-coordinator`) |
 
 Default template (used when `status_reporting_template` is not set in config):
@@ -301,7 +301,7 @@ work-coordinator report --ref <ref> --type <type> [type-specific flags] [--works
 | `--ref` | yes | — | Work item ref (e.g. `WC-42`) |
 | `--type` | yes | — | Message type (see table below) |
 | `--workspace` | no | `$WC_WORKSPACE`, then error | Workspace name |
-| `--socket` | no | `$WC_STATUS_SOCKET`, then `/tmp/work-coordinator-status.sock` | Status socket path |
+| `--socket` | no | `$WC_STATUS_SOCKET`, then `~/.local/run/work-coordinator/work-coordinator-status.sock` | Status socket path |
 
 **Type-specific flags:**
 

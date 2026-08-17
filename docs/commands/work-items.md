@@ -56,7 +56,7 @@ No work items found.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `WC_DATABASE` | `db/work_coordinator.sqlite3` | Path to the SQLite database |
-| `WC_SOCKET` | `/tmp/work-coordinator.sock` | Socket probed to decide `running` vs `not running` |
+| `WC_SOCKET` | `~/.local/run/work-coordinator/work-coordinator.sock` | Socket probed to decide `running` vs `not running` |
 
 ## Examples
 

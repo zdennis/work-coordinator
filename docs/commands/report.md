@@ -32,7 +32,7 @@ work-coordinator report --ref <ref> --type <type> [options]
 | `--summary TEXT` | for `task_complete` | — |
 | `--from-pane N` | for `pipeline_advanced` | — |
 | `--to-pane N` | for `pipeline_advanced` | — |
-| `--socket PATH` | no | `$WC_STATUS_SOCKET`, else `/tmp/work-coordinator-status.sock` |
+| `--socket PATH` | no | `$WC_STATUS_SOCKET`, else `~/.local/run/work-coordinator/work-coordinator-status.sock` |
 
 ## Exit codes
 
